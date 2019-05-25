@@ -1975,6 +1975,7 @@ class Note_Shelf:
         is not the undoing of a previous deletion. Show is TRUE if the
         note is to be displayed
         """
+        self.indexchanged = True 
 
         if quick and str(ind) not in self.note_dict:
 
@@ -1983,7 +1984,7 @@ class Note_Shelf:
                                               metadata)
 
             self.add_search_words(ind,text)
-            self.display_buffer.append(alerts.NOTE_ADDED+BLANK+str(ind))
+##            self.display_buffer.append(alerts.NOTE_ADDED+BLANK+index_reduce(str(ind)))
             self.iterator.add(ind)
 
             return None
@@ -2108,7 +2109,7 @@ class Note_Shelf:
 
 
             self.add_search_words(index, text)
-            self.display_buffer.append(alerts.NOTE_ADDED+BLANK+str(index))
+            self.display_buffer.append(alerts.NOTE_ADDED+BLANK+index_reduce(str(index)))
             a_temp = display.noteprint(self.show(index,
                                                  yestags=self.tagdefault,
                                                  shortform=True),
@@ -2150,6 +2151,7 @@ class Note_Shelf:
         notundoing is true if it is not undoing a previous action
         Note that the command 'delete' moves a note to a negative index, rather than
         permanently deleting it"""
+        self.indexchanged = True 
 
         if str(index) in self.indexes():
             self.display_buffer.append(str(index)+' has been deleted!')
@@ -2188,6 +2190,7 @@ class Note_Shelf:
              update_table=True):
 
         """Moves a note from indexfrom to indexto, or next available space"""
+        self.indexchanged = True 
 
         if str(indexfrom) not in self.indexes():
             return False
@@ -2287,6 +2290,8 @@ class Note_Shelf:
         Apologies for the equivocal use of 'keys,' referring both to
         python dictionary keys and the keys in the notes...
         """
+        if len(self.indexes())>20000:
+            return True, set(), set()
 
         val = self.key_dict.values()
             #retrieve index numbers in key_dict
@@ -2470,6 +2475,11 @@ class Note_Shelf:
                 tex_temp = tex_temp.replace('/FC/',BLANK+BLANK)
             if '/FC/' in tex_temp:
                 sides_temp = tex_temp.split('/FC/')
+                if self.flexflip:
+                    self.sides = len(sides_temp)
+                    if self.last_sides != self.sides:
+                        self.side=0
+                        self.last_sides = self.sides
                 tex_temp =  sides_temp[self.side%len(sides_temp)]
                 suffix =  '[' + str(self.side%len(sides_temp)+1) + ']' 
                 
@@ -2529,21 +2539,32 @@ class Note_Shelf:
 
         """show all indexes for existing notes"""
 
-        return sorted(self.note_dict.keys(),
-                      key=lambda x_temp: Index(x_temp))
+        if self.indexchanged or not self.sortedindexes:
+            self.indexchanged = False 
+
+            self.sortedindexes = sorted(self.note_dict.keys(),
+                                        key=lambda x_temp: Index(x_temp))
+            return self.sortedindexes
+        return self.sortedindexes
 
     def keys(self):
 
         """show all keys for existing notes"""
-
-        return sorted(self.key_dict.keys())
+        if self.indexchanged or not self.sortedkeys:
+            self.indexchanged = False
+            self.sortedkeys = sorted(self.key_dict.keys())
+            return self.sortedkeys
+        return self.sortedkeys
 
 
     def tags(self):
 
         """show all tags for existing notes"""
-
-        return sorted(self.tag_dict.keys())
+        if self.indexchanged or not self.sortedtags:
+            self.indexchanged = False
+            self.sortedtags = sorted(self.tag_dict.keys())
+            return self.sortedtags
+        return self.sortedtags
 
     def keys_for_tags(self):
 
@@ -5825,6 +5846,7 @@ class Note_Shelf:
             self.pass_key_dict[depth] = [[list(keys)], []]
 
         for a_temp, phrase in enumerate(embeddedlist):
+            print(PERIOD)
 
             if extract.embedded_extract(phrase)[2] > 1:
 
@@ -5859,7 +5881,40 @@ class Note_Shelf:
                                               newindex=newindex)
         return newindex
 
+    def dictionaryload(self,filename):
+        entertext = get_text_file(filename)
+        while True:
+            print(len(entertext.split('\n')))
+            startfrom = input('Startfrom?')
+            goto = input('Goto?')
+            if startfrom.isnumeric() and goto.isnumeric():
+                if int(goto) < len(entertext.split('\n')):
+                    break
+        startfrom = int(startfrom)
+        goto = int(goto)
+        upcount = 1
+        
+        for counter, line in enumerate(entertext.split('\n')[startfrom:goto]):
+            upcount += 1
 
+            if upcount == 1000:
+                upcount = 1
+                print(counter)
+
+            line = line.strip('\t')
+
+            line = line.split('\t')[0] + '\n'+' /FC/ ' +'\n' + '\n'.join(line.split('\t')[1:])
+
+            self.addnew(keyset=set(),
+                        text='(' + str(startfrom+counter) +')' + '\n ' + line,
+                        ind=Index(startfrom+counter+3),
+                        right_at=True,
+                        quick=True)
+                
+
+        
+
+        
     def loadtext(self,
                  filename='',
                  text=''):
@@ -6685,6 +6740,11 @@ class Console(Note_Shelf):
 ##                    'r': 'rb',
 ##                    'w': 'wb'}[flagvalue]
 
+        self.indexchanged = True
+        self.sortedindexes = set()
+        self.sortedtags = set()
+        self.sortedkeys = set()
+
         
 
         self.directoryname = globaldirectoryname
@@ -6918,13 +6978,17 @@ class Console(Note_Shelf):
         self.starting_linking = False
         self.usesequence = False
         self.side = 0
+        self.flip_at = 0
         self.flipmode = False
+        self.flexflip = True
         self.no_flash = False
         self.sides = 2
+        self.def_sides = 2
+        self.last_sides = 2
         self.show_images = True
         self.show_text = True
-        self.delete_by_edit = False 
-        
+        self.delete_by_edit = False
+
 
         
 
@@ -7518,6 +7582,14 @@ class Console(Note_Shelf):
 
         global override
 
+        if mainterm in ['dictionaryload']:
+            filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                                    file_suffix='.txt', file_prefix=EMPTYCHAR,
+                                    get_filename=otherterms[0])[0].rstrip()
+            display.noteprint((alerts.LOADING_FILE,filename_temp))
+        
+            self.dictionaryload(filename_temp)
+
         if mainterm in ['language']:
             lang_temp = s_input('En(glish), es(panol), fr(ench), de(utsch)?',otherterms[0])
             if len(lang_temp) > 1:
@@ -7620,6 +7692,24 @@ class Console(Note_Shelf):
                     break
     
             display.noteprint((labels.SIDES, str(self.sides)))
+
+        elif mainterm in ['flexflip']:
+            if not self.flexflip:
+                self.def_sides = self.sides
+                self.flexflip = True
+            else:
+                self.sides = self.def_sides
+                self.flexflip = False
+            display.noteprint(('FLEXFLIP',str(self.flexflip)))
+        elif mainterm in ['setflipat']:
+            while True:
+                self.flip_at = int(s_input(queries.FLIP_AT,
+                                        otherterms[0]))
+                if self.sides > 0:
+                    break
+    
+            display.noteprint((labels.FLIP_AT, str(self.flip_at)))
+                
                 
 
 
@@ -8997,7 +9087,7 @@ class Console(Note_Shelf):
                 manyinputterm = input(notebookname
                                       +temp_insert
                                       +self.project
-                                      +COLON+str(lastup)
+                                      +COLON+index_reduce(str(lastup))
                                       +BLANK+add_mark(lastup)+
                                       self.parent
                                       +BLANK+{'':'',
@@ -9321,11 +9411,13 @@ class Console(Note_Shelf):
         if self.flipmode:
 
             self.side += 1
-            if self.side % self.sides == 0:
+            if self.side % self.sides == self.flip_at % self.sides:
 
                 lastup = uptohere
                 if self.iteratormode:
                     uptohere = self.iterator.move()
+                    if not self.flexflip:
+                        self.side = self.flip_at
                 else:
                     uptohere = self.hypermove(lastup)
                 
