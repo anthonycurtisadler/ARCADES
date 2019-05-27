@@ -612,6 +612,7 @@ def get_range(entryterm,
     """
     term = entryterm
 
+
     # For more than one range of indexes
     returnrange = []
     bigterm = term
@@ -657,12 +658,15 @@ def get_range(entryterm,
                 returnrange = [a_temp for a_temp in range(int(termfrom),
                                                           int(termto)+1)]
             if sort:
+
                 return sorted(returnrange)
             return returnrange
 
 
     if sort:
+
         return sorted(returnrange)
+
     return returnrange
 
 
@@ -1721,7 +1725,12 @@ class Note_Shelf:
 
     def deepest(self,
                 entrylist=None,
-                is_string=False):
+                is_string=False,
+                abridged=False):
+        if abridged and self.abr_maxdepth_found>0:
+            return self.abr_maxdepth_found
+        if not abridged and self.maxdepth_found>0:
+            return self.maxdepth_found
 
         """discovers the deepest level of any index across the given range"""
 
@@ -1734,8 +1743,16 @@ class Note_Shelf:
                 if i_temp.level() > maxdepth:
                     maxdepth = i_temp.level()
             else:
-                if len(str(i_temp)) > maxdepth:
-                    maxdepth = len(str(i_temp))
+                if abridged:
+                    if len(index_reduce(str(i_temp))) > maxdepth:
+                        maxdepth = len(index_reduce(str(i_temp)))
+                else:
+                    if len(str(i_temp)) > maxdepth:
+                        maxdepth = len(str(i_temp))
+        if not abridged:
+            self.maxdepth_found = maxdepth
+        if abridged:
+            self.abr_maxdepth_found = maxdepth
 
         return maxdepth
 
@@ -1800,19 +1817,12 @@ class Note_Shelf:
                     indexfrom = Index(index_expand(indexfrom))
                 if isinstance(indexto, (str, int)):
                     indexto = Index(index_expand(indexto))
-                if not orequal:
-                    if not allindexes:
-
-                        return [a_temp for a_temp in withinrange
-                                if Index(a_temp) > indexfrom and Index(a_temp) < indexto]
-
-                    return self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal)
                 if not allindexes:
-  
-                    return [a_temp for a_temp in withinrange
-                            if Index(a_temp) >= indexfrom and Index(a_temp) <= indexto]
+
+                    return [a_temp for a_temp in self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal) if a_temp in withinrange]
 
                 return self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal)
+ 
             else:
                 if POUND in str(indexfrom) and POUND in str(indexto) and \
                    isinstance(indexfrom,str) and isinstance(indexto,str):
@@ -1932,14 +1942,19 @@ class Note_Shelf:
                                                         convert=True) <= dateto]
 
     def index_sort(self,indexlist,
-                   by_date=True,
-                   most_recent=False):
+                   by_date=False, #changed from true 
+                   most_recent=False,
+                   quick=True):
 
 
         """sorts an list of the type Index"""
-        
+
 
         if not by_date:
+
+            if quick:
+
+                return self.find_within(indexlist[0],indexlist[-1],orequal=True)
             return sorted(indexlist,
                           key=lambda x_temp: Index(str(x_temp)))
 
@@ -1975,7 +1990,8 @@ class Note_Shelf:
         is not the undoing of a previous deletion. Show is TRUE if the
         note is to be displayed
         """
-        self.indexchanged = True 
+        self.indexchanged = True
+        self.indexchanges += 1
 
         if quick and str(ind) not in self.note_dict:
 
@@ -2139,6 +2155,11 @@ class Note_Shelf:
                 
                 self.starting_linking = False
                 self.first_of_loop = index
+
+            if len(str(index)) > self.maxdepth_found:
+                self.maxdepth_found = len(str(index))
+            if len(index_reduce(str(index))) > self.abr_maxdepth_found:
+                self.abr_maxdepth_found = len(index_reduce(str(index)))
             
             return index
 
@@ -2151,7 +2172,8 @@ class Note_Shelf:
         notundoing is true if it is not undoing a previous action
         Note that the command 'delete' moves a note to a negative index, rather than
         permanently deleting it"""
-        self.indexchanged = True 
+        self.indexchanged = True
+        self.indexchanges += 1
 
         if str(index) in self.indexes():
             self.display_buffer.append(str(index)+' has been deleted!')
@@ -2178,6 +2200,10 @@ class Note_Shelf:
                 self.default_dict['indextable'].delete(index)
                 self.default_dict['indexlist'].delete(index)
                 self.changed = True
+            if len(str(index)) == self.maxdepth_found:
+                self.deepest(is_string=True,abridged=False)
+            if len(index_reduce(str(index))) == self.abr_maxdepth_found:
+                self.deepest(is_string=True,abridged=True)
             return {'keys': deletedkeys,
                     'text': deletedtext,
                     'meta': deletedmeta}
@@ -2190,7 +2216,8 @@ class Note_Shelf:
              update_table=True):
 
         """Moves a note from indexfrom to indexto, or next available space"""
-        self.indexchanged = True 
+        self.indexchanged = True
+        self.indexchanges += 1
 
         if str(indexfrom) not in self.indexes():
             return False
@@ -2408,11 +2435,13 @@ class Note_Shelf:
              most_recent=False,
              curtail=0):
 
+
  
 
         """returns 2-entry list for note at given index;
         list[0]=keys; list[1]=text
         """
+
 
         d_index = str(index)
         if len(d_index) > 10:
@@ -2472,7 +2501,7 @@ class Note_Shelf:
 
             suffix = ''
             if self.no_flash:
-                tex_temp = tex_temp.replace('/FC/',BLANK+BLANK)
+                tex_temp = tex_temp.replace('/FC/','/BREAK/')
             if '/FC/' in tex_temp:
                 sides_temp = tex_temp.split('/FC/')
                 if self.flexflip:
@@ -2504,7 +2533,7 @@ class Note_Shelf:
                             * self.default_dict['footer'] 
 
         else:
-            
+
             t_temp = self.note_dict[str(index)].text
             t_temp = t_temp[0 : min([len(t_temp), length])]
             t_temp = nformat.purgeformatting(t_temp).replace(EOL,
@@ -2518,7 +2547,7 @@ class Note_Shelf:
             
             
             l_temp.append(d_index+self.mark(index)
-                          +max([(self.deepest(is_string=True))
+                          +max([(self.deepest(is_string=True,abridged=True))
                                 -(len(d_index+self.mark(index))), 0])*BLANK+BLANK+VERTLINE+BLANK
                           +self.field(index)
                           +max([self.field_length()
@@ -2530,8 +2559,7 @@ class Note_Shelf:
                           +(self.default_dict['trim']-len(kl))*BLANK\
                           +BLANK+VERTLINE
                           +BLANK+t_temp)
-        
-            
+
         
         return l_temp
 
@@ -4207,17 +4235,21 @@ class Note_Shelf:
 
         """ shows a group of notes"""
 
+        if not quick and shortshow:
+            self.buf_abr_depth = self.abr_maxdepth_found
+            self.abr_maxdepth_found = self.deepest(entrylist=entrylist,is_string=True,abridged=True)
+
 
         def xformat (x_temp):
 
             return (x_temp)
 
-        if quick and not entrylist and abs(len(self.default_dict['all']) - len([str(Index(a_temp))
-                                                               for a_temp in self.indexes()
-                                                               if Index(a_temp) > Index(str(0))])) < 20:
+        if quick and not entrylist and self.indexchanges < 20:
             show_list(self.default_dict['all'],'INDEXES',0,40,func=xformat,present=True)
 
         else:
+            if self.indexchanges == 20:
+                self.indexchanges = 0
 
             if highlight is None:
                 highlight = set()
@@ -4228,6 +4260,7 @@ class Note_Shelf:
             if entrylist is None:
                 entrylist = self.get_indexes(childrentoo=childrentoo,
                                              levels=levels)
+
 ##            if entrylist is None:
 ##                if childrentoo:
 ##                    if levels==0:
@@ -4247,7 +4280,7 @@ class Note_Shelf:
 ##                        
                     
             else:
-                if not isinstance(entrylist, str):
+                if not isinstance(entrylist[0], str):
                     entrylist = [str(a_temp) for a_temp in entrylist]
 
             
@@ -4274,11 +4307,14 @@ class Note_Shelf:
             if quick:
                 self.default_dict['all'] = []
 
+
             for counter, i_temp in enumerate(self.index_sort([Index(a_temp)
                                                          for a_temp in entrylist],
                                                              by_date=self.default_dict['sortbydate'])):
 
+
                 if quick:
+
                     i_temp = index_reduce(str(i_temp))
                     k_temp = formkeys(self.note_dict[i_temp].keyset)
                     k_temp = k_temp[0:min([len(k_temp),30])]
@@ -4301,10 +4337,13 @@ class Note_Shelf:
 
                 elif not multi:
 
+
                     # Not automulti, but variable size
 
                     if self.default_dict['variablesize']:
+
                         if not shortshow:
+
                             self.text_result += \
                                              display.noteprint(self.show(i_temp, shortform=shortform,
                                                                        yestags=self.tagdefault,
@@ -4344,6 +4383,7 @@ class Note_Shelf:
                                                                           np_temp=shortform,
                                                                           leftmargin=self.default_dict['leftmargin'],
                                                                                   brackets=brackets))
+
                     # not automulti, not variable size
                     else:
                         if not shortshow:
@@ -4357,8 +4397,7 @@ class Note_Shelf:
                                                                leftmargin=self.default_dict['leftmargin'],
                                                                brackets=brackets)
                         else:
-                            self.text_result += \
-                                             self.default_dict['display'].append(display.noteprint(self.show(i_temp,
+                            self.default_dict['display'].append(display.noteprint(self.show(i_temp,
                                                             shortform=shortform,
                                                             yestags=self.tagdefault,
                                                             show_date=show_date),
@@ -4366,6 +4405,7 @@ class Note_Shelf:
                                                   np_temp=shortform,
                                                   leftmargin=self.default_dict['leftmargin'],
                                                                                   brackets=brackets))
+
 
 
 
@@ -4422,6 +4462,7 @@ class Note_Shelf:
                                          leftmargin=self.default_dict['leftmargin'],
                                          brackets=brackets))
                         else:
+
                             output.load(display.noteprint(self.show
                                                           (i_temp, yestags=self.tagdefault,
                                                            show_date=show_date),
@@ -4443,9 +4484,13 @@ class Note_Shelf:
                 else:
                     self.text_result = self.default_dict['display'].present(header=header,dump=True)
             if quick:
+
                 show_list(self.default_dict['all'],
                           'INDEXES',0,40,
                           func=xformat,present=True)
+            if not quick and shortshow:
+                self.abr_maxdepth_found = self.buf_abr_depth
+               
 
     def showall_incremental (self,
                              entrylist=None,
@@ -6741,6 +6786,7 @@ class Console(Note_Shelf):
 ##                    'w': 'wb'}[flagvalue]
 
         self.indexchanged = True
+        self.indexchanges = 0
         self.sortedindexes = set()
         self.sortedtags = set()
         self.sortedkeys = set()
@@ -6968,6 +7014,7 @@ class Console(Note_Shelf):
         self.text_result = ''
         self.negative_results = False
         self.changed = False
+        self.changes = 0
         self.iteratormode = True
         self.hypermovemode = 2
 
@@ -6976,7 +7023,7 @@ class Console(Note_Shelf):
         self.first_of_loop = None
         self.last_added = Index(0)
         self.starting_linking = False
-        self.usesequence = False
+        self.usesequence = True
         self.side = 0
         self.flip_at = 0
         self.flipmode = False
@@ -6988,6 +7035,8 @@ class Console(Note_Shelf):
         self.show_images = True
         self.show_text = True
         self.delete_by_edit = False
+        self.abr_maxdepth_found = 0
+        self.maxdepth_found = 0
 
 
         
@@ -8140,6 +8189,7 @@ class Console(Note_Shelf):
         elif mainterm in [DOLLAR+DOLLAR]:
             show_list(allnotebooks[notebookname].default_dict['all'],'INDEXES',0,40,func=dummy,present=True)
         elif mainterm in ['show', 's']:
+            
             if not otherterms[1]:
                 l_temp = 0
             else:
@@ -8231,6 +8281,9 @@ class Console(Note_Shelf):
         elif mainterm in ['showdepth']:
             display.noteprint((labels.MAX_DEPTH,
                                str(self.deepest(is_string=True))))
+            display.noteprint((labels.MAX_DEPTH+' REDUCED',
+                               str(self.deepest(is_string=True,abridged=True))))
+
 
         elif mainterm in ['refreshfreq']:
 
@@ -9357,6 +9410,9 @@ class Console(Note_Shelf):
 
         """ called from the mainloop of the program to enter commands"""
 
+
+        
+
         
 
         display = Display(self.rectify)
@@ -9376,23 +9432,23 @@ class Console(Note_Shelf):
         if not biginputterm  and self.next_term:
 
 
-            if '=>' in self.next_term:
+            if '=>' in self.next_term: # if refeeding 
                 afterterm = '=>'.join(self.next_term.split('=>')[1:])
                 biginputterm = self.next_term.split('=>')[0]
             else:
                 biginputterm = self.next_term
                 
-            if self.text_result:
+            if self.text_result: #replace with a text result
 
                 biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK+QUESTIONMARK+QUESTIONMARK,self.text_result)
 
                 
-            if self.key_results:
+            if self.key_results: # replace with key results
                 biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK+QUESTIONMARK,self.key_results.replace('<',EMPTYCHAR).replace('>',EMPTYCHAR).replace('|',', '))
                 biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK,self.key_results)
 
 
-            if self.last_results:
+            if self.last_results: # replace with index results
 
                 biginputterm = biginputterm.replace(SLASH+QUESTIONMARK,'/SLASH#QUEST/')
                 biginputterm = biginputterm.replace(QUESTIONMARK,
@@ -9408,7 +9464,7 @@ class Console(Note_Shelf):
         if not self.last_results_used:
             self.last_results = EMPTYCHAR 
             
-        if self.flipmode:
+        if self.flipmode: #if using flashcards, then flip the flashcard before going to next index
 
             self.side += 1
             if self.side % self.sides == self.flip_at % self.sides:
@@ -9420,17 +9476,20 @@ class Console(Note_Shelf):
                         self.side = self.flip_at
                 else:
                     uptohere = self.hypermove(lastup)
-                
+                    
 
-        elif next_up and not skipped:
+        elif next_up and not skipped: #if not using flashcards 
 
             
 ##            try:
+
                 lastup = uptohere
                 if self.iteratormode:
                     uptohere = self.iterator.move()
                 else:
                     uptohere = self.hypermove(lastup)
+
+
 
     
                     
@@ -9439,6 +9498,7 @@ class Console(Note_Shelf):
         skipped = False
 
         if self.parent and biginputterm:
+        #if a childnote, and BigInT begins with PERIOD, then replace with the parent index
             if biginputterm[0] == PERIOD:
                 biginputterm = self.parent + biginputterm
             biginputterm = biginputterm.replace(COLON+PERIOD,COLON+self.parent+PERIOD).\
@@ -9480,15 +9540,16 @@ class Console(Note_Shelf):
                 or EXCLAMATION in biginputterm
                 or EXCLAMATION+EXCLAMATION in biginputterm):
             biginputterm, oldlimit = self.limitlist_cc(biginputterm=biginputterm)
-        #Determine the predicates 
 
-        for (a_temp, b_temp) in enumerate(DOLLAR+ANDSIGN+STAR+QUESTIONMARK+EQUAL):   
+        #Determine the predicates 
+        for (a_temp, b_temp) in enumerate(DOLLAR+ANDSIGN+STAR+QUESTIONMARK+EQUAL):
+            
             if biginputterm and SLASH+b_temp in biginputterm[1:]:
                 predicate[a_temp] = True
                 biginputterm = (biginputterm[0]
                                 +biginputterm[1:].replace(SLASH+b_temp,
                                                           EMPTYCHAR))
-
+        #determine the otherterms
         if COLON in biginputterm:
             mainterm = biginputterm.split(COLON)[0]
             longphrase = True
@@ -9496,6 +9557,7 @@ class Console(Note_Shelf):
                 otherterms[i_temp] = term
                 totalterms += 1
         else:
+            # if a list of keywords 
             if biginputterm and len(biginputterm)>4 and not series_enter and ((COMMA in biginputterm
                  and SEMICOLON not in biginputterm
                  and biginputterm.replace(COMMA, EMPTYCHAR)) or
@@ -9506,7 +9568,9 @@ class Console(Note_Shelf):
                 
             else:
                 mainterm = biginputterm
-      
+
+        
+        # to assign a variable       
         if len(mainterm) > 2 and mainterm.isupper() and mainterm.isalpha() and COLON not in mainterm:
             if mainterm not in self.variables:
                 if self.last_results_used:
@@ -9539,6 +9603,7 @@ class Console(Note_Shelf):
 
         if QUESTIONMARK in mainterm and mainterm.replace(QUESTIONMARK,EMPTYCHAR)\
            in commandscript.HELP_DICTIONARY:
+            # to display information about a term 
             
             display.noteprint(('',
                                side_note((mainterm.replace(QUESTIONMARK,EMPTYCHAR),
@@ -9550,8 +9615,10 @@ class Console(Note_Shelf):
                                           [mainterm.replace(QUESTIONMARK,EMPTYCHAR)][1]),widths=[20,60,30])))
         mainterm = mainterm.strip()
         if mainterm == EMPTYCHAR and str(uptohere) in self.indexes():
+            # to display the next note
 
             lastup = self.display_function_com(uptohere=uptohere)
+
 
         elif mainterm and mainterm[0] in [LEFTNOTE, RIGHTNOTE,"'",'"','=']:
             if mainterm and mainterm[1:].isnumeric():
@@ -9571,11 +9638,13 @@ class Console(Note_Shelf):
                 
         elif mainterm != EMPTYCHAR and mainterm.replace(PERIOD,
                                                         EMPTYCHAR) == EMPTYCHAR:
+            # to skip forward by the number of periods 
             uptohere = self.iterator.skip_forward(len(mainterm))
             lastup = uptohere
             skipped = True
         elif mainterm != EMPTYCHAR and mainterm.replace(COMMA,
                                                         EMPTYCHAR) == EMPTYCHAR:
+            # to skip back by the number of commas 
             uptohere = self.iterator.skip_back(len(mainterm))
             lastup = uptohere
             skipped = True
@@ -9583,6 +9652,7 @@ class Console(Note_Shelf):
             next_up = True 
         # to display a note if index entered as command
         elif index_expand(mainterm) in self.indexes():
+            # to display a note that has been entered 
             mainterm = index_expand(mainterm)
             display.noteprint(self.show(Index(mainterm)),
                               param_width=display.width_needed(self.show(Index(mainterm)),
@@ -10076,8 +10146,8 @@ while bigloop:
                 display.noteprint((alerts.CONSTITUTING_WORD_DICT,
                                    alerts.WAIT))
                 allnotebooks[notebookname].constitute_word_dict()
-            if not allnotebooks[notebookname].is_consistent():
-                allnotebooks[notebookname].make_consistent()
+##            if not allnotebooks[notebookname].is_consistent():
+##                allnotebooks[notebookname].make_consistent()
 
             allnotebooks[notebookname].set_iterator(children_too=True,
                                                     flag=allnotebooks[notebookname].default_dict['setitflag'])
@@ -10090,11 +10160,14 @@ while bigloop:
                                labels.WELCOME_BODY)
                 allnotebooks[notebookname].autobackup = backup_was
             allnotebooks[notebookname].check_spelling = spelling_was
-            allnotebooks[notebookname].constitute_key_freq_dict()
-            display.noteprint((labels.CONSTITUTING_KEY_FREQ,
-                               alerts.WAIT))
+            if reconstitute and input('Reconstitute key dictionary? ') in YESTERMS:
 
-            if allnotebooks[notebookname].default_dict['displayonstart']:                
+                allnotebooks[notebookname].constitute_key_freq_dict()
+                display.noteprint((labels.CONSTITUTING_KEY_FREQ,
+                                   alerts.WAIT))
+
+            if (input('Show?') in YESTERMS)\
+               and allnotebooks[notebookname].default_dict['displayonstart']:                
                 if not allnotebooks[notebookname].default_dict['display'] \
                    and not allnotebooks[notebookname].default_dict['all']:
                     allnotebooks[notebookname].showall(shortshow=True,quick=True)

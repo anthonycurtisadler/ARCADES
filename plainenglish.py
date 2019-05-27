@@ -186,6 +186,7 @@ class Queries:
           self.SAVE_TO_FILE = 'File to save to?'
           self.FOLDER = 'In folder?'
           self.TEXT_TO_PRINT = 'TEXT to print'
+          self.FLIP_AT = 'Flip at?'
 
           
      
@@ -330,6 +331,7 @@ class Labels:
           self.LONG_MAX = 'LONGMAX'
           self.SIDE = 'SIDE'
           self.SIDES = 'SIDES'
+          self.FLIP_AT = 'FLIP AT'
           
 
           
@@ -424,7 +426,8 @@ binary_settings =    {'showtags':('self.tagdefault','TAG DEFAULT'),
                       'iteratemode':("self.iteratormode",labels.ITERATOR),
                       'showimages':("self.show_images",'Show Images'),
                       'showtext':("self.show_text",'Show Textfiles'),
-                      'editdelete':("self.delete_by_edit",'Delete when editing')}
+                      'editdelete':("self.delete_by_edit",'Delete when editing'),
+                      'variablesize':("self.default_dict['variablesize']",'Variable Size')}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -444,7 +447,9 @@ REFORMATING_COM = 'self.reformating_com(mainterm=mainterm,otherterms=otherterms,
 COPY_MOVE_SEARCH_COM = 'self.copy_move_search_com(longphrase=longphrase,mainterm=mainterm,otherterms=otherterms,predicate=predicate)'
 
 simple_commands =  {'setsides':RESIZE_COM,
+                    'setflipat':RESIZE_COM,
                     'flashmode':'self.flipmode = not self.flipmode',
+                    'flexflip':RESIZE_COM,
                     'noflash':'self.no_flash = not self.no_flash',
                     'flashforward':'self.side+=1',
                     'ff':'self.side+=1',
@@ -675,7 +680,8 @@ simple_commands =  {'setsides':RESIZE_COM,
                     'search':COPY_MOVE_SEARCH_COM,
                     QUESTIONMARK:COPY_MOVE_SEARCH_COM,
                     'move':COPY_MOVE_SEARCH_COM,
-                    'copy':COPY_MOVE_SEARCH_COM}         
+                    'copy':COPY_MOVE_SEARCH_COM,
+                    'dictionaryload':RESIZE_COM}         
           
           
 

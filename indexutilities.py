@@ -38,6 +38,8 @@ def index_reduce (string,paren=False):
 def index_expand (string):
 
     """Expands an index-string fro the abbreviated form"""
+    if isinstance(string,int):
+        string = str(string)
 
     if '(' in string:
         
