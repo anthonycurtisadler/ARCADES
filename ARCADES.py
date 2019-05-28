@@ -633,18 +633,23 @@ def get_range(entryterm,
                 if POUND not in term:
                     termfrom = Index(index_expand(term.split(SLASH)[0]))
                     termto = Index(index_expand(term.split(SLASH)[1]))
+
                 else:
                     termfrom = term.split(SLASH)[0]
                     termto = term.split(SLASH)[1]
+    
                     
                 if indexes:
-                    returnrange += [Index(a_temp) for a_temp
-                                    in notebook.find_within(termfrom,
+                    returnrange += notebook.find_within(termfrom,
                                                             termto,
-                                                            orequal=orequal)]
+                                                            orequal=orequal)
                 else:
-                    returnrange += [a_temp for a_temp
-                                    in range(int(termfrom),int(termto)+1)]
+                    returnrange += [str(a_temp) for a_temp in notebook.find_within(termfrom,
+                                                                              termto,
+                                                                              orequal=orequal)]
+
+##                    [a_temp for a_temp
+##                                    in range(int(termfrom),int(termto)+1)]
             else:
                 if indexes:
                     returnrange += [Index(term)]
@@ -659,13 +664,18 @@ def get_range(entryterm,
                                                           int(termto)+1)]
             if sort:
 
-                return sorted(returnrange)
+
+                return sorted(returnrange,
+                          key=lambda x_temp: Index(str(x_temp)))
+
             return returnrange
 
 
     if sort:
 
-        return sorted(returnrange)
+
+        return sorted(returnrange,
+                          key=lambda x_temp: Index(str(x_temp)))
 
     return returnrange
 
@@ -1391,14 +1401,28 @@ class Note_Shelf:
         """closes database"""
 
         self.note_dict.close()
-        tempfile = open(self.directoryname
-                        +SLASH+self.filename
-                        +'.pkl',
-                        'wb')
-        pickle.dump(self.pickle_dictionary,
-                    tempfile)
-        #globaldirectoryname+SLASH+self.filename+'PIC'
-        tempfile.close()
+        if self.divided or input('DO YOU WANT TO DIVIDE UP THE PICKLEFILE?') in YESTERMS:
+            for suffix in ('d','k','w','t'):
+                tempfile = open(self.directoryname
+                                +SLASH+self.filename
+                                +suffix.upper()+'.pkl','wb')
+                pickle.dump(self.pickle_dictionary[suffix],
+                            tempfile)
+                #globaldirectoryname+SLASH+self.filename+'PIC'
+                print(suffix,'saved')
+                tempfile.close()
+            
+        else:
+            
+            tempfile = open(self.directoryname
+                            +SLASH+self.filename
+                            +'.pkl',
+                            'wb')
+            pickle.dump(self.pickle_dictionary,
+                        tempfile)
+            #globaldirectoryname+SLASH+self.filename+'PIC'
+            tempfile.close()
+                
     def default_save(self):
         """saves default dictionary etc."""
         tempfile = open(self.directoryname
@@ -1807,21 +1831,24 @@ class Note_Shelf:
 
 
         if self.usesequence:
-
+            if len(self.default_dict['indexlist'])  < len(self.indexes()):
+                print('RECONSTITING INDEX SEQUENCE')
+                self.default_dict['indexlist'] = OrderedList(self.indexes(),indexstrings=True)
             allindexes = False
             if withinrange is None:
                 withinrange = self.indexes()
-                allindexes = True 
+                allindexes = True
+
             if POUND not in str(indexfrom)+str(indexto):
                 if isinstance(indexfrom, (str, int)):
                     indexfrom = Index(index_expand(indexfrom))
                 if isinstance(indexto, (str, int)):
                     indexto = Index(index_expand(indexto))
                 if not allindexes:
-
-                    return [a_temp for a_temp in self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal) if a_temp in withinrange]
-
-                return self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal)
+                    x_temp = [a_temp for a_temp in self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal) if a_temp in withinrange]
+                    return x_temp
+                x_temp = self.default_dict['indexlist'].find_within(indexfrom,indexto,fromequal=orequal,toequal=orequal)
+                return x_temp
  
             else:
                 if POUND in str(indexfrom) and POUND in str(indexto) and \
@@ -4235,6 +4262,7 @@ class Note_Shelf:
 
         """ shows a group of notes"""
 
+
         if not quick and shortshow:
             self.buf_abr_depth = self.abr_maxdepth_found
             self.abr_maxdepth_found = self.deepest(entrylist=entrylist,is_string=True,abridged=True)
@@ -4279,9 +4307,9 @@ class Note_Shelf:
 ##                                                  and Index(a_temp).is_top()])
 ##                        
                     
-            else:
-                if not isinstance(entrylist[0], str):
-                    entrylist = [str(a_temp) for a_temp in entrylist]
+            
+            if entrylist and not isinstance(entrylist[0], str):
+                entrylist = [str(a_temp) for a_temp in entrylist]
 
             
 
@@ -4310,7 +4338,8 @@ class Note_Shelf:
 
             for counter, i_temp in enumerate(self.index_sort([Index(a_temp)
                                                          for a_temp in entrylist],
-                                                             by_date=self.default_dict['sortbydate'])):
+                                                             by_date=self.default_dict['sortbydate'],quick=False)):
+
 
 
                 if quick:
@@ -4503,17 +4532,24 @@ class Note_Shelf:
         
 
         if entrylist is None:
-            entrylist = self.get_indexes(childrentoo=childrentoo,
-                                    levels=0)
+##            entrylist = self.get_indexes(childrentoo=childrentoo,
+##                                    levels=0)
+            entrylist = self.index_sort([Index(a_temp)
+                                         for a_temp
+                                         in entrylist],
+                                        by_date=self.default_dict['sortbydate'],quick=True)
+
+        else:
+            entrylist = self.index_sort([Index(a_temp)
+                                         for a_temp
+                                         in entrylist],
+                                        by_date=self.default_dict['sortbydate'],quick=False)
+
+
 
         if not isinstance(entrylist[0], str):
             entrylist = [str(a_temp) for a_temp in entrylist]
         
-        entrylist = self.index_sort([Index(a_temp)
-                                     for a_temp
-                                     in entrylist],
-                                    by_date=self.default_dict['sortbydate'])
-
         keep_on = True
         inp_temp = EMPTYCHAR
         while keep_on:
@@ -5752,7 +5788,7 @@ class Note_Shelf:
                 index = self.index_sort([Index(0)]
                                    +[a_temp for a_temp in self.find_within(Index(0),
                                                                            Index(1),
-                                                                           orequal=False)],by_date=False)[-1]
+                                                                           orequal=False)],by_date=False,quick=False)[-1]
 
             elif phrase[0] == "'":
                 #for a next note
@@ -5764,7 +5800,7 @@ class Note_Shelf:
                 index = self.index_sort([Index(0)]+[a_temp for a_temp
                                                in self.find_within(Index(0),
                                                                    Index(1),
-                                                                   orequal=False)],by_date=False)[-1]
+                                                                   orequal=False)],by_date=False,quick=False)[-1]
 
             elif phrase[0] == ";":
                 # to go back to the previous level and add a next note
@@ -5776,7 +5812,7 @@ class Note_Shelf:
                                    +[a_temp for a_temp
                                      in self.find_within(Index(0),
                                                          Index(1),
-                                                         orequal=False)],by_date=False)[-1]
+                                                         orequal=False)],by_date=False,quick=False)[-1]
                 index = Index(index)
                 index = index.previous()
                 index = str(index)
@@ -5928,34 +5964,73 @@ class Note_Shelf:
 
     def dictionaryload(self,filename):
         entertext = get_text_file(filename)
-        while True:
-            print(len(entertext.split('\n')))
-            startfrom = input('Startfrom?')
-            goto = input('Goto?')
-            if startfrom.isnumeric() and goto.isnumeric():
-                if int(goto) < len(entertext.split('\n')):
-                    break
-        startfrom = int(startfrom)
-        goto = int(goto)
-        upcount = 1
-        
-        for counter, line in enumerate(entertext.split('\n')[startfrom:goto]):
-            upcount += 1
 
-            if upcount == 1000:
-                upcount = 1
-                print(counter)
+        if '<PROGRAM>' in entertext and '</PROGRAM>' in entertext:
+            generic_program = ''.join(entertext.split('<PROGRAM>')[1:]).split('</PROGRAM>')[0]
+            entertext = ''.join(entertext.split('</PROGRAM>')[1:])
 
-            line = line.strip('\t')
-
-            line = line.split('\t')[0] + '\n'+' /FC/ ' +'\n' + '\n'.join(line.split('\t')[1:])
-
-            self.addnew(keyset=set(),
-                        text='(' + str(startfrom+counter) +')' + '\n ' + line,
-                        ind=Index(startfrom+counter+3),
-                        right_at=True,
-                        quick=True)
+            exec(generic_program)
+            print(generic_program)
+            exec('entertext=generic(entertext)')
+            print(entertext.split('\n')[0:10])
+            for counter, line in enumerate(entertext.split('\n')):
+                if counter % 100==0:
+                    print (counter)
+                self.addnew(keyset=set(),
+                            text=line,
+                            ind=Index(counter+3),
+                            right_at=True,
+                            quick=True)
                 
+            
+            
+        else:
+
+            for counter, line in enumerate(entertext.split('\n')[0:1000]):
+                if counter % 1000 == 0:
+                    print(counter)
+                if len(line.strip()) >2:
+                    word = line.split(' ')[0]
+                    phrase = ' '.join(line.split(' ')[1:])
+                    line =  '(' + str(counter) + ')' + '\n' + word + '\n' + '/FC/' + '\n' + phrase 
+                    self.addnew(keyset=set(),
+                                text=line,
+                                ind=Index(counter+3),
+                                right_at=True,
+                                quick=True)
+                    
+                    
+
+            
+            
+##            while True:
+##                print(len(entertext.split('\n')))
+##                startfrom = input('Startfrom?')
+##                goto = input('Goto?')
+##                if startfrom.isnumeric() and goto.isnumeric():
+##                    if int(goto) < len(entertext.split('\n')):
+##                        break
+##            startfrom = int(startfrom)
+##            goto = int(goto)
+##            upcount = 1
+##            
+##            for counter, line in enumerate(entertext.split('\n')[startfrom:goto]):
+##                upcount += 1
+##
+##                if upcount == 1000:
+##                    upcount = 1
+##                    print(counter)
+##
+##                line = line.strip('\t')
+##
+##                line = line.split('\t')[0] + '\n'+' /FC/ ' +'\n' + '\n'.join(line.split('\t')[1:])
+##
+##                self.addnew(keyset=set(),
+##                            text='(' + str(startfrom+counter) +')' + '\n ' + line,
+##                            ind=Index(startfrom+counter+3),
+##                            right_at=True,
+##                            quick=True)
+##                
 
         
 
@@ -6805,22 +6880,51 @@ class Console(Note_Shelf):
 
         self.last_results = EMPTYCHAR
         self.next_term = EMPTYCHAR
+        self.divided = True
 
-        try:
-            tempfile = open(self.directoryname
-                            +SLASH+self.filename+'.pkl', 'rb')
-            self.pickle_dictionary = pickle.load(tempfile)
-            tempfile.close()
 
-        except OSError:
-            print(alerts.NEW_PICKLE)
-            self.pickle_dictionary = {'k':{},
-                                      't':{},
-                                      'w':{},
-                                      'd':{}}
-            tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
-            pickle.dump(self.pickle_dictionary, tempfile)
-            tempfile.close()
+        
+        self.pickle_dictionary = {}
+        loaded = ''
+        failed = False
+        for suffix in ('d','k','t','w'):
+            if not failed:
+                try:
+                    tempfile = open(self.directoryname
+                                +SLASH+self.filename+suffix.upper()+'.pkl', 'rb')
+                    self.pickle_dictionary[suffix] = pickle.load(tempfile)
+                    tempfile.close()
+                    print(suffix,'loaded')
+                    loaded += suffix
+                    
+                    
+                except:
+                    print(suffix,'failed')
+                    self.pickle_dictionary[suffix] = {}
+                    failed = True
+
+        if failed:
+            try:
+                self.divided = False
+                tempfile = open(self.directoryname
+                                +SLASH+self.filename+'.pkl', 'rb')
+                self.pickle_dictionary = pickle.load(tempfile)
+                tempfile.close()
+            except OSError:
+                print('CREATING NEW PICKLE DICTIONARY')
+                print(alerts.NEW_PICKLE)
+                self.pickle_dictionary = {'k':{},
+                                          't':{},
+                                          'w':{},
+                                          'd':{}}
+                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
+                pickle.dump(self.pickle_dictionary, tempfile)
+                tempfile.close()
+        display.noteprint(('DIVIDED',str(self.divided)))
+        
+
+
+           
 
         self.key_dict = self.pickle_dictionary['k']
             # keeps track of keys
@@ -8199,8 +8303,8 @@ class Console(Note_Shelf):
                     l_temp = 0
             self.showall(get_range(s_input(queries.RANGE_TO_FROM,
                                   otherterms[0]),
-                         True,
-                         False, 
+                         orequal=True,
+                         complete=False, 
                          sort=True,
                          many=True),
                 show_date=(self.default_dict['showdate'] or predicate[4]),
