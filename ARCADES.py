@@ -1419,17 +1419,21 @@ class Note_Shelf:
         """closes database"""
 
         self.note_dict.close()
-        if self.divided or input('DO YOU WANT TO DIVIDE UP THE PICKLEFILE?') in YESTERMS:
-            for suffix in ('d','k','w','t'):
-                tempfile = open(self.directoryname
-                                +SLASH+self.filename
-                                +suffix.upper()+'.pkl','wb')
-                pickle.dump(self.pickle_dictionary[suffix],
-                            tempfile)
-                #globaldirectoryname+SLASH+self.filename+'PIC'
-                print(suffix,'saved')
-                tempfile.close()
-            
+        if not self.divide_no_query:
+            q_temp = input("Do you want to divide the pickle file? (Y)yes to divide (D)on't ask again")
+            if self.divided or q_temp in YESTERMS:
+                for suffix in ('d','k','w','t'):
+                    tempfile = open(self.directoryname
+                                    +SLASH+self.filename
+                                    +suffix.upper()+'.pkl','wb')
+                    pickle.dump(self.pickle_dictionary[suffix],
+                                tempfile)
+                    #globaldirectoryname+SLASH+self.filename+'PIC'
+                    print(suffix,'saved')
+                    tempfile.close()
+            if q_temp in ['R','r']:
+                self.divide_no_query = True
+                
         else:
             
             tempfile = open(self.directoryname
@@ -6890,6 +6894,7 @@ class Console(Note_Shelf):
         self.indexchanged = True
         self.indexchanged_key = True
         self.indexchanged_tag = True
+        self.usesequence = False
         
         self.indexchanges = 0
         self.sortedindexes = set()
@@ -6911,6 +6916,7 @@ class Console(Note_Shelf):
         self.last_results = EMPTYCHAR
         self.next_term = EMPTYCHAR
         self.divided = True
+        self.divide_no_query = True
 
 
         
@@ -7157,7 +7163,7 @@ class Console(Note_Shelf):
         self.first_of_loop = None
         self.last_added = Index(0)
         self.starting_linking = False
-        self.usesequence = True
+ 
         self.side = 0
         self.flip_at = 0
         self.flipmode = False
@@ -7171,6 +7177,7 @@ class Console(Note_Shelf):
         self.delete_by_edit = False
         self.abr_maxdepth_found = 0
         self.maxdepth_found = 0
+        self.usesequence = True  
 
 
         
@@ -10390,8 +10397,11 @@ while bigloop:
                 except KeyError:
                     print('KEY ERROR')
                     notebook.usesequence = False
-                    notebook.indexchanged = True 
+                    notebook.indexchanged = True
+                    print('RECONSTITING INDEX SEQUENCE')
+                    notebook.default_dict['indexlist'] = OrderedList(notebook.indexes(),indexstrings=True)
                     uptohere = Index(notebook.indexes()[-1])
+                    lastup = uptohere
                     print(uptohere)
                 except AttributeError:
                     print('ATTRIBUTE ERROR')
