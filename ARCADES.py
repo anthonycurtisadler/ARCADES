@@ -10,6 +10,8 @@ import math
 import os
 import shelve
 import string
+import json
+
 
 
 
@@ -28,11 +30,10 @@ from globalconstants import BOX_CHAR,\
      TILDA, UNDERLINE, DELETECHARACTERS, LONGDASH, BACKSLASH
 
 
-
-
                                                                         #pylint 10.0/10
 
 import commandscript                                                    #pylint 10.0/10
+from complexobjecttransformindexes import transform
 import consolidate                                                      #Stack Overflow
 from defaultscripts import COMMANDMACROSCRIPT
 from display import Display                                             #pylint 9.2/10
@@ -192,6 +193,8 @@ def si_input (prompt=EMPTYCHAR,
 
 def is_date(entry,returndate=False):
 
+
+
     """Utility to test if a string constitutes a date, returning either
     a boolean value or a converted date """
 
@@ -200,18 +203,29 @@ def is_date(entry,returndate=False):
                         2:(1,31),
                         3:(0,23),
                         4:(0,59),
-                        5:(0,59)}
-    print(entry)
+                        5:(0,59),
+                        6:(0,1000000)}
+
     if not isinstance(entry,(tuple,list)):
 
-        if entry and entry[0] == DASH:
-            entry = entry[0].replace(DASH,PLUS)+entry[1:]
-        entry = entry.split(DASH)
+        if entry.count(DASH)>1 and entry.count(COLON)>1 and entry.count(PERIOD)==1:
+             entry = entry.replace(DASH,BLANK).replace(COLON,BLANK).replace(PERIOD,BLANK).split(BLANK)
+             entry = [int(a.strip()) for a in entry]
+             if returndate:
+                    return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6])
+             
+        else:
+             
+             if entry and entry[0] == DASH:
+                 entry = entry[0].replace(DASH,PLUS)+entry[1:]
+             entry = entry.split(DASH)
 
-        for x_temp in entry:
-            if not x_temp.isnumeric():
-                False
-        entry = [int(x_temp.replace(PLUS,DASH)) for x_temp in entry]
+             for x_temp in entry:
+                 if not x_temp.isnumeric():
+                     False
+             entry = [int(x_temp.replace(PLUS,DASH)) for x_temp in entry]
+
+               
     
 
     for counter,x_temp in enumerate(entry):
@@ -225,8 +239,12 @@ def is_date(entry,returndate=False):
             return datetime.date(entry[0],entry[1],entry[2])
         elif len(entry) == 5:
             return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4])
+        elif len(entry) == 7:
+            return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6])
     
     return True 
+
+
 
 def isindex(entry):
 
@@ -2017,7 +2035,7 @@ class Note_Shelf:
         is not the undoing of a previous deletion. Show is TRUE if the
         note is to be displayed
         """
-        self.indexchanged = True
+        self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True
         self.indexchanges += 1
 
         if quick and str(ind) not in self.note_dict:
@@ -2199,7 +2217,7 @@ class Note_Shelf:
         notundoing is true if it is not undoing a previous action
         Note that the command 'delete' moves a note to a negative index, rather than
         permanently deleting it"""
-        self.indexchanged = True
+        self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True        
         self.indexchanges += 1
 
         if str(index) in self.indexes():
@@ -2243,7 +2261,7 @@ class Note_Shelf:
              update_table=True):
 
         """Moves a note from indexfrom to indexto, or next available space"""
-        self.indexchanged = True
+        self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True
         self.indexchanges += 1
 
         if str(indexfrom) not in self.indexes():
@@ -2326,6 +2344,7 @@ class Note_Shelf:
             self.default_dict['indexlist'].delete(indexfrom)
             self.default_dict['indexlist'].add(indexto)
             self.changed = True
+            self.indexchanged = True
         return True
 
 
@@ -2528,7 +2547,7 @@ class Note_Shelf:
 
             suffix = ''
             if self.no_flash:
-                tex_temp = tex_temp.replace('/FC/','/BREAK/')
+                tex_temp = tex_temp.replace('/FC/','\n  /BREAK/  \n')
             if '/FC/' in tex_temp:
                 sides_temp = tex_temp.split('/FC/')
                 if self.flexflip:
@@ -2594,19 +2613,27 @@ class Note_Shelf:
 
         """show all indexes for existing notes"""
 
-        if self.indexchanged or not self.sortedindexes:
-            self.indexchanged = False 
+        if not self.usesequence:
 
-            self.sortedindexes = sorted(self.note_dict.keys(),
-                                        key=lambda x_temp: Index(x_temp))
+            if len(self.note_dict.keys()) != len(self.sortedindexes) or self.indexchanged or not self.sortedindexes:
+                self.indexchanged = False 
+
+                self.sortedindexes = sorted(self.note_dict.keys(),
+                                            key=lambda x_temp: Index(x_temp))
+                return self.sortedindexes
             return self.sortedindexes
-        return self.sortedindexes
+        else:
+            if self.indexchanged:
+                self.sortedindexes = self.default_dict['indexlist'].strings()
+                return self.sortedindexes
+            else:
+                return self.sortedindexes
 
     def keys(self):
 
         """show all keys for existing notes"""
-        if self.indexchanged or not self.sortedkeys:
-            self.indexchanged = False
+        if self.indexchanged_key or not self.sortedkeys:
+            self.indexchanged_key = False
             self.sortedkeys = sorted(self.key_dict.keys())
             return self.sortedkeys
         return self.sortedkeys
@@ -2616,7 +2643,7 @@ class Note_Shelf:
 
         """show all tags for existing notes"""
         if self.indexchanged or not self.sortedtags:
-            self.indexchanged = False
+            self.indexchanged_tag = False
             self.sortedtags = sorted(self.tag_dict.keys())
             return self.sortedtags
         return self.sortedtags
@@ -6861,6 +6888,9 @@ class Console(Note_Shelf):
 ##                    'w': 'wb'}[flagvalue]
 
         self.indexchanged = True
+        self.indexchanged_key = True
+        self.indexchanged_tag = True
+        
         self.indexchanges = 0
         self.sortedindexes = set()
         self.sortedtags = set()
@@ -7724,6 +7754,40 @@ class Console(Note_Shelf):
         self.histio.implode(sort_keyset(self.keys())[d_temp])
         self.histio.show()
 
+    def json_com (self,
+              longphrase=False,
+              mainterm=EMPTYCHAR,
+              otherterms=EMPTYCHAR,
+              predicate=EMPTYCHAR,
+              totalterms=0):
+
+        if mainterm in ['dumpprojects']:
+
+            datesuffix=str(datetime.datetime.now()).split(' ')[0]
+            project = str(transform(self.default_dict['projects']))
+            save_file(returntext=project,
+                      filename='PROJ'+notebookname+datesuffix,
+                      folder='/textfiles')
+
+        if mainterm in ['loadprojects']:
+
+            if self.default_dict['projects'] == {}:
+                filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                                              file_suffix='.txt', file_prefix=EMPTYCHAR,
+                                              get_filename=otherterms[0])[0].rstrip()
+                display.noteprint((alerts.LOADING_FILE,filename_temp))
+                project = get_text_file(filename_temp)
+
+                self.default_dict['projects'] = transform(eval(project))
+                if self.default_dict['projects']:
+                    display.noteprint(('ATTENTION!','SUCCESSFULLY LOADED'))
+
+        if mainterm in ['clearprojects']:
+            if input('Are your sure?') in YESTERMS and input('Are you really sure?') in YESTERMS:
+                self.default_dict['projects'] = {}
+            
+            
+            
 
 
     def resize_etc_com (self,
@@ -7883,7 +7947,7 @@ class Console(Note_Shelf):
                           EMPTYCHAR,
                           changekeys=True,
                           annotate=predicate[0],
-                          update_table=False)
+                          update_table=True)
         elif mainterm in ['editnotekeys', 'enk']:
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
@@ -7892,7 +7956,7 @@ class Console(Note_Shelf):
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.note_dict[
                                                                        str(i_temp)].meta['size']))
-                if not self.edit(i_temp,{},EMPTYCHAR,changekeys=True,changetext=False,askabort=True,update_table=False):
+                if not self.edit(i_temp,{},EMPTYCHAR,changekeys=True,changetext=False,askabort=True,update_table=True):
                     break
         elif mainterm in ['editnotetext', 'ent']:
             for i_temp in [a_temp for a_temp
@@ -7902,7 +7966,7 @@ class Console(Note_Shelf):
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.note_dict[
                                                                        str(i_temp)].meta['size']))
-                self.edit(i_temp,{},EMPTYCHAR,annotate=predicate[0],update_table=False)
+                self.edit(i_temp,{},EMPTYCHAR,annotate=predicate[0],update_table=True)
 
         elif mainterm in ['link']:
             temp_range = [str(x_temp) for x_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]))]
@@ -10325,6 +10389,10 @@ while bigloop:
 
                 except KeyError:
                     print('KEY ERROR')
+                    notebook.usesequence = False
+                    notebook.indexchanged = True 
+                    uptohere = Index(notebook.indexes()[-1])
+                    print(uptohere)
                 except AttributeError:
                     print('ATTRIBUTE ERROR')
                 except FileNotFoundError:

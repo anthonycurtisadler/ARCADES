@@ -445,8 +445,13 @@ FLIP_COM = 'self.flip_com(mainterm=mainterm,otherterms=otherterms,longphrase=lon
 RESIZE_COM = 'self.resize_etc_com(longphrase=longphrase,mainterm=mainterm,otherterms=otherterms,predicate=predicate,totalterms=0)'
 REFORMATING_COM = 'self.reformating_com(mainterm=mainterm,otherterms=otherterms,predicate=predicate,longphrase=longphrase)'
 COPY_MOVE_SEARCH_COM = 'self.copy_move_search_com(longphrase=longphrase,mainterm=mainterm,otherterms=otherterms,predicate=predicate)'
+JSON_COM = 'self.json_com(longphrase=longphrase,mainterm=mainterm,otherterms=otherterms,predicate=predicate,totalterms=0)'
 
-simple_commands =  {'setsides':RESIZE_COM,
+
+simple_commands =  {'dumpprojects':JSON_COM,
+                    'loadprojects':JSON_COM,
+                    'clearprojects':JSON_COM,
+                    'setsides':RESIZE_COM,
                     'setflipat':RESIZE_COM,
                     'flashmode':'self.flipmode = not self.flipmode',
                     'flexflip':RESIZE_COM,
