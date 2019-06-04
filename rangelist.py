@@ -4,6 +4,8 @@ pylint rated 9.68/10
 """
 
 from globalconstants import EMPTYCHAR, DASH, COMMA, BLANK, COMMABLANK, SLASH, LONGDASH
+from indexclass import Index
+
 def de_range(range_string):
 
     """Takes a single formatted range and returns a list
@@ -42,18 +44,41 @@ def range_find(pageset):
 
     """Tranforms a list of pages into a formatted range
     """
-
+        
     pagerangelist = []
 
     for page in sorted(pageset):
 
-        if page in pageset and page-1 in pageset:
+        if isinstance(page,int):
 
-            pagerangelist[-1].append(str(page))
+            if page in pageset and page-1 in pageset:
 
-        elif page in pageset and not page-1 in pageset:
+                pagerangelist[-1].append(str(page))
 
-            pagerangelist.append([str(page)])
+            elif page in pageset and not page-1 in pageset:
+
+                pagerangelist.append([str(page)])
+
+        if isinstance(page,str):
+            if page.isnumeric():
+                if page in pageset and str(int(page)-1) in pageset:
+
+                    pagerangelist[-1].append(str(page))
+
+                elif page in pageset and not str(int(page)-1) in pageset:
+
+                    pagerangelist.append([str(page)])
+
+        if type(page) == type(Index(0)):
+            if page in pageset and page-Index(1) in pageset:
+
+                pagerangelist[-1].append(str(page))
+
+            elif page in pageset and not page-Index(1) in pageset:
+
+                pagerangelist.append([str(page)])
+            
+            
 
     pagerangestringlist = []
 

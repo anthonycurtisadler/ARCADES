@@ -22,7 +22,10 @@ class Index:
 
     def __init__(self, data):
 
-
+        if not isinstance(data,(int,str,tuple,list,float)):
+            data = str(data)
+            
+            
         if isinstance(data, int):
             self.self = tuple([data])
         if isinstance(data, str):
@@ -32,6 +35,7 @@ class Index:
             self.self = tuple([int(a_temp) for a_temp in data.split(PERIOD)])
         if isinstance(data, (tuple, list)):
             self.self = tuple(data)
+
 
     def __str__(self):
 

@@ -76,7 +76,10 @@ class OrderedList:
                                key=lambda x_temp: Index(str(x_temp)))
             
         elif entrylist and not indexstrings:
-            self.list = sorted(set(entrylist))
+            try:
+                self.list = sorted(set(entrylist))
+            except:
+                self.list = entrylist
             self.indexstrings = False
         else:
             self.list = []
@@ -445,9 +448,10 @@ class OrderedList:
     def ends (self):
         return self.list[0],self.list[-1]
 
+    def strings (self):
+        return [str(a) for a in self.list]
+
     def find_within(self,item1,item2,fromequal=False,toequal=False):
-
-
 
         try:
 
