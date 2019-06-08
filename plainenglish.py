@@ -1,3 +1,7 @@
+### contains queries, labels, alerts for plain English language, as well as the commands.
+### and various input terms.
+### NOTE that the names of the commands cannot be changed since 
+
 from globalconstants import DASH, PLUS, CARET,\
      VERTLINE, EOL, DOLLAR, POUND, SEMICOLON, QUESTIONMARK
 import commandscript
@@ -158,7 +162,8 @@ class Queries:
           self.KEY_COUNT = 'Keycount'
           self.EMPTY_BREAK_NEW = '(e)mpty,(b)reak,(n)ewnote? '
           self.SPECS = 'Specs . terms to purge? '
-          self.SET_TRIM = 'Set trim for displaying keywords? '
+          self.SET_KEY_TRIM = 'Set trim for displaying keywords? '
+          self.SET_TEXT_TRIM = 'Set trim for displaying text? '
           self.NEW_NOTE_SIZE = 'New note size? '
 
           self.OPEN_AS_NEW = 'Open as new file?'
@@ -301,7 +306,8 @@ class Labels:
           self.LIMIT_LIST_CHANGED = '/C/LIMIT LIST changed to'
           self.SHOW_CONFIG_BOX = '/C/Show configurations in boxes'
           self.PURGE_KEYS = '/C/Purgekeys settings'
-          self.TRIM = '/C/TRIM'
+          self.KEY_TRIM = '/C/ KEY TRIM'
+          self.TEXT_TRIM = '/C/ TEXT TRIM'
           self.SIZE ='/C/SIZE'
           self.FLIPOUT = 'FLIPOUT'
           self.SHORTSHOW = 'SHORTSHOW'
@@ -332,6 +338,20 @@ class Labels:
           self.SIDE = 'SIDE'
           self.SIDES = 'SIDES'
           self.FLIP_AT = 'FLIP AT'
+          self.TAG_DEFAULT = 'TAG DEFAULT'
+          self.USE_SEQUENCE = 'USE SEQUENCE'
+          self.NO_FLASH = "Don't show flash cards"
+          self.CHECK_SPELLING = 'Spell Check'
+          self.FLASHMODE = 'FLASHMODE'
+          self.SHOW_DATE = 'Show date'
+          self.SORT_BY_DATE= 'Sort by Date'
+          self.ORDER_KEYS = 'orderkeys'
+          self.ENTER_HELP= 'Enterhelp'
+          self.CHILDREN_TOO = 'Children too'
+          self.SHOW_IMAGES = 'Show Images'
+          self.SHOW_TEXTFILES = 'Show Textfiles'
+          self.DELETE_WHEN_EDITING = 'Delete when editing'
+          self.VARIABLE_SIZE = 'Variable Size'
           
 
           
@@ -395,18 +415,20 @@ class DefaultConsoles:
 
 labels = Labels ()
           
-binary_settings =    {'showtags':('self.tagdefault','TAG DEFAULT'),
-                      'usesequence':('self.usesequence','USE SEQUENCE'),
+binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
+                      'usesequence':('self.usesequence',labels.USE_SEQUENCE),
                       'boxconfigs':('self.box_configs', labels.SHOW_CONFIG_BOX),
                       'autobackup':('self.autobackup', labels.AUTOBACKUP),
                       'curtail':("self.default_dict['curtail']",labels.CURTAIL),
                       'itshow':("self.default_dict['setitflag']",labels.ITERATOR_SHOW),
-                      'spelling':("self.check_spelling",'Spell Check'),
-                      'showdate':("self.default_dict['showdate']",'Show date'),
-                      'sortbydate':("self.default_dict['sortbydate']",'Sort by Date'),
-                      'orderkeys':("self.default_dict['orderkeys']",'orderkeys'),
-                      'enterhelp':("self.default_dict['enterhelp']",'Enterhelp'),
-                      'childrentoo':("self.children_too",'Children too'),
+                      'noflash':("self.no_flash",labels.NO_FLASH),
+                      'spelling':("self.check_spelling",labels.CHECK_SPELLING),
+                      'flashmode':("self.flipmode",labels.FLASHMODE),
+                      'showdate':("self.default_dict['showdate']",labels.SHOW_DATE),
+                      'sortbydate':("self.default_dict['sortbydate']",labels.SORT_BY_DATE),
+                      'orderkeys':("self.default_dict['orderkeys']",labels.ORDER_KEYS),
+                      'enterhelp':("self.default_dict['enterhelp']",labels.ENTER_HELP),
+                      'childrentoo':("self.children_too",labels.CHILDREN_TOO),
                       'flipout':("self.flipout",labels.FLIPOUT),
                       'shortshow':("self.shortshow",labels.SHORTSHOW),
                       'fulltop':("self.show_full_top",labels.SHOW_TOP),
@@ -424,10 +446,10 @@ binary_settings =    {'showtags':('self.tagdefault','TAG DEFAULT'),
                       'negativeresults':("self.negative_results",labels.NEGATIVE_RESULTS),
                       'nr':("self.negative_results",labels.NEGATIVE_RESULTS),
                       'iteratemode':("self.iteratormode",labels.ITERATOR),
-                      'showimages':("self.show_images",'Show Images'),
-                      'showtext':("self.show_text",'Show Textfiles'),
-                      'editdelete':("self.delete_by_edit",'Delete when editing'),
-                      'variablesize':("self.default_dict['variablesize']",'Variable Size')}
+                      'showimages':("self.show_images",labels.SHOW_IMAGES),
+                      'showtext':("self.show_text",labels.SHOW_TEXTFILES),
+                      'editdelete':("self.delete_by_edit",labels.DELETE_WHEN_EDITING),
+                      'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -452,10 +474,9 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'loadprojects':JSON_COM,
                     'clearprojects':JSON_COM,
                     'setsides':RESIZE_COM,
-                    'setflipat':RESIZE_COM,
-                    'flashmode':'self.flipmode = not self.flipmode',
+                    'setflipat':RESIZE_COM,                  
                     'flexflip':RESIZE_COM,
-                    'noflash':'self.no_flash = not self.no_flash',
+                    
                     'flashforward':'self.side+=1',
                     'ff':'self.side+=1',
                     'flashback':'self.side-=1',
@@ -585,7 +606,8 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'resize':RESIZE_COM,
                     'size':RESIZE_COM,
                     'sz':RESIZE_COM,
-                    'trim':RESIZE_COM,
+                    'keytrim':RESIZE_COM,
+                    'texttrim':RESIZE_COM,
                     'editnote':RESIZE_COM,
                     'explode':RESIZE_COM,
                     'load':RESIZE_COM,

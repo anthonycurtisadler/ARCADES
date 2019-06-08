@@ -241,7 +241,7 @@ def check_hyperlinks(entry=[],purge=False):
     return returning
 
 
-def transpose_keys(entry_list=None):
+def transpose_keys(entry_list=None,surround=True):
 
     """Transpose keys that are indexes"""
 
@@ -251,13 +251,18 @@ def transpose_keys(entry_list=None):
         to_return = []
         
         for x_temp in entry_list:
-            to_return.append(str(notebook.default_dict['indextable'].transform(x_temp)))
+            to_return.append(str(notebook.default_dict['indextable'].transform(x_temp,surround=surround)))
+        return to_return
 
-    if isinstance(entry_list,set):
+    elif isinstance(entry_list,set):
         to_return = set()
         
         for x_temp in entry_list:
-            to_return.add(str(notebook.default_dict['indextable'].transform(x_temp)))
+            to_return.add(str(notebook.default_dict['indextable'].transform(x_temp,surround=surround)))
+        return to_return
+
+    else:
+        to_return = notebook.default_dict['indextable'].transform(entry_list,surround=surround)
 
     return to_return
 
@@ -1787,7 +1792,8 @@ class Note_Shelf:
         while str(index) in self.indexes():
             if indexlist != []:
                 index = self.find_space(next(freespaces))
-            else: index = index.next()
+            else:
+                index = index.next()
         return index
 
 
@@ -2164,7 +2170,7 @@ class Note_Shelf:
                 self.default_dict['indexlist_indexes'].add(Index(index))
                 self.changed = True
             if self.project:
-                self.default_dict['projects'][self.project]['indexes'].append(index)
+                self.default_dict['projects'][self.project]['indexes'].add(index)
             self.last_results = [index]
 
             if self.linking and self.starting_linking:
@@ -2222,6 +2228,8 @@ class Note_Shelf:
                 self.deepest(is_string=True,abridged=False)
             if len(index_reduce(str(index))) == self.abr_maxdepth_found:
                 self.deepest(is_string=True,abridged=True)
+            if self.project:
+                self.default_dict['projects'][self.project]['indexes'].delete(index)
             return {'keys': deletedkeys,
                     'text': deletedtext,
                     'meta': deletedmeta}
@@ -2232,6 +2240,12 @@ class Note_Shelf:
           flatten=False,
           copy=False,
              update_table=True):
+
+        if isinstance(indexfrom,str):
+            indexfrom = Index(indexfrom)
+        if isinstance(indexto,str):
+            indexto = Index(indexto)
+
 
         """Moves a note from indexfrom to indexto, or next available space"""
         self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True
@@ -2450,13 +2464,12 @@ class Note_Shelf:
     def show(self,
              index,
              shortform=False,
-             length=70,
+             length=None,
              yestags=True,
              highlight=None,
              show_date=True,
              most_recent=False,
              curtail=0):
-
 
  
 
@@ -2465,6 +2478,8 @@ class Note_Shelf:
         """
 
 
+        if not length:
+            length = self.default_dict['texttrim']
         d_index = str(index)
         if len(d_index) > 10:
             d_index = index_reduce(d_index) # to display long indexes in compact form
@@ -2485,8 +2500,8 @@ class Note_Shelf:
             return [EMPTYCHAR, EMPTYCHAR]
         kl = self.abridged_str_from_list(remove_tags(
             self.return_least_keys(transpose_keys(self.note_dict[str(index)].keyset),
-                                   override=not self.default_dict['orderkeys']
-                                   or not shortform), override=yestags),
+                                   override=not self.default_dict['orderkeys'],
+                                   add_number=True), override=yestags),
                                          override=not shortform)
         
         for char in string.whitespace[1:]:
@@ -2578,7 +2593,7 @@ class Note_Shelf:
                           +BLANK
                          
                           +VERTLINE+BLANK+kl
-                          +(self.default_dict['trim']-len(kl))*BLANK\
+                          +(self.default_dict['keytrim']-len(kl))*BLANK\
                           +BLANK+VERTLINE
                           +BLANK+t_temp)
 
@@ -4127,6 +4142,43 @@ class Note_Shelf:
             display.noteprint(self.show(i_temp),
                               param_width=self.default_dict['size'])
 
+    def show_project_dates (self,
+                            entrylist=None,
+                            determinant='ymd',
+                            dictionaryobject=None):
+
+        """ makes a dictionary of the dates in projects
+        """
+
+        if not dictionaryobject:
+            if 'PROJ'+determinant not in self.default_dict['date_dict']:
+                self.default_dict['date_dict']['PROJ'+determinant] = {}
+            dictionaryobject = self.default_dict['date_dict']['PROJ'+determinant]
+            self.default_dict['date_dict']['PROJ'+determinant].clear()
+
+
+        if entrylist is None:
+
+            entrylist = self.apply_limit(self.find_within(indexfrom=Index(0),orequal=True))
+            indexrange=False
+        else:
+            indexrange=True
+            entryset = set(entrylist)
+        
+            
+
+        for project_temp in self.default_dict['projects']:
+            dates_temp = self.default_dict['projects'][project_temp]['date']
+            dates_temp = {clip_date(d_temp,determinant) for d_temp in dates_temp}
+            for date in dates_temp:
+                if date not in dictionaryobject:
+                    dictionaryobject[date] = set()
+                if not indexrange:
+                    dictionaryobject[date].add(project_temp)
+                else:
+                    if entryset.intersection({str(x_temp) for x_temp in self.default_dict['projects'][project_temp]['indexes'].list}):
+                        dictionaryobject[date].add(project_temp)
+
     def find_dates_for_keys_in_indexes (self,
                                         entrylist=None,
                                         flag='o',
@@ -4172,7 +4224,7 @@ class Note_Shelf:
             if alldates:
                 dates = self.note_dict[index].alldates()
             else:
-                dates = {self.note_dict[str(index)].date(most_recent=newest)}
+                dates = {self.note_dict[index].date(most_recent=newest)}
 
             dates = {clip_date(d_temp,determinant) + suffix for d_temp in dates}
 
@@ -4189,12 +4241,13 @@ class Note_Shelf:
     def show_date_dictionary (self,
                               dictionaryobject=None,
                               determinant='ym',
-                              func=dummy):
+                              func=dummy,
+                              prefix=EMPTYCHAR):
 
         if not dictionaryobject:
-            if determinant not in self.default_dict['date_dict']:
-                self.default_dict['date_dict'][determinant] = {}
-            dictionaryobject = self.default_dict['date_dict'][determinant]
+            if prefix+determinant not in self.default_dict['date_dict']:
+                self.default_dict['date_dict'][prefix+determinant] = {}
+            dictionaryobject = self.default_dict['date_dict'][prefix+determinant]
 
 
         def dformat (x_temp):
@@ -4350,63 +4403,44 @@ class Note_Shelf:
                                                          for a_temp in entrylist],
                                                              by_date=self.default_dict['sortbydate'],quick=False)):
 
+                try:
 
 
-                if quick:
 
-                    i_temp = index_reduce(str(i_temp))
-                    k_temp = formkeys(self.note_dict[i_temp].keyset)
-                    k_temp = k_temp[0:min([len(k_temp),30])]
-                    t_temp = self.note_dict[i_temp].text
-                    t_temp = nformat.purgeformatting(t_temp[0:min([len(t_temp),40])])
-                    t_temp = t_temp.replace(VERTLINE,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR).replace(EOL,EMPTYCHAR)
-                    d_temp = str(self.note_dict[i_temp].date(most_recent=True,
-                                                                  short=True,
-                                                                  convert=False))
-                    
-                    
-                    self.default_dict['all'].append(i_temp+self.mark(i_temp)
-                                                    +VERTLINE+d_temp
-                                                    +VERTLINE+k_temp
-                                                    +VERTLINE+t_temp)
-                    self.dd_changed = True
-                    
-                                                    
+                    if quick:
 
-                    
+                        i_temp = index_reduce(str(i_temp))
+                        k_temp = formkeys(self.note_dict[i_temp].keyset)
+                        k_temp = k_temp[0:min([len(k_temp),30])]
+                        t_temp = self.note_dict[i_temp].text
+                        t_temp = nformat.purgeformatting(t_temp[0:min([len(t_temp),40])])
+                        t_temp = t_temp.replace(VERTLINE,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR).replace(EOL,EMPTYCHAR)
+                        d_temp = str(self.note_dict[i_temp].date(most_recent=True,
+                                                                      short=True,
+                                                                      convert=False))
+                        
+                        
+                        self.default_dict['all'].append(i_temp+self.mark(i_temp)
+                                                        +VERTLINE+d_temp
+                                                        +VERTLINE+k_temp
+                                                        +VERTLINE+t_temp)
+                        self.dd_changed = True
+                        
+                                                        
 
-                elif not multi:
+                        
+
+                    elif not multi:
 
 
-                    # Not automulti, but variable size
+                        # Not automulti, but variable size
 
-                    if self.default_dict['variablesize']:
+                        if self.default_dict['variablesize']:
 
-                        if not shortshow:
+                            if not shortshow:
 
-                            self.text_result += \
-                                             display.noteprint(self.show(i_temp, shortform=shortform,
-                                                                       yestags=self.tagdefault,
-                                                                       highlight=highlight,
-                                                                       show_date=show_date),
-                                                                      param_width=display.width_needed(
-                                                                          self.show(i_temp,
-                                                                                    shortform=shortform,
-                                                                                    yestags=self.tagdefault,
-                                                                                    highlight=highlight,
-                                                                                    show_date=show_date),
-                                                                          self.note_dict[
-                                                                              str(i_temp)]
-                                                                          .meta['size'],
-                                                                          leftmargin=self.default_dict['leftmargin']),
-                                                                      np_temp=shortform,
-                                                                      leftmargin=self.default_dict['leftmargin'],
-                                                                              brackets=brackets)
-                            
-                        else:
-                            
-                            self.default_dict['display'].append(display.noteprint(self.show
-                                                                          (i_temp, shortform=shortform,
+                                self.text_result += \
+                                                 display.noteprint(self.show(i_temp, shortform=shortform,
                                                                            yestags=self.tagdefault,
                                                                            highlight=highlight,
                                                                            show_date=show_date),
@@ -4422,102 +4456,125 @@ class Note_Shelf:
                                                                               leftmargin=self.default_dict['leftmargin']),
                                                                           np_temp=shortform,
                                                                           leftmargin=self.default_dict['leftmargin'],
-                                                                                  brackets=brackets))
-                            self.dd_changed = True
+                                                                                  brackets=brackets)
+                                
+                            else:
+                                
+                                self.default_dict['display'].append(display.noteprint(self.show
+                                                                              (i_temp, shortform=shortform,
+                                                                               yestags=self.tagdefault,
+                                                                               highlight=highlight,
+                                                                               show_date=show_date),
+                                                                              param_width=display.width_needed(
+                                                                                  self.show(i_temp,
+                                                                                            shortform=shortform,
+                                                                                            yestags=self.tagdefault,
+                                                                                            highlight=highlight,
+                                                                                            show_date=show_date),
+                                                                                  self.note_dict[
+                                                                                      str(i_temp)]
+                                                                                  .meta['size'],
+                                                                                  leftmargin=self.default_dict['leftmargin']),
+                                                                              np_temp=shortform,
+                                                                              leftmargin=self.default_dict['leftmargin'],
+                                                                                      brackets=brackets))
+                                self.dd_changed = True
 
-                    # not automulti, not variable size
-                    else:
-                        if not shortshow:
-                            self.text_result +=  \
-                                             display.noteprint(self.show(i_temp,
-                                                        shortform=shortform,
-                                                        yestags=self.tagdefault,
-                                                        show_date=show_date),
-                                                               param_width=self.default_dict['size'],
-                                                               np_temp=shortform,
-                                                               leftmargin=self.default_dict['leftmargin'],
-                                                               brackets=brackets)
+                        # not automulti, not variable size
                         else:
-                            self.default_dict['display'].append(display.noteprint(self.show(i_temp,
+                            if not shortshow:
+                                self.text_result +=  \
+                                                 display.noteprint(self.show(i_temp,
                                                             shortform=shortform,
                                                             yestags=self.tagdefault,
                                                             show_date=show_date),
-                                                  param_width=self.default_dict['size'],
-                                                  np_temp=shortform,
-                                                  leftmargin=self.default_dict['leftmargin'],
-                                                                                  brackets=brackets))
-                            self.dd_changed = True
+                                                                   param_width=self.default_dict['size'],
+                                                                   np_temp=shortform,
+                                                                   leftmargin=self.default_dict['leftmargin'],
+                                                                   brackets=brackets)
+                            else:
+                                self.default_dict['display'].append(display.noteprint(self.show(i_temp,
+                                                                shortform=shortform,
+                                                                yestags=self.tagdefault,
+                                                                show_date=show_date),
+                                                      param_width=self.default_dict['size'],
+                                                      np_temp=shortform,
+                                                      leftmargin=self.default_dict['leftmargin'],
+                                                                                      brackets=brackets))
+                                self.dd_changed = True
 
 
 
 
-                elif multi:
+                    elif multi:
 
-                    if not vary:
+                        if not vary:
 
-                        if self.default_dict['variablesize']:
-                            output.load(
-                                display.noteprint(self.show(i_temp,
-                                                            yestags=self.tagdefault,
-                                                            show_date=show_date,curtail=curtail),
-                                                  np_temp=True,
-                                                  param_width=display.width_needed
-                                                  (self.show(i_temp,
-                                                             yestags=self.tagdefault,
-                                                             show_date=show_date,
-                                                             curtail=curtail),
-                                                   self.note_dict[str(i_temp)].meta['size'],
-                                                   leftmargin=self.default_dict['leftmargin']),
-                                                  leftmargin=self.default_dict['leftmargin'],
-                                                  brackets=brackets))
-                        else:
-                            output.load(display.noteprint
-                                        (self.show(i_temp,
-                                                   yestags=self.tagdefault,
-                                                   show_date=show_date,curtail=curtail),
-                                         np_temp=True,
-                                         param_width=self.default_dict['size'],
-                                         leftmargin=self.default_dict['leftmargin'],
-                                         brackets=brackets))
+                            if self.default_dict['variablesize']:
+                                output.load(
+                                    display.noteprint(self.show(i_temp,
+                                                                yestags=self.tagdefault,
+                                                                show_date=show_date,curtail=curtail),
+                                                      np_temp=True,
+                                                      param_width=display.width_needed
+                                                      (self.show(i_temp,
+                                                                 yestags=self.tagdefault,
+                                                                 show_date=show_date,
+                                                                 curtail=curtail),
+                                                       self.note_dict[str(i_temp)].meta['size'],
+                                                       leftmargin=self.default_dict['leftmargin']),
+                                                      leftmargin=self.default_dict['leftmargin'],
+                                                      brackets=brackets))
+                            else:
+                                output.load(display.noteprint
+                                            (self.show(i_temp,
+                                                       yestags=self.tagdefault,
+                                                       show_date=show_date,curtail=curtail),
+                                             np_temp=True,
+                                             param_width=self.default_dict['size'],
+                                             leftmargin=self.default_dict['leftmargin'],
+                                             brackets=brackets))
 
-                    else:
-
-                        if self.default_dict['variablesize']:
-                            output.load(display.noteprint
-                                        (self.show(i_temp,
-                                                   yestags=self.tagdefault,
-                                                   show_date=show_date,
-                                                   curtail=curtail),
-                                         np_temp=True,
-                                         param_width=display.width_needed
-                                         (self.show(i_temp,
-                                                    yestags=self.tagdefault,
-                                                    show_date=show_date,
-                                                    curtail=curtail),
-                                          p_width=max([int
-                                                       (math.sqrt
-                                                        (len
-                                                         (self.show(i_temp,
-                                                                    yestags=self.tagdefault,
-                                                                    show_date=show_date,
-                                                                    curtail=curtail)[1]))),20])),
-                                         leftmargin=self.default_dict['leftmargin'],
-                                         brackets=brackets))
                         else:
 
-                            output.load(display.noteprint(self.show
-                                                          (i_temp, yestags=self.tagdefault,
-                                                           show_date=show_date),
-                                                          np_temp=True,
-                                                          param_width=max([int
-                                                                           (math.sqrt(
-                                                                               len(self.show(
-                                                                                   i_temp,
-                                                                                   yestags=self.tagdefault,
-                                                                                   show_date=show_date)[1]))), 20]),
-                                                          leftmargin=self.default_dict['leftmargin'],
-                                                          brackets=brackets,
-                                                          curtail=curtail))
+                            if self.default_dict['variablesize']:
+                                output.load(display.noteprint
+                                            (self.show(i_temp,
+                                                       yestags=self.tagdefault,
+                                                       show_date=show_date,
+                                                       curtail=curtail),
+                                             np_temp=True,
+                                             param_width=display.width_needed
+                                             (self.show(i_temp,
+                                                        yestags=self.tagdefault,
+                                                        show_date=show_date,
+                                                        curtail=curtail),
+                                              p_width=max([int
+                                                           (math.sqrt
+                                                            (len
+                                                             (self.show(i_temp,
+                                                                        yestags=self.tagdefault,
+                                                                        show_date=show_date,
+                                                                        curtail=curtail)[1]))),20])),
+                                             leftmargin=self.default_dict['leftmargin'],
+                                             brackets=brackets))
+                            else:
+
+                                output.load(display.noteprint(self.show
+                                                              (i_temp, yestags=self.tagdefault,
+                                                               show_date=show_date),
+                                                              np_temp=True,
+                                                              param_width=max([int
+                                                                               (math.sqrt(
+                                                                                   len(self.show(
+                                                                                       i_temp,
+                                                                                       yestags=self.tagdefault,
+                                                                                       show_date=show_date)[1]))), 20]),
+                                                              leftmargin=self.default_dict['leftmargin'],
+                                                              brackets=brackets,
+                                                              curtail=curtail))
+                except:
+                    display.noteprint((alerts.ATTENTION,'cannot show '+str(i_temp)))
 
             if not quick and shortform and not multi:
 
@@ -6053,7 +6110,7 @@ class Note_Shelf:
         self.key_freq_dict = {}
 
         for k_temp in self.keys():
-            self.key_freq_dict[k_temp] = len(self.key_dict[k_temp])/len(self.keys())
+            self.key_freq_dict[k_temp] = len(self.key_dict[k_temp])
 
 ##        for k in self.key_freq_dict: print(k, self.key_freq_dict[k])
 
@@ -6090,7 +6147,8 @@ class Note_Shelf:
                           keyset,
                           numberof=0,
                           override=False,
-                          no_allcaps=True):
+                          no_allcaps=True,
+                          add_number=False):
 
         """ returns the least frequent keys in a keyset."""
 
@@ -6101,13 +6159,13 @@ class Note_Shelf:
         if not keyset:
             return []
         freq_list = self.order_keys(keyset)
-        freq_list = [a_temp[0] for a_temp
+        freq_list = [a_temp[0]+ self.show_key_freq*add_number*(' ('+str(a_temp[1])+')') for a_temp
                      in freq_list][0 : numberof]
         if no_allcaps and len(freq_list) > 3:
             freq_list = [a_temp for a_temp
                          in freq_list
                          if not a_temp.isupper()]
-        freq_list = sorted(freq_list, key=lambda x_temp: len(x_temp))
+##        freq_list = sorted(freq_list, key=lambda x_temp: len(x_temp))
 ##        freq_list.reverse()
 
         return freq_list
@@ -6125,7 +6183,7 @@ class Note_Shelf:
         if override:
             trim_length = KEYLENGTH
         if trim_length == 0:
-            trim_length = self.default_dict['trim']
+            trim_length = self.default_dict['keytrim']
 
         returntext = EMPTYCHAR
         for term in entrylist:
@@ -6457,12 +6515,17 @@ class Note_Shelf:
 
         
 
+        
+
         notelist = DisplayList(displayobject=display)
         text_temp = [labels.PROJECT_DISPLAY,' || ']
         for counter,temp_key in enumerate(sorted(projectobject)):
 
             if 'indexes' not in projectobject[temp_key]:
-                projectobject[temp_key]['indexes'] = []
+                projectobject[temp_key]['indexes'] = OrderedList()
+            else:
+                if isinstance(projectobject[temp_key]['indexes'],list):
+                    projectobject[temp_key]['indexes'] = OrderedList(sorted(projectobject[temp_key]['indexes'],key=lambda x_temp:Index(x_temp)))
             if 'status' not in projectobject[temp_key]:
                 projectobject[temp_key]['status'] = {'started':str(datetime.datetime.now()),
                                                                              'open':True,
@@ -6477,9 +6540,11 @@ class Note_Shelf:
             line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)+(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
             line_temp += VERTLINE + '[' + abridge(keys_formated, 40) + (40 -  len(abridge(keys_formated, 40))) * BLANK + ']/'
             if len(projectobject[temp_key]['indexes']) > 1:
-                   line_temp += str(projectobject[temp_key]['indexes'][0])+':'+str(projectobject[temp_key]['indexes'][-1])
-            elif len(projectobject[temp_key]['indexes']) == 1:
-                line_temp += str(projectobject[temp_key]['indexes'][0])
+                   line_temp += str(transpose_keys(projectobject[temp_key]['indexes'].list,
+                                                   surround=False)[0]) +':'+str(transpose_keys(projectobject[temp_key]['indexes'].list,
+                                                                                            surround=False)[-1])
+            elif len(projectobject[temp_key]['indexes'].list) == 1:
+                line_temp += str(projectobject[temp_key]['indexes'].list[0])
                 
             else:
                 line_temp += ''
@@ -6924,7 +6989,8 @@ class Console(Note_Shelf):
         self.default_dict = self.pickle_dictionary['d']
             # persistent default data
 
-
+        if 'texttrim' not in self.default_dict:
+            self.default_dict['texttrim'] = 40
         if 'enterhelp' not in self.default_dict:
             self.default_dict['enterhelp'] = True
         if 'formattinghelp' not in self.default_dict:
@@ -6953,8 +7019,8 @@ class Console(Note_Shelf):
             self.default_dict['iterators'] = []
         if 'iterator_names' not in self.default_dict:
             self.default_dict['iterator_names'] = {}
-        if 'trim' not in self.default_dict:
-            self.default_dict['trim'] = 30
+        if 'keytrim' not in self.default_dict:
+            self.default_dict['keytrim'] = 70
         if 'orderkeys' not in self.default_dict:
             self.default_dict['orderkeys'] = False
         if 'numberof' not in self.default_dict:
@@ -7131,7 +7197,8 @@ class Console(Note_Shelf):
         self.delete_by_edit = False
         self.abr_maxdepth_found = 0
         self.maxdepth_found = 0
-        self.usesequence = True  
+        self.usesequence = True
+        self.show_key_freq = True
 
 
         
@@ -7936,9 +8003,14 @@ class Console(Note_Shelf):
                 
 
 
-        elif mainterm in ['trim']:
-            self.default_dict['trim'] = int(s_input(queries.SET_TRIM,otherterms[0]))
-            display.noteprint((labels.TRIM, str(self.default_dict['trim'])))
+        elif mainterm in ['keytrim']:
+            self.default_dict['keytrim'] = int(s_input(queries.SET_KEY_TRIM,otherterms[0]))
+            display.noteprint((labels.KEY_TRIM, str(self.default_dict['keytrim'])))
+            self.dd_changed=True
+
+        elif mainterm in ['texttrim']:
+            self.default_dict['texttrim'] = int(s_input(queries.SET_TEXT_TRIM,otherterms[0]))
+            display.noteprint((labels.TEXT_TRIM, str(self.default_dict['texttrim'])))
             self.dd_changed=True
 
 
@@ -9479,6 +9551,15 @@ class Console(Note_Shelf):
                                                                       for a_temp
                                                                       in self.default_dict['flipbook']]).replace(LONGDASH,SLASH))
 
+        if '[%' in biginputterm and ']' in biginputterm and '[%]' not in biginputterm:
+            projectname = biginputterm.split('[%')[1].split(']')[0]
+            print(projectname)
+            if projectname in self.default_dict['projects']:
+                biginputterm = biginputterm.replace('[%'+projectname+']', rangelist.range_find([a_temp
+                                                                      for a_temp
+                                                                      in transpose_keys(self.default_dict['projects'][projectname]['indexes'].list,surround=False)]).replace(LONGDASH,SLASH))
+            
+
         return biginputterm,continuelooping,close_notebook
 
     
@@ -9981,7 +10062,7 @@ class Console(Note_Shelf):
                     project_name = otherterms[0]
                 else:
                     project_name = input(queries.PROJECT_NAME)
-                if project_name.isalpha():
+                if not projectname or project_name.isalpha():
                     break
                 else:
                     other_terms = EMPTYCHAR
@@ -10000,29 +10081,32 @@ class Console(Note_Shelf):
                     project_number += 1
                     project_name = project_name[0:-(x_temp+1)]+ str(project_number)
 
-            if input(queries.CLEAR_DEFAULT_KEYS) in YESTERMS:
-                self.default_dict['defaultkeys'] = []
-                self.dd_changed=True
-            self.default_dict['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
-            
+            if project_name:
+
+                if input(queries.CLEAR_DEFAULT_KEYS) in YESTERMS:
+                    self.default_dict['defaultkeys'] = []
+                    self.dd_changed=True
+                self.default_dict['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
                 
                     
-            self.default_dict['projects'][project_name] = {}
-            self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
-            self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
-            self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
-            self.default_dict['projects'][project_name]['date'] = [str(datetime.datetime.now())]
-            self.default_dict['projects'][project_name]['indexes'] = []
-            self.default_dict['projects'][project_name]['status'] = {'started':datetime.datetime.now(),
-                                                                     'open':True,
-                                                                     'lastmodified':[]}
-            self.dd_changed=True
-            
+                        
+                self.default_dict['projects'][project_name] = {}
+                self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
+                self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
+                self.default_dict['projects'][project_name]['date'] = [str(datetime.datetime.now())]
+                self.default_dict['projects'][project_name]['indexes'] = OrderedList()
+                self.default_dict['projects'][project_name]['status'] = {'started':datetime.datetime.now(),
+                                                                         'open':True,
+                                                                         'lastmodified':[]}
+                self.dd_changed=True
+                
 
-            self.project = project_name
+                self.project = project_name
 
 
         elif mainterm in ['saveproject']:
+            project_name = EMPTYCHAR
 
             while True:
 
@@ -10047,17 +10131,24 @@ class Console(Note_Shelf):
                 self.dd_changed=True
 
         elif mainterm in ['resumeproject','loadproject']:
+            project_name = EMPTYCHAR
             
             if self.project:   # Save the existing project status
                 project_name = self.project
                 if project_name in self.default_dict['projects']:
+
                     self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
 
                     if 'indexes' not in self.default_dict['projects'][project_name]:
-                        self.default_dict['projects'][project_name]['indexes'] = []
+                        self.default_dict['projects'][project_name]['indexes'] = OrderedList()
+                    else:
+                        if isinstance(self.default_dict['projects'][project_name]['indexes'],list):
+                            self.default_dict['projects'][project_name]['indexes'] = OrderedList(sorted(self.default_dict['projects']
+                                                                                                        [project_name]['indexes'],
+                                                                                                        key=lambda x_temp:Index(x_temp)))
                     if 'status' not in self.default_dict['projects'][project_name]:
                         self.default_dict['projects'][project_name]['status'] = {'started':str(datetime.datetime.now()),
                                                                                  'open':True,
@@ -10070,21 +10161,23 @@ class Console(Note_Shelf):
                 
                 if not project_name:
                     project_name = input(queries.PROJECT_NAME)
-                if project_name in  self.default_dict['projects']:
+                if not project_name or  project_name in  self.default_dict['projects']:
                     break
                 else:
-                    project_name = ''
+                    project_name = EMPTYCHAR
 
-            # To load different project 
-            self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-            lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),Index(str(self.default_dict['projects'][project_name]['position'][1]))
-            mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],self.default_dict['projects'][project_name]['going'][1]
-            self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
-##            if temp_uptohere in self.indexes():
-##                command_stack.add('skip:'+temp_uptohere)
-            
-            self.project = project_name
-            self.dd_changed=True
+            if project_name:
+
+                # To load different project
+                self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
+                lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),Index(str(self.default_dict['projects'][project_name]['position'][1]))
+                mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],self.default_dict['projects'][project_name]['going'][1]
+                self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
+    ##            if temp_uptohere in self.indexes():
+    ##                command_stack.add('skip:'+temp_uptohere)
+                
+                self.project = project_name
+                self.dd_changed=True
 
 
         elif mainterm in ['endproject','quitproject']:
@@ -10168,18 +10261,61 @@ class Console(Note_Shelf):
 
 
         elif mainterm in ['flipproject']:
-            self.default_dict['flipbook'] = self.default_dict['projects'][self.project]['indexes']
+            self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project]['indexes'].list,surround=False)
             self.set_iterator(self.default_dict['flipbook'],flag=self.default_dict['setitflag'])
             self.dd_changed=True
 
         elif mainterm in ['currentproject']:
 
             text_temp = self.project + EOL + EOL \
-                        + str(self.default_dict['projects'][self.project]['indexes'][0]) \
-                        + ':' + str(self.default_dict['projects'][self.project]['indexes'][-1])
+                        + str(self.default_dict['projects'][self.project]['indexes'].list[0]) \
+                        + ':' + str(self.default_dict['projects'][self.project]['indexes'].list[-1])
 
             display.noteprint(('/C/CURRENT PROJECT',text_temp))
 
+        elif mainterm in ['showproject']:
+
+            while True:
+                name_temp = s_input('Name of project?',otherterms[0])
+                if name_temp in self.default_dict['projects'] or not name_temp:
+                    break
+            if name_temp:
+                text_temp = 'PROJECTNAME: '+name_temp+EOL+EOL
+                text_temp += 'DEFAULTKEYS: '+', '.join(self.default_dict['projects'][name_temp]['defaultkeys']) + EOL + EOL
+                text_temp += 'POSITION:' + str(self.default_dict['projects'][name_temp]['position'][0]) +';'\
+                             + str(self.default_dict['projects'][name_temp]['position'][1]) + EOL+EOL
+                text_temp += 'DATES:' + ', '.join(self.default_dict['projects'][name_temp]['date']) + EOL + EOL
+                if len(self.default_dict['projects'][name_temp]['status']['lastmodified'])>0:
+                    text_temp += 'LAST MODIDFIED: ' + self.default_dict['projects'][name_temp]['status']['lastmodified'][-1] + EOL + EOL
+                text_temp += 'INDEXES: ' + ', '.join(transpose_keys(self.default_dict['projects'][name_temp]['indexes'].list,surround=False))
+                display.noteprint(('/C/ PROJECT',text_temp))
+        
+        elif mainterm in ['showprojectdates']:
+
+            determinant = EMPTYCHAR
+            if not predicate[0]:
+                determinant = 'ym'
+            else:
+                determinant = 'ymd'
+            if predicate[1]:
+                determinant += '*h'
+            if predicate[1] and predicate[2]:
+                determinant += 'm'
+
+            if not longphrase:
+                
+                self.show_project_dates(determinant=determinant)
+                self.show_date_dictionary(determinant=determinant,prefix='PROJ')
+
+            else:
+    
+                entrylist_temp = get_range(s_input('Range?',otherterms[0]),many=True)
+                if otherterms[1]:
+                    determinant = otherterms[1]
+     
+                self.show_project_dates(entrylist=entrylist_temp,determinant=determinant)
+                self.show_date_dictionary(determinant=determinant,prefix='PROJ')
+            
         elif (mainterm in ['quit'] and (predicate[0]
                                         or q_input(queries.SURE,command_stack))):
 
