@@ -121,6 +121,7 @@ class Queries:
           self.CONFLATE_EMBED = '[C]onflate or [E]mbed? '
           self.WIDTH = 'Width?'
           self.INDEX = 'Index?'
+          self.INDEX_OR_RANGE = 'Index or Indexrange?'
           self.COLUMNS = 'Columns?'
           self.BREAKER = 'Breaker?'
           self.BREAK_MARK = 'Break mark?'
@@ -192,7 +193,15 @@ class Queries:
           self.FOLDER = 'In folder?'
           self.TEXT_TO_PRINT = 'TEXT to print'
           self.FLIP_AT = 'Flip at?'
-
+          self.SHOW_ALL_NOTES = 'Do you want to show all the notes in the notebook? '
+          self.DIVIDE_PICKLE = "Do you want to divide "\
+                               +" the pickle file?" +\
+                               " (Y)yes to divide (D)on't ask again"
+          self.LANGUAGE = 'Language? '
+          self.LANGUAGE_SELECT = 'es(panol) fr(ench) en(glish) de(utsch)?'
+          self.FUNCTION_NAME = 'Function name? ' 
+          self.TEXT_TO_CONVERT = 'Text to convert? '
+          self.TEXT_TO_INTERPRET = 'Text to interpret?'
           
      
 class Alerts:
@@ -251,10 +260,18 @@ class Alerts:
           self.REVISE_DELETE_END = ' Enter new term, RETURN to keep, or (d)elete.' 
           self.ALREADY_IN_USE = 'ALREADY IN USE'
           self.STILL_CHANGED = 'Still change?'
-
-            
-     
-
+          self.INDEX = 'Index '
+          self.NOT_FOUND_IN_NOTEBASE = ' not found in notebase!'
+          self.NO_DICTIONARY_OBJECT = 'NO DICTIONARY OBJECT'
+          self.NEW_SEQUENCE = 'New sequence dictionary created of type '
+          self.OVERWRITTEN = 'OVERWRITTEN. New sequence dictionary created of type '  
+          self.RECONSTITUTING_INDEXES = 'RECONSTITING INDEX SEQUENCE'
+          self.WAS_DELETED = ' has been deleted!'
+          self.DELETE = 'DELETE '
+          self.FAILED = 'FAILED'
+          self.SAVED = ' SAVED!'
+          self.TOO_LARGE = 'TOO LARGE'
+          
           
 class Labels:
      def __init__(self):
@@ -383,7 +400,7 @@ class Spelling:
           self.WORD_TO_ADD =  'New word to add?'
           self.WORD_TO_DELETE = 'Words to delete?'
           self.LANGUAGE_SELECT = 'es(panol) fr(ench) en(glish) de(utsch)?'
-        
+             
 
 
 class DefaultConsoles:

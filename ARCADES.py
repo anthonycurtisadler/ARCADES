@@ -218,7 +218,7 @@ def check_hyperlinks(entry=[],purge=False):
             x_temp = str(x_temp)
             if isindex(x_temp):
                 if x_temp not in notebook.indexes():
-                    display.noteprint((alerts.ATTENTION, 'Index '+x_temp+' not found in notebase!'))
+                    display.noteprint((alerts.ATTENTION, alerts.INDEX+x_temp+alerts.NOT_FOUND_IN_NOTEBASE))
                 else:
                     returning.append(x_temp)
             else:
@@ -284,7 +284,7 @@ def how_common(entrylist,
 
         return sorted(returnlist,key=lambda x_temp: x_temp[1])
     else:
-        display.noteprint((alerts.ATTENTION, 'NO DICTIONARY OBJECT'))
+        display.noteprint((alerts.ATTENTION, alerts.NO_DICTIONARY_OBJECT))
 
 def formkeys(entry_temp):
 
@@ -676,6 +676,8 @@ def get_words(text):
 
 
 def get_keys_to_add(keys_to_add):
+
+    """ Expands the list of keys by applying keymacros and checks hyperlinks """
 
     keyset = set()
     for k_temp in keys_to_add:
@@ -1368,7 +1370,7 @@ class Note_Shelf:
 
         self.note_dict.close()
         if not self.divide_no_query:
-            q_temp = input("Do you want to divide the pickle file? (Y)yes to divide (D)on't ask again")
+            q_temp = input(queries.DIVIDE_PICKLE)
             if self.divided or q_temp in YESTERMS:
                 for suffix in ('d','k','w','t'):
                     tempfile = open(self.directoryname
@@ -1393,7 +1395,7 @@ class Note_Shelf:
             #globaldirectoryname+SLASH+self.filename+'PIC'
             tempfile.close()
                 
-    def default_save(self,suffix='',extra=''):
+    def default_save(self,suffix=EMPTYCHAR,extra=EMPTYCHAR):
         """saves default dictionary etc."""
         tempfile = open(self.directoryname
                         +SLASH+self.filename+extra
@@ -1536,11 +1538,11 @@ class Note_Shelf:
                     if identifier not in self.default_dict['sequences']:
                         if identifier not in self.default_dict['sequences']['#TYPE#']:
                             self.default_dict['sequences']['#TYPE#'][identifier] = seq_type
-                            display.noteprint((alerts.ATTENTION,'New sequence dictionary created of type '+str(seq_type)))
+                            display.noteprint((alerts.ATTENTION,alerts.NEW_SEQUENCE+str(seq_type)))
                         else:
                             del self.default_dict['sequences']['#TYPE#'][identifier]
                             self.default_dict['sequences']['#TYPE#'][identifier] = type(seq_value)
-                            display.noteprint((alerts.ATTENTION,'OVERWRITTEN. New sequence dictionary created of type '+str(seq_type)))
+                            display.noteprint((alerts.ATTENTION,alerts.OVERWRITTEN+str(seq_type)))
                         self.default_dict['sequences'][identifier] = OrderedList()
                         self.default_dict['sequences'][identifier].add(seq_value)
 
@@ -1819,7 +1821,7 @@ class Note_Shelf:
                 indexto = self.default_dict['indexlist'].list[-1]
 
             if len(self.default_dict['indexlist'])  < len(self.indexes()):
-                display.noteprint((alerts.ATTENTION,'RECONSTITING INDEX SEQUENCE'))
+                display.noteprint((alerts.ATTENTION,alerts.RECONSTITUTING_INDEXES))
                 self.default_dict['indexlist'] = OrderedList(self.indexes(),indexstrings=True)
                 self.dd_changed = True
             allindexes = False
@@ -2199,7 +2201,7 @@ class Note_Shelf:
 
 
         if str(index) in self.indexes():
-            self.display_buffer.append(str(index)+' has been deleted!')
+            self.display_buffer.append(str(index)+alerts.WAS_DELETED)
             self.delete_search_words(index,
                                      self.note_dict[str(index)].text)
             self.delete_keys_tags(index,
@@ -2218,7 +2220,7 @@ class Note_Shelf:
             try:
                 del self.note_dict[str(index)]
             except:
-                display.noteprint((alerts.ATTENTION,'DELETE '+str(index)+'FAILED'))
+                display.noteprint((alerts.ATTENTION,alerts.DELETE+str(index)+alerts.FAILED))
             if update_table:   
                 self.default_dict['indextable'].delete(index)
                 self.default_dict['indexlist'].delete(index)
@@ -2536,7 +2538,7 @@ class Note_Shelf:
                             
                         
 
-            suffix = ''
+            suffix = EMPTYCHAR
             if self.no_flash:
                 tex_temp = tex_temp.replace('/FC/','\n  /BREAK/  \n')
             if '/FC/' in tex_temp:
@@ -3629,7 +3631,7 @@ class Note_Shelf:
             
     def show_iterators(self):
 
-        show_note = ''
+        show_note = EMPTYCHAR
         for counter in range(min([len(self.default_dict['iterators']),len(self.default_dict['iterator_names'])])):
             show_note += 'Cluster #'+str(counter+1)+' : '+self.default_dict['iterator_names'][counter]+EOL+formkeys(self.default_dict['iterators'][counter])+EOL+'/BREAK/'+EOL
             
@@ -4349,24 +4351,7 @@ class Note_Shelf:
             if entrylist is None:
                 entrylist = self.get_indexes(childrentoo=childrentoo,
                                              levels=levels)
-
-##            if entrylist is None:
-##                if childrentoo:
-##                    if levels==0:
-##                        entrylist = self.apply_limit([a_temp for a_temp in self.indexes()
-##                                                      if Index(a_temp) > Index(str(0))])
-##                        # if entrylist is , default to all notes, with limit applied.
-##
-##                    else:
-##                        entrylist = self.apply_limit([a_temp for a_temp in self.indexes()
-##                                                      if Index(a_temp) > Index(str(0))
-##                                                      and Index(a_temp).level()<=levels])
-##                
-##                else:
-##                    entrylist = self.apply_limit([a_temp for a_temp in self.indexes()
-##                                                  if Index(a_temp) > Index(str(0))
-##                                                  and Index(a_temp).is_top()])
-##                        
+              
                     
             
             if entrylist and not isinstance(entrylist[0], str):
@@ -5609,7 +5594,7 @@ class Note_Shelf:
                 
             
 
-        display.noteprint(('',alerts.NOT_REGULAR))
+        display.noteprint((EMPTYCHAR,alerts.NOT_REGULAR))
 
         return query, set(), foundterms
 
@@ -5783,7 +5768,7 @@ class Note_Shelf:
         else:
             for i_temp in selection:
 
-                self.display_buffer.append('Saving '+str(i_temp))
+                self.display_buffer.append(alerts.SAVING+str(i_temp))
                 returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset),
                                         self.note_dict[str(i_temp)].text,
                                         right_at=right_at, index=i_temp))
@@ -5792,7 +5777,7 @@ class Note_Shelf:
         if saveyes:
             save_file(returntext,filename)
 
-            display.noteprint(('ATTENTION!',filename+' SAVED!'))
+            display.noteprint((alerts.ATTENTION,filename+alerts.SAVED))
 
 ##            directoryname = os.getcwd()+'/textfiles'
 ##            textfile = open(directoryname+SLASH
@@ -6032,8 +6017,8 @@ class Note_Shelf:
         entertext = get_text_file(filename)
 
         if '<PROGRAM>' in entertext and '</PROGRAM>' in entertext:
-            generic_program = ''.join(entertext.split('<PROGRAM>')[1:]).split('</PROGRAM>')[0]
-            entertext = ''.join(entertext.split('</PROGRAM>')[1:])
+            generic_program = EMPTYCHAR.join(entertext.split('<PROGRAM>')[1:]).split('</PROGRAM>')[0]
+            entertext = EMPTYCHAR.join(entertext.split('</PROGRAM>')[1:])
 
             exec(generic_program)
             print(generic_program)
@@ -6067,8 +6052,8 @@ class Note_Shelf:
 
         
     def loadtext(self,
-                 filename='',
-                 text=''):
+                 filename=EMPTYCHAR,
+                 text=EMPTYCHAR):
 
         analysetext = text
 
@@ -6547,7 +6532,7 @@ class Note_Shelf:
                 line_temp += str(projectobject[temp_key]['indexes'].list[0])
                 
             else:
-                line_temp += ''
+                line_temp += EMPTYCHAR
                                  
                              
             text_temp.append(line_temp)
@@ -6815,7 +6800,7 @@ class Configuration:
                         +'_config.pkl', 'wb')
         pickle.dump(self, tempfile)   #pylint flagged this as inproper assignment to self
         tempfile.close()
-        display.noteprint(('',labels.CONFIG_SAVED))
+        display.noteprint((EMPTYCHAR,labels.CONFIG_SAVED))
 
     def show(self,
              big=False):
@@ -6930,7 +6915,7 @@ class Console(Note_Shelf):
 
         
         self.pickle_dictionary = {}
-        loaded = ''
+        loaded = EMPTYCHAR
         failed = False
         display_temp = EMPTYCHAR
         for suffix in ('d','k','t','w'):
@@ -7167,11 +7152,11 @@ class Console(Note_Shelf):
         self.entry_buffer = DisplayList(displayobject=display)
         self.last_keys = set()
         self.rectify = False # equalizes width of notes
-        self.parent = ''
+        self.parent = EMPTYCHAR
         self.display_attributes = (True, True)
-        self.project = ''
-        self.key_results = ''
-        self.text_result = ''
+        self.project = EMPTYCHAR
+        self.key_results = EMPTYCHAR
+        self.text_result = EMPTYCHAR
         self.negative_results = False
         self.changed = False
         self.changes = 0
@@ -7729,7 +7714,7 @@ class Console(Note_Shelf):
                and not predicate[3]:
                 self.speller.show_added()
             if longphrase:
-                self.speller.show_added(s_input('Language? ',otherterms[0]))
+                self.speller.show_added(s_input(queries.LANGUAGE,otherterms[0]))
             if predicate[0]:
                 self.speller.show_added('en')
             if predicate[1]:
@@ -7879,7 +7864,7 @@ class Console(Note_Shelf):
             self.dictionaryload(filename_temp)
 
         if mainterm in ['language']:
-            lang_temp = s_input('En(glish), es(panol), fr(ench), de(utsch)?',otherterms[0])
+            lang_temp = s_input(queries.LANGUAGE_SELECT,otherterms[0])
             if len(lang_temp) > 1:
                 lang_temp = lang_temp[0:2].lower()
             if lang_temp in ['en','es','fr','de']:
@@ -7900,10 +7885,10 @@ class Console(Note_Shelf):
             print(text_temp)
 
         if mainterm in ['run']:
-            program_name = s_input('Function name',otherterms[0])
+            program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
             program = get_text_file(program_name,'\programs',suffix='.py')
             print(program)
-            text_temp=s_input('Text to convert',otherterms[1])
+            text_temp=s_input(queries.TEXT_TO_CONVERT,otherterms[1])
             exec(program)
             exec('self.text_result=generic(text_temp)')
 
@@ -7927,11 +7912,11 @@ class Console(Note_Shelf):
             self.text_result = get_text_file(filename_temp)
 
         if mainterm in ['interpret']:
-            text_temp=s_input('Text to interpret?',otherterms[0])
+            text_temp=s_input(queries.TEXT_TO_INTERPRET,otherterms[0])
             self.loadtext(text=text_temp)
 
         if mainterm in ['runinterpret']:
-            program_name = s_input('Function name',otherterms[0])
+            program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
             program = get_text_file(program_name,'\programs',suffix='.py')
             print(program)
             if not otherterms[1]:
@@ -8052,7 +8037,7 @@ class Console(Note_Shelf):
             
     
             if len(temp_range) > 10:
-                display.noteprint((alerts.ATTENTION,'TOO LARGE'))
+                display.noteprint((alerts.ATTENTION,alerts.TOO_LARGE))
             else:
                 for x_temp in temp_range:
 
@@ -8229,7 +8214,7 @@ class Console(Note_Shelf):
 
         elif mainterm in ['descendents']:
             if longphrase:
-                temp_entry = s_input('Index or Indexrange?',otherterms[0])
+                temp_entry = s_input(queries.INDEX_OR_RANGE,otherterms[0])
                 if DASH not in temp_entry and COMMA not in temp_entry:
                     self.iterate_over_descendents(self.group_into_descendents(self.all_descendents(temp_entry,as_index=False)))
                     self.parent = temp_entry
@@ -8950,7 +8935,7 @@ class Console(Note_Shelf):
 
             for com_temp in commandscript.HELP_DICTIONARY:
 
-                display.noteprint(('',
+                display.noteprint((EMPTYCHAR,
                                    side_note((com_temp,
                                               commandscript.HELP_DICTIONARY[com_temp][0]\
                                               +labels.NONE*\
@@ -9287,7 +9272,7 @@ class Console(Note_Shelf):
                   predicate=EMPTYCHAR,
                   longphrase=False,
                   lastup=None,
-                  series_enter=''):
+                  series_enter=EMPTYCHAR):
 
 
         index_entered = False
@@ -9407,7 +9392,7 @@ class Console(Note_Shelf):
                                       +COLON+index_reduce(str(lastup))
                                       +BLANK+add_mark(lastup)+
                                       self.parent
-                                      +BLANK+{'':'',
+                                      +BLANK+{EMPTYCHAR:EMPTYCHAR,
                                               PLUS+PLUS:'[++]',
                                               PLUS+PLUS+PLUS:'[+++]'}[series_enter]+BLANK)
                 manyinputterm = self.default_dict['commands'].do(manyinputterm, lchar=EMPTYCHAR)
@@ -9676,7 +9661,7 @@ class Console(Note_Shelf):
                       next_up=True,
                       uptohere=1,
                       notebookname=EMPTYCHAR,
-                      series_enter=''):
+                      series_enter=EMPTYCHAR):
 
         global override
 
@@ -9878,7 +9863,7 @@ class Console(Note_Shelf):
            in commandscript.HELP_DICTIONARY:
             # to display information about a term 
             
-            display.noteprint(('',
+            display.noteprint((EMPTYCHAR,
                                side_note((mainterm.replace(QUESTIONMARK,EMPTYCHAR),
                                           commandscript.HELP_DICTIONARY\
                                           [mainterm.replace(QUESTIONMARK,EMPTYCHAR)][0]\
@@ -10435,7 +10420,7 @@ if betastart:
 else:
     prefix = EMPTYCHAR
 if prefix:
-    display.noteprint(('','prefix='+prefix))
+    display.noteprint((EMPTYCHAR,'prefix='+prefix))
 bigloop = True
 allnotebooks = {}
 allnotebooks_tracking = {}
@@ -10563,7 +10548,7 @@ while bigloop:
                 display.noteprint((labels.CONSTITUTING_KEY_FREQ,
                                    alerts.WAIT))
 
-            if (input('Show?') in YESTERMS)\
+            if (input(queries.SHOW_ALL_NOTES) in YESTERMS)\
                and allnotebooks[notebookname].default_dict['displayonstart']:                
                 if not allnotebooks[notebookname].default_dict['display'] \
                    and not allnotebooks[notebookname].default_dict['all']:
@@ -10585,7 +10570,7 @@ while bigloop:
     
 
         continuelooping = True
-        series_enter = ''
+        series_enter = EMPTYCHAR
 
         while continuelooping:
 
@@ -10704,7 +10689,7 @@ while bigloop:
                 del allnotebooks[notebookname]
                 opennotebooks.clear()
                 for counter, nb_temp in enumerate(sorted(allnotebooks.keys())):
-                    opennotebooks.append(str(counter+1) + ': ' + nb_temp)
+                    opennotebooks.append(str(counter+1) + COLON + BLANK + nb_temp)
                 opennotebooks.present()
                 go_temp = True
                 while go_temp:
