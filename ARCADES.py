@@ -288,6 +288,8 @@ def how_common(entrylist,
 
 def formkeys(entry_temp):
 
+    """ combines format key and transpose keys """
+
     return nformat.format_keys(transpose_keys(entry_temp))
 
 
@@ -3248,6 +3250,8 @@ class Note_Shelf:
 
         def embedcount(line):
 
+            """return size adjusted for number of embedded notes"""
+
             x_temp = line.count(BOX_CHAR['lu'])
             return self.default_dict['size']-(4*x_temp)
 
@@ -3285,6 +3289,8 @@ class Note_Shelf:
                   undo=False,
                   counters=False,
                   only_counter=True):
+
+        """ create a new note divided into columns """
 
         if index in self.indexes():
 
@@ -4246,6 +4252,11 @@ class Note_Shelf:
                               func=dummy,
                               prefix=EMPTYCHAR):
 
+        """ Takes a date-dictionary and displays it
+            The date-dictionary has dates for keys, and contains
+            a list of keywords or other info as values
+        """
+
         if not dictionaryobject:
             if prefix+determinant not in self.default_dict['date_dict']:
                 self.default_dict['date_dict'][prefix+determinant] = {}
@@ -4286,6 +4297,11 @@ class Note_Shelf:
     def get_indexes(self,
                     childrentoo=True,
                     levels=0):
+
+        """ gets all  positive-valued indexes in the notebook
+            For only top-level notes, childrentoo False.
+            For all level notes, childrentoo True, levels=0
+        """
 
         if childrentoo:
             if levels==0:
@@ -4584,15 +4600,22 @@ class Note_Shelf:
                              index=None,
                              beforeafter=10):
 
+        """ shows only a single group of notes, rather than all notes at once.
+            The regular show-all is quite quick, so this is probably no longer necesary
+        """
+
         
 
         if entrylist is None:
-##            entrylist = self.get_indexes(childrentoo=childrentoo,
-##                                    levels=0)
-            entrylist = self.index_sort([Index(a_temp)
-                                         for a_temp
-                                         in entrylist],
-                                        by_date=self.default_dict['sortbydate'],quick=True)
+
+            if not self.default_dict['sortbydate']:
+                entrylist = self.default_dict['indexlist_indexes'].list
+            else:
+                entrylist = self.default_dict['indexlist_indexes'].list
+                entrylist = self.index_sort([Index(a_temp)
+                                             for a_temp
+                                             in entrylist],
+                                            by_date=self.default_dict['sortbydate'],quick=True)
 
         else:
             entrylist = self.index_sort([Index(a_temp)
@@ -4820,8 +4843,13 @@ class Note_Shelf:
 
     def show_variables(self):
 
+        """ show all the variables """
+
         variablelist = [(x_temp,self.variables[x_temp]) for x_temp in sorted(self.variables.keys())]
-        print(variablelist)
+        display.noteprint(('/C/ '+labels.VARIABLES.upper(), EOL.join([x_temp[0]+BLANK
+                                                  +COLON+BLANK
+                                                  +abridge(str(x_temp[1]),40)
+                                                  for x_temp in variablelist])))
         
         
 
@@ -4874,6 +4902,8 @@ class Note_Shelf:
 
     def display_fields(self):
 
+        """ displays the fields currently actice """
+
         field_text = self.show_fields()
         field_text_list = field_text.split(EOL)[0:-1]
         
@@ -4917,18 +4947,6 @@ class Note_Shelf:
 
         if not enterlist:
             enterlist = list(self.searchlog)
-
-
-
-        def abridge (string,maxlength=60,overmark=' ... ',rev=False):
-            if len(string) > maxlength:
-
-                if not rev:
-                    return (string[0:maxlength]+overmark)
-                return overmark+string[-maxlength:] 
-            else:
-                return string
-
 
         def lformat(x_temp):
 
@@ -5081,15 +5099,6 @@ class Note_Shelf:
 
         return returnset
     
-            
-        
-        
-            
-            
-            
-
-        
- 
 
     def new_search(self,
                    query,
@@ -5744,12 +5753,7 @@ class Note_Shelf:
         returntext = EMPTYCHAR
         if selection is None:
             selection = self.apply_limit(self.find_within(indexfrom=Index(0),orequal=True))
-##             sorted([a_temp for a_temp
-##                                in self.apply_limit(sorted(
-##                                    [str(Index(a_temp)) for a_temp
-##                                     in self.indexes()
-##                                     if Index(a_temp) > Index(0)],
-##                                    key=lambda x_temp: Index(x_temp)))])
+
         else:
             selection = sorted([a_temp for a_temp in selection
                                 if a_temp in self.indexes()],
@@ -5779,13 +5783,6 @@ class Note_Shelf:
 
             display.noteprint((alerts.ATTENTION,filename+alerts.SAVED))
 
-##            directoryname = os.getcwd()+'/textfiles'
-##            textfile = open(directoryname+SLASH
-##                            +filename+'.txt',
-##                            'x',
-##                            encoding='utf-8')
-##            textfile.write(returntext.replace('\ufeff', EMPTYCHAR))
-##            textfile.close()
 
         else:
             print(returntext)
@@ -10047,7 +10044,7 @@ class Console(Note_Shelf):
                     project_name = otherterms[0]
                 else:
                     project_name = input(queries.PROJECT_NAME)
-                if not projectname or project_name.isalpha():
+                if not project_name or project_name.isalpha():
                     break
                 else:
                     other_terms = EMPTYCHAR
