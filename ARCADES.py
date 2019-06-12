@@ -1065,13 +1065,14 @@ def show_list(entrylist,
 
 def save_file(returntext=EMPTYCHAR,
               filename=EMPTYCHAR,
-              folder='\textfiles'):
+              folder=os.altsep+'textfiles'):
 
     """for saving a file"""
     
               
     directoryname = os.getcwd()+folder
-    textfile = open(directoryname+SLASH
+    print(directoryname)
+    textfile = open(directoryname+os.altsep
                     +filename+'.txt',
                     'x',
                     encoding='utf-8')
@@ -2505,7 +2506,7 @@ class Note_Shelf:
         kl = self.abridged_str_from_list(remove_tags(
             self.return_least_keys(transpose_keys(self.note_dict[str(index)].keyset),
                                    override=not self.default_dict['orderkeys'],
-                                   add_number=True), override=yestags),
+                                   add_number=True,no_allcaps=False), override=yestags),
                                          override=not shortform)
         
         for char in string.whitespace[1:]:
@@ -8354,7 +8355,7 @@ class Console(Note_Shelf):
                                                        False,
                                                        sort=True,
                                                        many=True)],
-                               saveyes=predicate[2],
+                               saveyes=not predicate[2],
                                filename=(s_input(queries.SAVE_TO,
                                                  otherterms[1])),
                                metashow=(predicate[0]
