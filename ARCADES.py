@@ -122,6 +122,8 @@ def si_input (prompt=EMPTYCHAR,
               inputrange=range(-100000,100000),
               alert=(EMPTYCHAR,EMPTYCHAR)):
 
+    """Inputs an integer value"""
+
     while True:
         if inputtext  in [EMPTYCHAR, QUESTIONMARK]:
             inputtext = input(prompt)
@@ -1735,11 +1737,15 @@ class Note_Shelf:
     def deepest(self,
                 entrylist=None,
                 is_string=False,
-                abridged=False):
-        if abridged and self.abr_maxdepth_found>0:
-            return self.abr_maxdepth_found
-        if not abridged and self.maxdepth_found>0:
-            return self.maxdepth_found
+                abridged=False,
+                always=False):
+
+        if not always:
+        
+            if abridged and self.abr_maxdepth_found>0:
+                return self.abr_maxdepth_found
+            if not abridged and self.maxdepth_found>0:
+                return self.maxdepth_found
 
         """discovers the deepest level of any index across the given range"""
 
@@ -2175,7 +2181,8 @@ class Note_Shelf:
                 self.default_dict['indexlist_indexes'].add(Index(index))
                 self.changed = True
             if self.project:
-                self.default_dict['projects'][self.project]['indexes'].add(index)
+                for p_temp in self.project:
+                    self.default_dict['projects'][p_temp]['indexes'].add(index)
             self.last_results = [index]
 
             if self.linking and self.starting_linking:
@@ -2234,7 +2241,8 @@ class Note_Shelf:
             if len(index_reduce(str(index))) == self.abr_maxdepth_found:
                 self.deepest(is_string=True,abridged=True)
             if self.project:
-                self.default_dict['projects'][self.project]['indexes'].delete(index)
+                for p_temp in self.project:
+                    self.default_dict['projects'][p_temp]['indexes'].delete(index)
             return {'keys': deletedkeys,
                     'text': deletedtext,
                     'meta': deletedmeta}
@@ -2474,7 +2482,8 @@ class Note_Shelf:
              highlight=None,
              show_date=True,
              most_recent=False,
-             curtail=0):
+             curtail=0,
+             deepest=None):
 
  
 
@@ -2482,7 +2491,9 @@ class Note_Shelf:
         list[0]=keys; list[1]=text
         """
 
-
+        if not deepest:
+            deepest = self.deepest(is_string=True,abridged=True)
+        deepest += 3
         if not length:
             length = self.default_dict['texttrim']
         d_index = str(index)
@@ -2523,6 +2534,7 @@ class Note_Shelf:
 
 
                     if n_temp and n_temp[0] in [ATSIGN, STAR]:
+                        pass
                         if self.show_text:
                             folder_temp = {ATSIGN:'/textfiles',
                                            STAR:'/attachments'}[n_temp[0]]
@@ -2589,8 +2601,7 @@ class Note_Shelf:
             
             
             l_temp.append(d_index+self.mark(index)
-                          +max([(self.deepest(is_string=True,abridged=True))
-                                -(len(d_index+self.mark(index))), 0])*BLANK+BLANK+VERTLINE+BLANK
+                          +max([deepest-(len(d_index+self.mark(index))), 0])*BLANK+BLANK+VERTLINE+BLANK
                           +self.field(index)
                           +max([self.field_length()
                                 -(len(self.field(index))), 0])*BLANK+BLANK
@@ -4009,23 +4020,25 @@ class Note_Shelf:
                         keyset.add(k_temp)
             if not self.default_dict['keysbefore']:
                 keyset.update(oldkeys)
-        found_temp = False
-        if self.project:
-            for x_temp in range(1,1000):
-                if self.project + ATSIGN + str(x_temp)+'.0' in self.keys():
-                    found_temp = True
-                    break
-            if not found_temp:
 
-                self.default_dict['sequences']['#TYPE#'][self.project] = float
-                self.default_dict['sequences'][self.project] =  OrderedList()
-                next_temp = float(input('start from?'))
-            else:
-                next_temp = self.default_dict['sequences'][self.project].next()
-                
-                
+        if self.project:
+            for p_temp in self.project:
+                found_temp = False
+                for x_temp in range(1,1000):
+                    if p_temp + ATSIGN + str(x_temp)+'.0' in self.keys():
+                        found_temp = True
+                        break
+                if not found_temp:
+
+                    self.default_dict['sequences']['#TYPE#'][p_temp] = float
+                    self.default_dict['sequences'][p_temp] =  OrderedList()
+                    next_temp = float(input('start from?'))
+                else:
+                    next_temp = self.default_dict['sequences'][p_temp].next()
                     
-            keyset.add(self.project + ATSIGN + str(next_temp))
+                    
+                        
+                keyset.add(p_temp + ATSIGN + str(next_temp))
    
         for k_temp in self.default_dict['defaultkeys']:
             if ATSIGN in k_temp and QUESTIONMARK in k_temp:
@@ -4338,7 +4351,11 @@ class Note_Shelf:
                 alternateobject=None,
                 header=EMPTYCHAR,
                 brackets=True,
-                curtail=0):
+                curtail=0,
+                groupsize=None):
+        
+        if not groupsize:
+            groupsize = self.how_many
 
         """ shows a group of notes"""
 
@@ -4400,29 +4417,47 @@ class Note_Shelf:
                 self.default_dict['all'] = []
                 self.dd_changed = True
 
+            deepest_temp = self.deepest(is_string=True,abridged=True,always=True)
+            total_length_temp = len(entrylist)
+            lastgroup=-1
 
-            for counter, i_temp in enumerate(self.index_sort([Index(a_temp)
+            if not self.default_dict['sortbydate']:
+
+                to_enumerate =  [x_temp for x_temp in self.default_dict['indexlist_indexes'].list if str(x_temp) in entrylist]
+            else:
+                to_enumerate = self.index_sort([Index(a_temp)
                                                          for a_temp in entrylist],
-                                                             by_date=self.default_dict['sortbydate'],quick=False)):
+                                                             by_date=self.default_dict['sortbydate'],quick=False)
 
+
+            for counter, i_temp in enumerate(to_enumerate):
+                
+                group, remainder = divmod(counter,groupsize)
+                min_temp = group * groupsize
+                max_temp = min([(group+1)*groupsize,total_length_temp])
+ 
                 try:
 
 
+                    if group> lastgroup:
+                        deepest_temp = self.deepest(to_enumerate[min_temp:max_temp],is_string=True,abridged=True,always=True)
+                        lastgroup = group
 
                     if quick:
 
-                        i_temp = index_reduce(str(i_temp))
-                        k_temp = formkeys(self.note_dict[i_temp].keyset)
+
+                        ind_temp = index_reduce(str(i_temp)) 
+                        k_temp = formkeys(self.note_dict[str(i_temp)].keyset)
                         k_temp = k_temp[0:min([len(k_temp),30])]
-                        t_temp = self.note_dict[i_temp].text
+                        t_temp = self.note_dict[str(i_temp)].text
                         t_temp = nformat.purgeformatting(t_temp[0:min([len(t_temp),40])])
                         t_temp = t_temp.replace(VERTLINE,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR).replace(EOL,EMPTYCHAR)
-                        d_temp = str(self.note_dict[i_temp].date(most_recent=True,
+                        d_temp = str(self.note_dict[str(i_temp)].date(most_recent=True,
                                                                       short=True,
                                                                       convert=False))
+
                         
-                        
-                        self.default_dict['all'].append(i_temp+self.mark(i_temp)
+                        self.default_dict['all'].append(ind_temp+self.mark(str(i_temp))
                                                         +VERTLINE+d_temp
                                                         +VERTLINE+k_temp
                                                         +VERTLINE+t_temp)
@@ -4466,13 +4501,13 @@ class Note_Shelf:
                                                                               (i_temp, shortform=shortform,
                                                                                yestags=self.tagdefault,
                                                                                highlight=highlight,
-                                                                               show_date=show_date),
+                                                                               show_date=show_date,deepest=deepest_temp),
                                                                               param_width=display.width_needed(
                                                                                   self.show(i_temp,
                                                                                             shortform=shortform,
                                                                                             yestags=self.tagdefault,
                                                                                             highlight=highlight,
-                                                                                            show_date=show_date),
+                                                                                            show_date=show_date,deepest=deepest_temp),
                                                                                   self.note_dict[
                                                                                       str(i_temp)]
                                                                                   .meta['size'],
@@ -4498,7 +4533,7 @@ class Note_Shelf:
                                 self.default_dict['display'].append(display.noteprint(self.show(i_temp,
                                                                 shortform=shortform,
                                                                 yestags=self.tagdefault,
-                                                                show_date=show_date),
+                                                                show_date=show_date,deepest=deepest_temp),
                                                       param_width=self.default_dict['size'],
                                                       np_temp=shortform,
                                                       leftmargin=self.default_dict['leftmargin'],
@@ -4581,9 +4616,9 @@ class Note_Shelf:
             if not quick and shortform and not multi:
 
                 if not header:
-                    self.text_result = self.default_dict['display'].present(dump=True)
+                    self.text_result = self.default_dict['display'].present(dump=True,howmany=self.how_many)
                 else:
-                    self.text_result = self.default_dict['display'].present(header=header,dump=True)
+                    self.text_result = self.default_dict['display'].present(header=header,dump=True,howmany=self.how_many)
             if quick:
 
                 show_list(self.default_dict['all'],
@@ -6496,9 +6531,8 @@ class Note_Shelf:
 
     def show_projects(self,projectobject=None):
 
-        
-
-        
+        trim1 = self.default_dict['keytrim']
+        trim2 = self.default_dict['texttrim']
 
         notelist = DisplayList(displayobject=display)
         text_temp = [labels.PROJECT_DISPLAY,' || ']
@@ -6519,9 +6553,9 @@ class Note_Shelf:
             fl_temp = max([50,len(keys_formated)])
             keys_formated = keys_formated[0:fl_temp]
             line_temp = str(counter+1)+(5-len(str(counter+1)))*BLANK + VERTLINE
-            line_temp += abridge(temp_key,20)+(20-len(abridge(temp_key,20)))*BLANK + VERTLINE
+            line_temp += abridge(temp_key,trim1)+(trim1-len(abridge(temp_key,trim1)))*BLANK + VERTLINE
             line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)+(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
-            line_temp += VERTLINE + '[' + abridge(keys_formated, 40) + (40 -  len(abridge(keys_formated, 40))) * BLANK + ']/'
+            line_temp += VERTLINE + '[' + abridge(keys_formated, trim2) + (trim2 + 6 -  len(abridge(keys_formated, trim2))) * BLANK + ']/'
             if len(projectobject[temp_key]['indexes']) > 1:
                    line_temp += str(transpose_keys(projectobject[temp_key]['indexes'].list,
                                                    surround=False)[0]) +':'+str(transpose_keys(projectobject[temp_key]['indexes'].list,
@@ -7152,7 +7186,7 @@ class Console(Note_Shelf):
         self.rectify = False # equalizes width of notes
         self.parent = EMPTYCHAR
         self.display_attributes = (True, True)
-        self.project = EMPTYCHAR
+        self.project = []
         self.key_results = EMPTYCHAR
         self.text_result = EMPTYCHAR
         self.negative_results = False
@@ -7182,6 +7216,7 @@ class Console(Note_Shelf):
         self.maxdepth_found = 0
         self.usesequence = True
         self.show_key_freq = True
+        self.how_many = 30
 
 
         
@@ -8735,6 +8770,21 @@ class Console(Note_Shelf):
                                formkeys(self.default_dict['defaultkeys'])))
             
         elif mainterm in ['help']:
+
+
+            if not helploaded:
+                for counter, cs_temp in enumerate(commandscript.COMMANDSCRIPT):
+
+                    commandlist[counter] = DisplayList(displayobject=display)
+                    nformat.columns(commandscript.COMMANDSCRIPT[counter],
+                                    commandlist[counter],
+                                    columnwidth=(37,45,60,30,30),
+                                    compactwidth=None)
+
+                
+
+
+            
             
             if longphrase:
 
@@ -9386,7 +9436,7 @@ class Console(Note_Shelf):
                 print('<<'+nformat.format_keys(self.default_dict['defaultkeys'])+'>>')
                 manyinputterm = input(notebookname
                                       +temp_insert
-                                      +self.project
+                                      +UNDERLINE.join(self.project)
                                       +COLON+index_reduce(str(lastup))
                                       +BLANK+add_mark(lastup)+
                                       self.parent
@@ -10085,17 +10135,18 @@ class Console(Note_Shelf):
                 self.dd_changed=True
                 
 
-                self.project = project_name
+                self.project.append(project_name)
 
 
         elif mainterm in ['saveproject']:
+            
             project_name = EMPTYCHAR
 
             while True:
 
                 if not otherterms[0]:
                     if self.project:
-                        project_name = self.project
+                        project_name = self.project[-1]
                     else:
                         project_name = input(queries.PROJECT_NAME)
                 else:
@@ -10116,8 +10167,8 @@ class Console(Note_Shelf):
         elif mainterm in ['resumeproject','loadproject']:
             project_name = EMPTYCHAR
             
-            if self.project:   # Save the existing project status
-                project_name = self.project
+            if self.project and not predicate[0]:   # Save the existing project status
+                project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
 
                     self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
@@ -10159,14 +10210,14 @@ class Console(Note_Shelf):
     ##            if temp_uptohere in self.indexes():
     ##                command_stack.add('skip:'+temp_uptohere)
                 
-                self.project = project_name
+                self.project.append(project_name)
                 self.dd_changed=True
 
 
         elif mainterm in ['endproject','quitproject']:
 
-            if self.project:
-                project_name = self.project
+            if self.project and not predicate[0]:
+                project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
                     self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
@@ -10175,7 +10226,21 @@ class Console(Note_Shelf):
                     self.default_dict['projects'][project_name]['status']['open'] = False
                     self.default_dict['projects'][project_name]['status']['lastmodified'].append(str(datetime.datetime.now()))
                     self.dd_changed=True
-                self.project = EMPTYCHAR
+                self.project = self.project[0:-1]
+
+            if self.project and predicate[0]:
+                while self.project:
+                    project_name = self.project[-1]
+                    if project_name in self.default_dict['projects']:
+                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
+                        self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
+                        self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
+                        self.default_dict['projects'][project_name]['status']['open'] = False
+                        self.default_dict['projects'][project_name]['status']['lastmodified'].append(str(datetime.datetime.now()))
+                        self.dd_changed=True
+                    self.project = self.project[0:-1]
+                
 
         elif mainterm in ['archiveproject']:
 
@@ -10244,17 +10309,19 @@ class Console(Note_Shelf):
 
 
         elif mainterm in ['flipproject']:
-            self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project]['indexes'].list,surround=False)
-            self.set_iterator(self.default_dict['flipbook'],flag=self.default_dict['setitflag'])
-            self.dd_changed=True
+            if self.project:
+                self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project[-1]]['indexes'].list,surround=False)
+                self.set_iterator(self.default_dict['flipbook'],flag=self.default_dict['setitflag'])
+                self.dd_changed=True
 
         elif mainterm in ['currentproject']:
+            if self.project:
 
-            text_temp = self.project + EOL + EOL \
-                        + str(self.default_dict['projects'][self.project]['indexes'].list[0]) \
-                        + ':' + str(self.default_dict['projects'][self.project]['indexes'].list[-1])
+                text_temp = self.project[-1] + EOL + EOL \
+                            + str(self.default_dict['projects'][self.project[-1]]['indexes'].list[0]) \
+                            + ':' + str(self.default_dict['projects'][self.project[-1]]['indexes'].list[-1])
 
-            display.noteprint(('/C/CURRENT PROJECT',text_temp))
+                display.noteprint(('/C/CURRENT PROJECT',text_temp))
 
         elif mainterm in ['showproject']:
 
@@ -10307,13 +10374,13 @@ class Console(Note_Shelf):
             close_notebook = True
 
             if self.project:
-                project_name = self.project
+                project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
                     self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
-                self.project = EMPTYCHAR  
+                self.project = self.project[0:-1]  
         elif mainterm in ['switch']:
             continuelooping = False
             close_notebook = False
@@ -10322,13 +10389,14 @@ class Console(Note_Shelf):
                 command_stack.add(otherterms[0])
 
             if self.project:
-                project_name = self.project
-                if project_name in self.default_dict['projects']:
-                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
-                    self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
-                    self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
-                    self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
-                self.project = EMPTYCHAR 
+                while self.project:
+                    project_name = self.project[-1]
+                    if project_name in self.default_dict['projects']:
+                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
+                        self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
+                        self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
+                    self.project = self.project[0:-1] 
         else:
             if self.quickenter:
                 if not longphrase:
@@ -10366,6 +10434,7 @@ display.noteprint([INTROSCRIPT],
 betastart = False
 reconstitute = False
 commandlist = list(range(len(commandscript.COMMANDSCRIPT)))
+helploaded=False
 
 while True:
     display.noteprint(('SELECT',"(1) Display commands \n(2) display commands in compact mode\n(3) Start in Betamode \n(4) Start in regular mode \n(5) Start in the advanced mode"))
@@ -10373,10 +10442,12 @@ while True:
     if option == '1' or option == '2':
         compactmode = False
         compactcolumns = None
+        helploaded=True
 
         if option == '2':
              compactmode = True
              compactcolumns = (20,20,20,20,20)
+             
 
             # TO load the help menu in, and also show it on starting.
         for counter, cs_temp in enumerate(commandscript.COMMANDSCRIPT):
@@ -10393,6 +10464,8 @@ while True:
                                           centered=True,indent=0)
                 if input():
                     break
+                    helploaded=False
+        
                       
     if option == '3':
             betastart, reconstitute = True, True

@@ -5,7 +5,8 @@ pylint rated 9.6/10
 import nformat
 from ninput import i_input
 from globalconstants import EMPTYCHAR, EOL, BLANK,\
-     PERIOD, COMMA, LEFTNOTE, RIGHTNOTE, SLASH, COLON, DASH
+     PERIOD, COMMA, LEFTNOTE, RIGHTNOTE, SLASH, COLON, DASH, \
+     RIGHTBRACKET, LEFTBRACKET
 
 def get_simple_range (entry):
 
@@ -165,12 +166,14 @@ class DisplayList:
                 header=EMPTYCHAR,
                 centered=False,
                 accumulate=False,
-                dump=False):
+                dump=False,
+                howmany=None):
 
         """ presents all the lines in the object in such
         a way that one can examine them page by page
         """
-
+        if howmany:
+            self.how_many = howmany
         s_temp = EMPTYCHAR
         accumulate_set = set()
         if not self.dis_list:
@@ -178,7 +181,7 @@ class DisplayList:
         total_groups = int(len(self.dis_list)/self.how_many)+1
         if total_groups == 1 and not accumulate:
             s_temp = self.show(0, len(self.dis_list), header=header
-                               +('From 0 to '+str(len(self.dis_list)))*(header==EMPTYCHAR),
+                               +('From 0 to '+str(len(self.dis_list)-1))*(header==EMPTYCHAR),
                                centered=centered)
         else:
 
@@ -191,17 +194,17 @@ class DisplayList:
                 end_at = (self.group)*self.how_many
                 self.show(start_at, end_at, header=header+' From '
                           +str(start_at)
-                          +' to '+str(end_at),
+                          +' to '+str(end_at-1),
                           centered=centered,
                           markset=accumulate_set)
-                prompt = LEFTNOTE+LEFTNOTE+BLANK+LEFTNOTE
+                prompt = LEFTBRACKET+BLANK+LEFTNOTE
                 if total_groups+1 < 20:
                     for a_temp in range(1, total_groups+1):
                         prompt += str(a_temp)+BLANK
                 if total_groups+1 > 20:
                     prompt += '1 2 3 4 5 6 7 8 9 10 ... '+str(total_groups)
-                prompt += RIGHTNOTE + BLANK + RIGHTNOTE + \
-                          RIGHTNOTE + BLANK+' [A]ll [C]hange entries shown [Q]uit menu ' + '[S]elect] or U[nselect]' * accumulate
+                prompt += RIGHTNOTE + BLANK + RIGHTBRACKET + \
+                          BLANK+' [A]ll [C]hange entries shown [Q]uit menu ' + '[S]elect] or U[nselect]' * accumulate
                 q_temp = input(prompt)
                 if q_temp in [LEFTNOTE, COMMA] and self.group > 1:
                     self.group -= 1
@@ -209,9 +212,14 @@ class DisplayList:
                     if self.group < total_groups:
                         self.group += 1
                     else: go_on = False
-                elif q_temp == RIGHTNOTE + RIGHTNOTE:
+                elif len(q_temp) > 0 and q_temp[0] in [LEFTNOTE,RIGHTNOTE]:
+                    if q_temp[0] == LEFTNOTE:
+                        self.group = max([self.group - len(q_temp),0])
+                    if q_temp[0] == RIGHTNOTE:
+                        self.group = min([self.group + len(q_temp),total_groups])
+                elif q_temp == RIGHTBRACKET:
                     self.group = total_groups
-                elif q_temp == LEFTNOTE + LEFTNOTE:
+                elif q_temp == LEFTBRACKET:
                     self.group = 1
                 elif (q_temp.isnumeric() and
                       int(q_temp) > 0 and
