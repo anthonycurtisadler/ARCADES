@@ -1425,6 +1425,17 @@ class Note_Shelf:
             seq_type = str
             seq_mark = EMPTYCHAR
 
+            if seq_value in [DOLLAR,PLUS,POUND,UNDERLINE,CARET]:
+                seq_type,seq_mark,seq_value = {DOLLAR:(str,EMPTYCHAR,EMPTYCHAR),
+                            PLUS:(int,EMPTYCHAR,EMPTYCHAR),
+                            POUND:(type(datetime.date(1972,3,13)),POUND,EMPTYCHAR),
+                            UNDERLINE:(type(Index(0)),UNDERLINE,EMPTYCHAR),
+                            CARET:(float,EMPTYCHAR,EMPTYCHAR)}[seq_value]
+                return seq_mark,seq_value,seq_type
+                            
+
+
+
             if seq_value and seq_value[0] in [POUND,UNDERLINE]:
                 seq_mark = seq_value[0]
                 seq_value = seq_value[1:]
@@ -5057,37 +5068,49 @@ class Note_Shelf:
                 self.showall(sr_temp[1], highlight=sr_temp[2])
 
 
-    def sequence_key_search(self,key):
+    def sequence_key_search(self,key,return_found_terms=False):
 
         """finds all the indexes that are in a ordered relation to a sequence key"""
+        if not return_found_terms:
+            returnvalue = set()
+        else:
+            returnvalue = (set(),set())
 
 
-        if key.startswith('GT'):
+        if key.startswith('GT_'):
              func_pred = '>='
-        elif key.startswith('LT'):
+             pred_len = 3
+        elif key.startswith('LT_'):
              func_pred = '<='
-        elif key.startswith('='):
+             pred_len = 3
+        elif key.startswith('=_'):
              func_pred = '='
-        elif key.startswith('G'):
+             pred_len = 2
+        elif key.startswith('G_'):
              func_pred = '>'
-        elif key.startswith('L'):
+             pred_len = 2
+        elif key.startswith('L_'):
              func_pred = '<'
-        elif key.startswith('E'):
+             pred_len = 2
+        elif key.startswith('E_'):
              func_pred = '='
-        elif key.startswith('R'):
+             pred_len = 2
+        elif key.startswith('R_'):
              func_pred = '/'
-            
+             pred_len = 2
+        elif key.startswith('ALL_'):
+             func_pred = '?'
+             pred_len = 4
 
         else:
+            return returnvalue 
 
-            return set()
+        key = key[pred_len:]
 
-        key = key[len(func_pred):]
  
 
         if ATSIGN not in key:
-            return set()
-
+            return returnvalue 
         else:
             if SLASH in key:
                 afterslash = key.split(SLASH)[1].split(ATSIGN)[1].replace(POUND,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR)
@@ -5104,8 +5127,7 @@ class Note_Shelf:
 
 
         if identifier not in self.default_dict['sequences']:
-
-            return set()
+                return returnvalue
         sub_sequence = []
 
 
@@ -5117,11 +5139,14 @@ class Note_Shelf:
 
 
 
+
         returnset = set()
+        returnfound = set()
 
 
         for x_temp in sub_sequence:
             x_temp = identifier+ATSIGN+key_mark+str(x_temp)
+
             if x_temp.endswith('.0'):
 
                 x_temp = x_temp[:-2]
@@ -5130,10 +5155,13 @@ class Note_Shelf:
 
                 if y_temp in self.keys():
                     returnset = returnset.union(self.key_dict[y_temp])
+                    returnfound.add(y_temp)
 
             
-
-        return returnset
+        if not return_found_terms:
+            return returnset
+        else:
+            return returnset, returnfound 
     
 
     def new_search(self,
@@ -5438,14 +5466,15 @@ class Note_Shelf:
         termlistb = [a_temp for a_temp in termlist if LEFTNOTE not in a_temp]
             #termlist b = list of words in text
         upto = len(termlista)
-
+        result_temp = set()
 
         for counter, term in enumerate(termlista+termlistb):
 
 
             if not counter < upto:  #for the words
-
                 temp_set = set()
+
+
                 termcopy = term
                 keyterm = False
 
@@ -5461,9 +5490,9 @@ class Note_Shelf:
                 el_temp = expand_term_list(t_temp[0])
 
             else:  #for the keywords
+                temp_set = set()
 
                 term = term.replace(PERCENTAGE, BLANK)
-                temp_set = set()
                 termcopy = term
 
                 keyterm = True
@@ -5489,60 +5518,86 @@ class Note_Shelf:
 
 
             if t_temp[1] or keyterm:   # if the term is a keyterm
+                if not_term:
+                    temp_set = set(searchset)
+                    
                 for word in el_temp:
+
 
                     if ATSIGN in word:
 
- 
-                            if not not_term:
+                                ft_temp = set()
 
-
-
-                                if word[0] == LEFTBRACKET and word[-1] == RIGHTBRACKET:
-                                    temp_set = temp_set.union(self.sequence_key_search('='+word[1:-1]))
+                                if word[0] == LEFTBRACKET and word[-1] == RIGHTBRACKET:                              
+                                    result_temp, ft_temp = self.sequence_key_search('=_'+word[1:-1],
+                                                                                    return_found_terms=True)
                                     
 
-                                if SLASH not in word:
+                                elif SLASH not in word:
                                     if word and word[0] != LEFTBRACKET:
-                                        temp_set = temp_set.union(self.sequence_key_search('GT'+word))
+                                        if word and len(word)>2 and word[-2] == ATSIGN and word[-1] in [DOLLAR,CARET,POUND,UNDERLINE,PLUS]:
+                                            result_temp, ft_temp = self.sequence_key_search('ALL_'+word,
+                                                                                   return_found_terms=True)
+                                        else:     
+                                            result_temp,ft_temp = self.sequence_key_search('GT_'+word,
+                                                                                   return_found_terms=True)
                                     else:
-                                        temp_set = temp_set.union(self.sequence_key_search('G'+word[1:]))
+                                        result_temp,ft_temp = self.sequence_key_search('G_'+word[1:],
+                                                                                   return_found_terms=True)
                                 elif SLASH in word and word and word[0] == SLASH:
                                     if word[-1] == RIGHTBRACKET:
-                                        temp_set = temp_set.union(self.sequence_key_search('L'+word[1:-1]))
+                                        result_temp,ft_temp = self.sequence_key_search('L_'+word[1:-1],
+                                                                                   return_found_terms=True)
                                     else:
-                                        temp_set = temp_set.union(self.sequence_key_search('LT'+word[1:]))
+                                        result_temp,ft_temp = self.sequence_key_search('LT_'+word[1:],
+                                                                                   return_found_terms=True)
 
                                 elif SLASH in word and word.count(SLASH) == 1:
 
-                                    temp_set = temp_set.union(self.sequence_key_search('R'+word))
+                                    result_temp,ft_temp = self.sequence_key_search('R_'+word,
+                                                                           return_found_terms=True)
                                     
 
-                                 
+                                if not not_term:
 
-                            else:
-                                if temp_set == set():
-                                    temp_set = set(self.indexes())-self.sequence_key_search (word)
+                                    temp_set = temp_set.union(result_temp)
+                                    foundterms.update(ft_temp)
+
                                 else:
-                                    temp_set = temp_set.intersection(set(self.indexes())-self.sequence_key_search (word))
-                            
+                                    if result_temp:
+                                    
+                                        if not temp_set:
+                                            temp_set = set(self.indexes())-result_temp
+                                        else:                                            
+                                            temp_set = temp_set - result_temp
 
-                    if word in self.key_dict.keys():
+                                        foundterms.update({'~'+f_temp for f_temp in ft_temp})
+                                        
+
+                                
+
+                    elif word in self.key_dict.keys():
                         if not not_term:
 
                             temp_set = temp_set.union(self.key_dict[word])
                             if self.key_dict[word].intersection(searchset):
                                 foundterms.add(word)
                         else:
-                            if temp_set == set():
+
+                            if not temp_set:
                                 temp_set = set(self.indexes())-self.key_dict[word]
                             else:
-                                temp_set = temp_set.intersection(set(self.indexes())-self.key_dict[word])
+                                temp_set = temp_set - self.key_dict[word]
+
+                            foundterms.add('~'+word)
                     else:
                         if not not_term:
                             pass
-                        else:
-                            temp_set = set(self.indexes())
+
+##                if not term:                
+##                    if not temp_set:
+##                        temp_set = searchset
+##                        print(word,len(temp_set))
 
             else:   #if it is not 
 
@@ -5556,15 +5611,16 @@ class Note_Shelf:
                             if self.word_dict[word].intersection(searchset):
                                 foundterms.add(word)
                         else:
-                            if temp_set == set():
+                            if not temp_set:
                                 temp_set = set(self.indexes())-self.word_dict[word]
                             else:
-                                temp_set = temp_set.intersection(set(self.indexes())-self.word_dict[word])
+                                temp_set = temp_set - self.word_dict[word]
+                            foundterms.add('~'+word)
                     else:
                         if not not_term:
                             pass
                         else:
-                            if temp_set == set():
+                            if not temp_set:
                                 temp_set = {a_temp for a_temp
                                             in self.indexes()}
                             else:

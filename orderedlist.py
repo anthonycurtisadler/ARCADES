@@ -501,6 +501,7 @@ class OrderedList:
         
     def get(self,func=None,item=None,item2=None):
 
+
         try:
 
             if self.indexstrings:
@@ -511,11 +512,13 @@ class OrderedList:
         except:
             pass
 
-                
+        if func == '?':
+            return self.list        
         if not func or not item:
             return []
         if func == '=':
             return [item]
+        
         if item2:
 
             if isinstance(item,int):

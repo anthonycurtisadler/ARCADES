@@ -263,6 +263,9 @@ class Display:
         param_indent --- indicates indentation of note
         param_spacing --- indicated spacing of note """
 
+        npp_temp = np_temp
+        np_temp = True
+
         if not rectify:
             rectify = self.rectify
         modified = False  ## to keep track of whether different widths introd.
@@ -686,8 +689,18 @@ class Display:
                                              bracket=brackets)
             returntext += (EOL*param_spacing)
 
+        line_length_list = [len(l_temp) for l_temp in returntext.split(EOL)]
+        max_len = max(line_length_list)
+        min_len = min(line_length_list)
+        if min_len != max_len:
+            returntext = EOL.join([l_temp[0:-1]+BLANK*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
+        if not npp_temp:
+            print(returntext)
+            
+            
 
-        if np_temp:
+
+        if npp_temp:
             modified = True
             if modified:
                 returnlist = returntext.split(EOL)
