@@ -263,6 +263,12 @@ class Display:
         param_indent --- indicates indentation of note
         param_spacing --- indicated spacing of note """
 
+        def box_or_nothing(char):
+            if char not in [BOX_CHAR['h'],BOX_CHAR['rm']]:
+                return BLANK
+            else:
+                return char
+
         npp_temp = np_temp
         np_temp = True
 
@@ -693,7 +699,7 @@ class Display:
         max_len = max(line_length_list)
         min_len = min(line_length_list)
         if min_len != max_len:
-            returntext = EOL.join([l_temp[0:-1]+BLANK*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
+            returntext = EOL.join([l_temp[0:-1]+box_or_nothing(l_temp[-2])*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
         if not npp_temp:
             print(returntext)
             
