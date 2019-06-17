@@ -652,12 +652,22 @@ def get_range(entryterm,
 
 
 
-def get_text_file(filename,folder='/textfiles',suffix='.txt'):
+def get_text_file(filename,folder=os.altsep+'textfiles',suffix='.txt'):
 
 
     """opens a text file a returns the text"""
 
     directoryname = os.getcwd()+folder
+    if os.altsep+'notebooks'+os.altsep+'textfiles' in directoryname:
+        print(directoryname)
+        directoryname = directoryname.replace(os.altsep+'notebooks'+os.altsep+'textfiles',os.altsep+'textfiles')
+        print(directoryname)
+    if  os.altsep+'notebooks'+'/'+'textfiles' in directoryname:
+        print(directoryname)
+        directoryname = directoryname.replace(os.altsep+'notebooks'+'/'+'textfiles',os.altsep+'textfiles')
+        print(directoryname)
+        
+    
     textfile = open(directoryname+os.altsep+filename+suffix, 'r', encoding='utf-8')
     returntext = textfile.read().replace('\ufeff', EMPTYCHAR)
     textfile.close()
@@ -1555,6 +1565,7 @@ class Note_Shelf:
                     if identifier not in self.default_dict['sequences']:
                         if identifier not in self.default_dict['sequences']['#TYPE#']:
                             self.default_dict['sequences']['#TYPE#'][identifier] = seq_type
+                            print()
                             display.noteprint((alerts.ATTENTION,alerts.NEW_SEQUENCE+str(seq_type)))
                         else:
                             del self.default_dict['sequences']['#TYPE#'][identifier]
@@ -5833,7 +5844,8 @@ class Note_Shelf:
                       selection=None,
                       filename='defaultoutput',
                       metashow=False,
-                      index_data=True):
+                      index_data=True,
+                      include_project=False):
 
         """ saves notes as text"""
 
@@ -5869,10 +5881,17 @@ class Note_Shelf:
                                         right_at=right_at, index=i_temp))
                 lastindex = i_temp
 
+        if include_project:
+            returntext += '<<<<PROJECTBEGIN>>>>'\
+                          + str(transform(self.default_dict['projects'])) \
+                          + '<<<<PROJECTEND>>>>'
+
         if saveyes:
             save_file(returntext,filename)
 
             display.noteprint((alerts.ATTENTION,filename+alerts.SAVED))
+
+        
 
 
         else:
@@ -6017,12 +6036,12 @@ class Note_Shelf:
                         #assigns metadata
                         if VERTLINE in md_temp and len(md_temp.split(VERTLINE)) >= 2:
                             if md_temp.split(VERTLINE)[1] == 'S':
-                                meta[md_temp.split(VERTLINE)[0]] = str(md_temp.split(VERTLINE)[2])
+                                meta[md_temp.split(VERTLINE)[0]] = str(md_temp.split(VERTLINE)[2]).replace('"'+"'","'").replace("'"+'"',"'")
                             if md_temp.split(VERTLINE)[1] == 'I':
                                 meta[md_temp.split(VERTLINE)[0]] = int(md_temp.split(VERTLINE)[2])
                             if md_temp.split(VERTLINE)[1] == 'L':
-                                meta[md_temp.split(VERTLINE)[0]] = list(
-                                    md_temp.split(VERTLINE)[2][1:-1].split(COMMA))
+                                meta[md_temp.split(VERTLINE)[0]] = [x_temp.replace('"'+"'","'").replace("'"+'"',"'") for x_temp in
+                                                                    md_temp.split(VERTLINE)[2][1:-1].split(COMMA)]
                 phrase = nformat.remove_between(phrase, '^:', ':^')
                 newindex = self.enter(ks_temp,
                                       phrase,
@@ -6065,8 +6084,15 @@ class Note_Shelf:
         else:
             self.pass_key_dict[depth] = [[list(keys)], []]
 
+        emb_len = str(len(embeddedlist))
+
         for a_temp, phrase in enumerate(embeddedlist):
-            print(PERIOD)
+            print(PERIOD,end=EMPTYCHAR)
+            if a_temp<10 or (a_temp>9 and a_temp<100 and a_temp%10 == 0) or (a_temp>99 and a_temp%100==0):
+                print()
+                print(str(a_temp)+'/'+emb_len)
+
+                
 
             if extract.embedded_extract(phrase)[2] > 1:
 
@@ -6141,9 +6167,12 @@ class Note_Shelf:
         
     def loadtext(self,
                  filename=EMPTYCHAR,
-                 text=EMPTYCHAR):
+                 text=EMPTYCHAR,
+                 loadproject=False,
+                 loadindexes=True):
 
         analysetext = text
+        projecttext = EMPTYCHAR
 
         """loads in a textfile to be parsed and interpreted"""
 
@@ -6155,23 +6184,36 @@ class Note_Shelf:
         
             analysetext = get_text_file(filename)
 
-        analysetext = self.default_dict['abbreviations'].do(analysetext)
+        if '<<<<PROJECTBEGIN>>>>' and '<<<<PROJECTEND>>>>' in analysetext:
+            projecttext = analysetext.split('<<<<PROJECTBEGIN>>>>')[1].split('<<<<PROJECTEND>>>>')[0]
+            analysetext.replace('<<<<PROJECTBEGIN>>>>'+projecttext+'<<<<PROJECTEND>>>>',EMPTYCHAR)
+        if loadproject and projecttext:
+
+            if self.default_dict['projects'] == {}:
+                
+                self.default_dict['projects'] = transform(eval(projecttext))
+                if self.default_dict['projects']:
+                    display.noteprint(('ATTENTION!','SUCCESSFULLY LOADED'))
+                self.dd_changed=True
+
+        if loadindexes:
+
+            analysetext = self.default_dict['abbreviations'].do(analysetext)
 
 
-        if filename == 'backup':
-            default_backup = self.autobackup
-            self.autobackup = False
-        print(analysetext)
+            if filename == 'backup':
+                default_backup = self.autobackup
+                self.autobackup = False
 
-        newindex = self.textparse(analysetext,
-                                  re_entering=True,
-                                  newindex=Index(int(Index(self.indexes()[-1]))+1))
+            newindex = self.textparse(analysetext,
+                                      re_entering=True,
+                                      newindex=Index(int(Index(self.indexes()[-1]))+1))
 
-        if filename == 'backup':
-            self.autobackup = default_backup
+            if filename == 'backup':
+                self.autobackup = default_backup
 
-        for i_temp in self.find_within(Index(0), Index(1)):
-            self.move(i_temp, Index(i_temp)+newindex)
+            for i_temp in self.find_within(Index(0), Index(1)):
+                self.move(i_temp, Index(i_temp)+newindex)
 
         self.check_spelling = check_spelling_was
 
@@ -7426,7 +7468,7 @@ class Console(Note_Shelf):
                                     get_filename=otherterms[0])[0].rstrip()
         display.noteprint((alerts.LOADING_FILE,filename_temp))
         
-        self.loadtext(filename_temp)
+        self.loadtext(filename_temp,loadproject=predicate[1],loadindexes=not predicate[2])
         
         if predicate[0]:
             self.default_dict['defaultkeys'] = key_buffer
@@ -8457,7 +8499,9 @@ class Console(Note_Shelf):
                                                     otherterms[2]) in YESTERMS),
                                index_data=(predicate[1]
                                            or s_input(queries.SHOW_INDEXES,
-                                                      otherterms[3]) in YESTERMS))
+                                                      otherterms[3]) in YESTERMS),
+                               include_project=(predicate[3] or s_input(queries.INCLUDE_PROJECTS,
+                                                                       otherterms[4]) in YESTERMS))
         elif mainterm in ['findwithin']:
             print(self.find_within(s_input(queries.FROM,
                                            otherterms[0]),
@@ -10744,6 +10788,7 @@ while bigloop:
                     print('ATTRIBUTE ERROR')
                 except FileNotFoundError:
                     print('FILE NOTE FOUND ERROR')
+                    
                 except IndexError:
                     print('INDEX ERROR')
                 except TypeError:

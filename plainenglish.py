@@ -202,6 +202,8 @@ class Queries:
           self.FUNCTION_NAME = 'Function name? ' 
           self.TEXT_TO_CONVERT = 'Text to convert? '
           self.TEXT_TO_INTERPRET = 'Text to interpret? '
+          self.INCLUDE_PROJECTS = 'Include projects? '
+          
           
      
 class Alerts:

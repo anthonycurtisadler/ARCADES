@@ -698,8 +698,11 @@ class Display:
         line_length_list = [len(l_temp) for l_temp in returntext.split(EOL)]
         max_len = max(line_length_list)
         min_len = min(line_length_list)
+        leftstuff = (int(param_indent/50))*']'+(param_indent % 50)*BLANK
         if min_len != max_len:
-            returntext = EOL.join([l_temp[0:-1]+box_or_nothing(l_temp[-2])*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
+            returntext = EOL.join([leftstuff+l_temp[0:-1]+box_or_nothing(l_temp[-2])*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
+        else:
+            returntext = EOL.join([leftstuff+l_temp for l_temp in returntext.split(EOL)])
         if not npp_temp:
             print(returntext)
             

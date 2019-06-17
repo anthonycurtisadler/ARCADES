@@ -1,12 +1,16 @@
-
+### Takes a dictionary, makes a copy of it, and applies
+### transformations to INDEXES and DATES, yielding strings 
 
 import copy
 from indexclass import Index
 import datetime
 from globalconstants import DASH, COLON, PERIOD, BLANK, PLUS, EMPTYCHAR
+from orderedlist import OrderedList
+
+ordlist_example = OrderedList(['1'],indexstrings=True)
+
 
 def is_date(entry,returndate=False):
-
 
 
     """Utility to test if a string constitutes a date, returning either
@@ -59,10 +63,10 @@ def is_date(entry,returndate=False):
     return True 
 
 
-def square (x):
-     return x*x
-
 def transform(complexobject,start=True):
+
+     """ copies dictionary, and applies tranformations
+     """
 
      def dummy (y):
           return y
@@ -76,26 +80,31 @@ def transform(complexobject,start=True):
           for x in list(complexobject.keys()):
               complexobject[x]=transform(complexobject[x],start=start)
           return complexobject
-     if isinstance(complexobject,list):
+     elif isinstance(complexobject,list):
           newlist = []
           for x in complexobject:
                newlist += [transform(x,start=start)]
           return newlist
-     if isinstance(complexobject,set):
+     elif isinstance(complexobject,set):
           newset = set()
           for x in complexobject:
                newset.add(transform(x,start=start))
           return newset
-     if isinstance(complexobject,tuple):
+     elif isinstance(complexobject,tuple):
           newlist = []
           for x in complexobject:
                newlist += [transform(x,start=start)]
           return tuple(newlist)
-          
-                   
+
+               
      else:
                if type(complexobject) == type(Index(0)):
                     return '<'+str(complexobject)+'>'
+               elif isinstance(complexobject,str) and len(complexobject)>4\
+                    and complexobject[0:2] == '<<'\
+                    and complexobject[-2:] == '>>':
+                    return OrderedList(eval(complexobject[2:-2]),indexstrings=True)
+                   
                elif isinstance(complexobject,str) and len(complexobject)>2\
                     and complexobject[0] == '<' \
                     and complexobject[-1] == '>':
@@ -107,6 +116,8 @@ def transform(complexobject,start=True):
                     return is_date(complexobject,returndate=True)
 ##               elif isinstance(complexobject,str) and complexobject.startswith('datetime.datetime'):
 ##                        return eval(complexobject)
+               elif type(complexobject) == type(ordlist_example):
+                    return '<<['+str(complexobject)+']>>'
                else:
                     return complexobject
                

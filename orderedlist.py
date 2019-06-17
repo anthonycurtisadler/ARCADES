@@ -86,7 +86,14 @@ class OrderedList:
             self.indexstrings = indexstrings
 
     def __str__(self):
-        return ', '.join([str(x_temp) for x_temp in self.list])
+        if len(self.list)>0:
+            if isinstance(self.list[-1], str):
+                return ', '.join(["'"+str(x_temp)+"'" for x_temp in self.list])
+            elif type(self.list[-1]) == type(Index(0)):
+                return ', '.join(["Index('"+str(x_temp)+"')" for x_temp in self.list])
+            else:
+                return ', '.join([str(x_temp) for x_temp in self.list])
+        return ''
 
     def __len__(self):
         return len(self.list)
