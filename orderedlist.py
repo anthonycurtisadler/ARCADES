@@ -83,7 +83,7 @@ class OrderedList:
             self.indexstrings = False
         else:
             self.list = []
-            self.indexstrings = False
+            self.indexstrings = indexstrings
 
     def __str__(self):
         return ', '.join([str(x_temp) for x_temp in self.list])

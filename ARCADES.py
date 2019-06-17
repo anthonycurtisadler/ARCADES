@@ -658,7 +658,7 @@ def get_text_file(filename,folder='/textfiles',suffix='.txt'):
     """opens a text file a returns the text"""
 
     directoryname = os.getcwd()+folder
-    textfile = open(directoryname+SLASH+filename+suffix, 'r', encoding='utf-8')
+    textfile = open(directoryname+os.altsep+filename+suffix, 'r', encoding='utf-8')
     returntext = textfile.read().replace('\ufeff', EMPTYCHAR)
     textfile.close()
     return returntext
@@ -1157,10 +1157,11 @@ def get_file_name(file_path=EMPTYCHAR,
 
     if get_filename != EMPTYCHAR:
         return get_filename, EMPTYCHAR
-    if 'simple note' in os.getcwd():
-        file_path = os.getcwd() + file_path
-    else:
-        file_path = os.getcwd()
+##    if 'simple note' in os.getcwd():
+##        file_path = os.getcwd() + file_path
+##    else:
+##        file_path = os.getcwd()
+    file_path = os.getcwd() + file_path
         
     old_file_path = file_path
     added_path = EMPTYCHAR
@@ -1830,8 +1831,6 @@ class Note_Shelf:
         searching over withinrange orequal is True if less
         than equal to upper range. Converts indexfrom and
         indexto to indextype if string or integer"""
-
-
 
 
         if self.usesequence:
@@ -5856,7 +5855,7 @@ class Note_Shelf:
 
                 self.display_buffer.append(alerts.SAVING+str(i_temp))
 
-                returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset),
+                returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset,surround=False),
                                         self.note_dict[str(i_temp)].text,
                                         self.note_dict[str(i_temp)].meta,
                                         right_at=right_at, index=i_temp))
@@ -5865,7 +5864,7 @@ class Note_Shelf:
             for i_temp in selection:
 
                 self.display_buffer.append(alerts.SAVING+str(i_temp))
-                returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset),
+                returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset,surround=False),
                                         self.note_dict[str(i_temp)].text,
                                         right_at=right_at, index=i_temp))
                 lastindex = i_temp
@@ -5955,7 +5954,7 @@ class Note_Shelf:
                                                          orequal=False)],by_date=False,quick=False)[-1]
                 index = Index(index)
                 index = index.previous()
-                index = str(index)
+#                index = str(index)
 
 
             elif phrase[0] not in [DOLLAR, DASH, PLUS, STAR]:
@@ -5970,7 +5969,7 @@ class Note_Shelf:
                 right_at = False
                 as_child = False
                 as_next = False
-                index = 0
+                index = Index(0)
 
             if phrase[0] == DOLLAR:
                 #new keyword set
@@ -6032,7 +6031,7 @@ class Note_Shelf:
                                       not_parsing=False,
                                       right_at=right_at,
                                       as_child=as_child,
-                                      ind=index,
+                                      ind=str(index),
                                       re_entering=re_entering)
             self.pass_key_dict[depth][0] = keylist
             self.pass_key_dict[depth][1] = addedlist
@@ -6199,10 +6198,14 @@ class Note_Shelf:
         keylist = [k_temp for k_temp in keyset]
         keylist = [(a_temp, b_temp) for a_temp, b_temp in enumerate(keylist)]
         freq_list = []
+        not_in_list = []
         for counter, key in keylist:
             if key in self.key_freq_dict:
                 freq_list.append((self.key_freq_dict[key],
                                   counter))
+            else:
+                freq_list.append((0,counter))
+
         freq_list.sort(key=lambda x_temp: x_temp[0])
         return [(keylist[x_temp[1]][1], x_temp[0]) for x_temp in freq_list]
 
@@ -6233,7 +6236,7 @@ class Note_Shelf:
         if not keyset:
             return []
         freq_list = self.order_keys(keyset)
-        freq_list = [a_temp[0]+ self.show_key_freq*add_number*(' ('+str(a_temp[1])+')') for a_temp
+        freq_list = [a_temp[0]+ self.show_key_freq*add_number*(a_temp[1]>0)*(' ('+str(a_temp[1])+')') for a_temp
                      in freq_list][0 : numberof]
         if no_allcaps and len(freq_list) > 3:
             freq_list = [a_temp for a_temp
