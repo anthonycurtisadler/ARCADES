@@ -382,6 +382,7 @@ class Labels:
           self.MAIN_SEQUENCES = '/C/ MAIN SEQUENCES '
           self.SEQ_FORM_ONE = '/C/ FIRST SEQUENCE FORM '
           self.SEQ_FORM_TWO = '/C/ SECOND SEQUENCE FORM '
+          self.FROM_TEXT = '/C/ KEYWORDS FROM TEXT'
           
 
           
@@ -480,7 +481,8 @@ binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'showtext':("self.show_text",labels.SHOW_TEXTFILES),
                       'editdelete':("self.delete_by_edit",labels.DELETE_WHEN_EDITING),
                       'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE),
-                      'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT)}
+                      'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT),
+                      'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -505,9 +507,12 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'loadprojects':JSON_COM,
                     'clearprojects':JSON_COM,
                     'setsides':RESIZE_COM,
+                    'convertdefinitions':RESIZE_COM,
+                    'newconvertmode':RESIZE_COM,
+                    'switchconvertmode':RESIZE_COM,
+                    'showallconvertmodes':RESIZE_COM,
                     'setflipat':RESIZE_COM,                  
-                    'flexflip':RESIZE_COM,
-                    
+                    'flexflip':RESIZE_COM,                    
                     'flashforward':'self.side+=1',
                     'ff':'self.side+=1',
                     'flashback':'self.side-=1',

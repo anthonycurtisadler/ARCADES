@@ -35,6 +35,7 @@ from globalconstants import BOX_CHAR,\
 import commandscript                                                    #pylint 10.0/10
 from complexobjecttransformindexes import transform
 import consolidate                                                      #Stack Overflow
+from convert import Convert
 import copy
 from defaultscripts import COMMANDMACROSCRIPT
 from display import Display                                             #pylint 9.2/10
@@ -3856,7 +3857,7 @@ class Note_Shelf:
                         
                             
 
-        if not from_keys and self.default_dict['keysbefore']:
+        if not from_keys and self.default_dict['keysbefore'] and not self.default_dict['fromtext']:
 
             for k_temp in check_hyperlinks(input(queries.KEYS).split(COMMA)):
                 if k_temp != EMPTYCHAR:
@@ -4086,7 +4087,7 @@ class Note_Shelf:
 
         keyset.update(set(newkeylist))
         #add new kewords to existing set of keywords
-        if not from_keys and self.default_dict['keysafter']:
+        if not from_keys and self.default_dict['keysafter'] and not self.default_dict['fromtext']:
             for k_temp in input(queries.KEYS).split(COMMA):
                 if k_temp != EMPTYCHAR:
                     if k_temp[0] == DOLLAR:
@@ -4095,6 +4096,25 @@ class Note_Shelf:
                         keyset.add(k_temp)
             if not self.default_dict['keysbefore']:
                 keyset.update(oldkeys)
+
+        old_fromtext = self.default_dict['fromtext']  # Save old settings
+        old_mode = self.default_dict['convertmode']
+        
+        if '//' in text and '//' in text:
+            mode = text.split('//')[1].split('//')[0]
+            if mode in self.default_dict['convert']:
+                self.default_dict['convertmode'] = mode
+            display.noteprint(('MODE',self.default_dict['convertmode']))
+            self.default_dict['fromtext'] = True
+            text = text.replace('//'+mode+'//',EMPTYCHAR)
+      
+        if self.default_dict['fromtext']:
+            conv_keys, text = self.default_dict['convert'][self.default_dict['convertmode']].interpret(text)
+            text = reform_text(text)
+            text = self.default_dict['abbreviations'].do(text)
+            text = self.default_dict['macros'].do(text)
+            keyset.update(conv_keys)
+
 
         if self.project:
             for p_temp in self.project:
@@ -4227,6 +4247,9 @@ class Note_Shelf:
 
         self.entry_buffer.clear()
         self.last_keys = set()
+        # restore old settings
+        self.default_dict['fromtext'] = old_fromtext 
+        self.default_dict['convertmode'] = old_mode
 
         return index
 
@@ -7160,6 +7183,15 @@ class Console(Note_Shelf):
             # keeps track of words to facilitate quick searches
         self.default_dict = self.pickle_dictionary['d']
             # persistent default data
+
+        if 'convert' not in self.default_dict:
+            self.default_dict['convert'] = {'default':Convert()}
+        if  not isinstance(self.default_dict['convert'],dict):
+            self.default_dict['convert'] = {'default':Convert()}            
+        if 'convertmode' not in self.default_dict:
+            self.default_dict['convertmode'] = 'default'
+        if 'fromtext' not in self.default_dict:
+            self.default_dict['fromtext'] = True
         if 'seqform1' not in self.default_dict:
             self.default_dict['seqform1'] = EOL
         if 'seqform2' not in self.default_dict:
@@ -8049,6 +8081,48 @@ class Console(Note_Shelf):
                         totalterms=0):
 
         global override
+
+        if mainterm in ['convertdefinitions']:
+            for x_temp in ['d','s','e']:
+                queries_dic = {'d':'Dividor?',
+                               's':'Sequence key mark?',
+                               'e':'Entry divisor'}
+                defaults = {'d':EOL,
+                               's':COLON,
+                               'e':COMMA}
+                inp_temp = input(queries_dic[x_temp])
+                if inp_temp:
+                    self.default_dict['convert'][self.default_dict['convertmode']].change(inp_temp,x_temp)
+                else:
+                    self.default_dict['convert'][self.default_dict['convertmode']].change(defaults[x_temp],x_temp)
+                display.noteprint((self.default_dict['convertmode'],'/'.join(self.default_dict['convert'][self.default_dict['convertmode']].show()).
+                                                    replace(EOL,'EOL').
+                                                    replace(COMMA,'COMMA').
+                                                    replace(COLON,'COLON')))
+                
+        if mainterm in ['newconvertmode']:
+            ex_temp = s_input('New convert mode?',otherterms[0])
+            if ex_temp not in self.default_dict['convert']:
+                self.default_dict['convert'][ex_temp] = Convert()
+            display.noteprint(('/C/ Convert modes',', '.join(self.default_dict['convert'])))
+        if mainterm in ['switchconvertmode']:
+            ex_temp = s_input('convert mode?',otherterms[0])
+            if ex_temp in self.default_dict['convert']:
+                self.default_dict['convertmode']=ex_temp
+            display.noteprint((self.default_dict['convertmode'],
+                               '/'.join(self.default_dict['convert'][self.default_dict['convertmode']].show()).
+                                                    replace(EOL,'EOL').
+                                                    replace(COMMA,'COMMA').
+                                                    replace(COLON,'COLON')))
+        if mainterm in ['showallconvertmodes']:
+            display.noteprint(('ALL CONVERT MODES',
+                               EOL.join([x_temp + ':'
+                                         + '/'.join(self.default_dict['convert'][x_temp].show()).
+                                                    replace(EOL,'EOL').
+                                                    replace(COMMA,'COMMA').
+                                                    replace(COLON,'COLON')
+                                         for x_temp in self.default_dict['convert'].keys()])))
+            
 
         if mainterm in ['mainsequences']:
 
