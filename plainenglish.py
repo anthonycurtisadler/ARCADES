@@ -203,6 +203,13 @@ class Queries:
           self.TEXT_TO_CONVERT = 'Text to convert? '
           self.TEXT_TO_INTERPRET = 'Text to interpret? '
           self.INCLUDE_PROJECTS = 'Include projects? '
+          self.SEQ_FORM_ONE = 'Formatting after each sequence? (s) for space,' + EOL + \
+                              '(l) for EOL, (c) for COMMA and SPACE, ' + EOL + \
+                              '(b) for break, (n) for new or OTHER TEXT '
+          self.SEQ_FORM_TWO = 'Formatting after all sequence? (e) for emptychar, '+ EOL + \
+                              '(l) for EOL, (b)reak, (n)ew or OTHER TEXT '
+          self.MAIN_SEQUENCES = 'Main sequences? Enter as a list separated by commas or (d)efaults! '
+          
           
           
      
@@ -289,7 +296,7 @@ class Labels:
           self.DEPTH = '/C/ DEPTH'
           self.DEFAULT_KEYS = '/C/ DEFAULT KEYS'
           self.GRABBED_KEYS = '/C/GRABBED KEYS'
-          self.RESULT_FOR = '/C/ RESULT FOR '
+          self.RESULT_FOR = 'RESULT FOR '
           self.INDEXES = '/C/ INDEXES'
           self.KEYS = '/C/ KEYS'
           self.ITERATOR_SHOW = '/C/ SHOW INDEXES WITH ITERATOR RESET'
@@ -331,46 +338,50 @@ class Labels:
           self.FLIPOUT = '/C/ FLIPOUT'
           self.SHORTSHOW = '/C/ SHORTSHOW'
 
-          self.ITERATOR_SHOW = '/C/ SHOW INDEXES WITH ITERATOR RESET'
-          self.NONE = '/C/ NONE'
+          self.ITERATOR_SHOW = '/C/ SHOW INDEXES WITH ITERATOR RESET '
+          self.NONE = '/C/ NONE '
           self.COMMAND_EQ = '/C/ COMMAND = '
-          self.CONCORDANCE = '/C/ CONCORDANCE'
-          self.TO_UNDO = '/C/ TO UNDO'
-          self.DELETED = '/C/ DELETED NOTES'
-          self.CONFIG_SAVED = '/C/ CONFIGURATION SAVED'
-          self.VARIABLES = '/C/ VARIABLES'
-          self.KEYS_BEFORE = '/C/ KEYS BEFORE'
-          self.KEYS_AFTER = '/C/ KEYS AFTER'
-          self.CARRY_OVER_KEYS = '/C/ CARRY OVER KEYS'
-          self.CARRY_ALL = '/C/ CARRY OVER ALL PARENTS'
-          self.SETTINGS = '/C/ SETTINGS'
-          self.RETURN_QUIT_ON = '/C/ RETURNQUIT'
-          self.CLUSTERS = '/C/ CLUSTERS'
-          self.PROJECT_DISPLAY = '# |PROJECTNAME| INDEX |  KEYS'
-          self.NEGATIVE_RESULTS = '/C/ SHOW NEGATIVE RESULTS'
-          self.INDENT_MULTIPLIER = '/C/ INDENT MULTIPLIER'
-          self.ITERATOR = '/C/ ITERATOR'
+          self.CONCORDANCE = '/C/ CONCORDANCE '
+          self.TO_UNDO = '/C/ TO UNDO '
+          self.DELETED = '/C/ DELETED NOTES '
+          self.CONFIG_SAVED = '/C/ CONFIGURATION SAVED '
+          self.VARIABLES = '/C/ VARIABLES '
+          self.KEYS_BEFORE = '/C/ KEYS BEFORE '
+          self.KEYS_AFTER = '/C/ KEYS AFTER '
+          self.CARRY_OVER_KEYS = '/C/ CARRY OVER KEYS '
+          self.CARRY_ALL = '/C/ CARRY OVER ALL PARENTS '
+          self.SETTINGS = '/C/ SETTINGS '
+          self.RETURN_QUIT_ON = '/C/ RETURNQUIT '
+          self.CLUSTERS = '/C/ CLUSTERS '
+          self.PROJECT_DISPLAY = '# |PROJECTNAME| INDEX |  KEYS '
+          self.NEGATIVE_RESULTS = '/C/ SHOW NEGATIVE RESULTS '
+          self.INDENT_MULTIPLIER = '/C/ INDENT MULTIPLIER '
+          self.ITERATOR = '/C/ ITERATOR '
           self.MUST_BE_BETWEEN = '/C/ MUST BE BETWEEN '
           self.AND = ' AND '
-          self.SMALL_SIZE = '/C/ SMALL SIZE'
-          self.LONG_MAX = '/C/ LONGMAX'
-          self.SIDE = '/C/ SIDE'
-          self.SIDES = '/C/ SIDES'
-          self.FLIP_AT = '/C/ FLIP AT'
-          self.TAG_DEFAULT = '/C/ TAG DEFAULT'
-          self.USE_SEQUENCE = '/C/ USE SEQUENCE'
-          self.NO_FLASH = "/C/ DON'T SHOW FLASH CARDS"
-          self.CHECK_SPELLING = '/C/ SPELL CHECK'
-          self.FLASHMODE = '/C/ FLASHMODE'
-          self.SHOW_DATE = '/C/ SHOW DATE'
-          self.SORT_BY_DATE= '/C/ SORT BY DATE'
-          self.ORDER_KEYS = '/C/ ORDER KEYS'
-          self.ENTER_HELP= '/C/ ENTERHELP'
-          self.CHILDREN_TOO = '/C/ CHILDREN TOO'
-          self.SHOW_IMAGES = '/C/ SHOW IMAGES'
-          self.SHOW_TEXTFILES = '/C/ SHOW TEXTFILES'
-          self.DELETE_WHEN_EDITING = '/C/ DELETE WHEN EDITING'
-          self.VARIABLE_SIZE = '/C/ VARIABLE SIZE'
+          self.SMALL_SIZE = '/C/ SMALL SIZE '
+          self.LONG_MAX = '/C/ LONGMAX '
+          self.SIDE = '/C/ SIDE '
+          self.SIDES = '/C/ SIDES '
+          self.FLIP_AT = '/C/ FLIP AT '
+          self.TAG_DEFAULT = '/C/ TAG DEFAULT '
+          self.USE_SEQUENCE = '/C/ USE SEQUENCE '
+          self.NO_FLASH = "/C/ DON'T SHOW FLASH CARDS "
+          self.CHECK_SPELLING = '/C/ SPELL CHECK '
+          self.FLASHMODE = '/C/ FLASHMODE '
+          self.SHOW_DATE = '/C/ SHOW DATE '
+          self.SORT_BY_DATE= '/C/ SORT BY DATE '
+          self.ORDER_KEYS = '/C/ ORDER KEYS ' 
+          self.ENTER_HELP= '/C/ ENTERHELP '
+          self.CHILDREN_TOO = '/C/ CHILDREN TOO '
+          self.SHOW_IMAGES = '/C/ SHOW IMAGES '
+          self.SHOW_TEXTFILES = '/C/ SHOW TEXTFILES '
+          self.DELETE_WHEN_EDITING = '/C/ DELETE WHEN EDITING '
+          self.VARIABLE_SIZE = '/C/ VARIABLE SIZE '
+          self.SEQUENCE_IN_TEXT = '/C/ SEQUENCE IN TEXT '
+          self.MAIN_SEQUENCES = '/C/ MAIN SEQUENCES '
+          self.SEQ_FORM_ONE = '/C/ FIRST SEQUENCE FORM '
+          self.SEQ_FORM_TWO = '/C/ SECOND SEQUENCE FORM '
           
 
           
@@ -468,7 +479,8 @@ binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'showimages':("self.show_images",labels.SHOW_IMAGES),
                       'showtext':("self.show_text",labels.SHOW_TEXTFILES),
                       'editdelete':("self.delete_by_edit",labels.DELETE_WHEN_EDITING),
-                      'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE)}
+                      'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE),
+                      'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -727,7 +739,10 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     QUESTIONMARK:COPY_MOVE_SEARCH_COM,
                     'move':COPY_MOVE_SEARCH_COM,
                     'copy':COPY_MOVE_SEARCH_COM,
-                    'dictionaryload':RESIZE_COM}         
+                    'dictionaryload':RESIZE_COM,
+                    'seqformone':RESIZE_COM,
+                    'seqformtwo':RESIZE_COM,
+                    'mainsequences':RESIZE_COM}         
           
           
 

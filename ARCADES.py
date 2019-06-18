@@ -2535,16 +2535,69 @@ class Note_Shelf:
 
         if str(index) not in self.indexes():
             return [EMPTYCHAR, EMPTYCHAR]
+
+        keyset_temp = self.note_dict[str(index)].keyset
+        seq_keys = set()
+        if self.default_dict['sequences_in_text'] and not shortform:
+            oldkeys = set(keyset_temp)
+            seq_keys = set()
+            keyset_temp = set()
+            seq_keys = {x_temp for x_temp in oldkeys if ATSIGN  in x_temp}
+            keyset_temp = oldkeys - seq_keys
+
         kl = self.abridged_str_from_list(remove_tags(
-            self.return_least_keys(transpose_keys(self.note_dict[str(index)].keyset),
+            self.return_least_keys(transpose_keys(keyset_temp),
                                    override=not self.default_dict['orderkeys'],
                                    add_number=True,no_allcaps=False), override=yestags),
                                          override=not shortform)
+        seq_text = EMPTYCHAR
+
+        if seq_keys:
+            proj_seq = []
+            main_seq = []
+            other_seq = []
+
+            for kx_temp in seq_keys:
+                ident_temp= kx_temp.split(ATSIGN)[0]
+                value_temp = kx_temp.split(ATSIGN)[1]
+                if ident_temp in self.default_dict['projects']:
+                    proj_seq.append(kx_temp)
+                elif ident_temp in self.default_dict['main_sequences']:
+                    main_seq.append(kx_temp)
+                else:
+                    other_seq.append(kx_temp)
+            proj_seq.sort()
+            main_seq.sort()
+            other_seq.sort()
+
+            if proj_seq:
+                seq_text = 'PROJECTS: ' + ', '.join(proj_seq) + self.default_dict['seqform1']
+            if main_seq: 
+                for kx_temp in main_seq:
+                    ident_temp= kx_temp.split(ATSIGN)[0]
+                    value_temp = kx_temp.split(ATSIGN)[1]
+                    seq_text += ident_temp + ':' + value_temp + self.default_dict['seqform1']
+            if other_seq:
+                seq_text += EOL 
+                for kx_temp in other_seq:
+                    ident_temp= kx_temp.split(ATSIGN)[0]
+                    value_temp = kx_temp.split(ATSIGN)[1]
+                    seq_text += ident_temp + ':' + value_temp + self.default_dict['seqform1']
+            if seq_text:
+                seq_text += EOL + self.default_dict['seqform2']
+
+            seq_text = seq_text.replace(BLANK+EOL,EOL)
+
+            if COMMA + EOL in seq_text or COLON +EOL in seq_text or SEMICOLON + EOL in seq_text:
+                seq_text = seq_text.replace(COMMA+EOL,EOL).replace(COLON+EOL,EOL).replace(SEMICOLON+EOL,EOL)
+                
+
         
         for char in string.whitespace[1:]:
             kl = kl.replace(char, EMPTYCHAR)
         
         kl = kl.replace(UNDERLINE, BLANK)
+            
         
         if not shortform:
 
@@ -2592,13 +2645,14 @@ class Note_Shelf:
 
             if curtail != 0 and len(tex_temp) > curtail:
                 tex_temp = tex_temp[0:curtail]
+            # Adds the first and second element on the list 
             l_temp.append(d_index+self.mark(index)+suffix
                           +BLANK+VERTLINE+BLANK
                           +self.field(index)
                           +date_insert
                           +BLANK+VERTLINE+BLANK+kl
                           +BLANK+VERTLINE)
-            l_temp.append(nformat.encase(tex_temp,
+            l_temp.append(seq_text + nformat.encase(tex_temp,
                                          highlight))
             if len(l_temp) > 1: 
                 if self.default_dict['curtail']:
@@ -7106,7 +7160,14 @@ class Console(Note_Shelf):
             # keeps track of words to facilitate quick searches
         self.default_dict = self.pickle_dictionary['d']
             # persistent default data
-
+        if 'seqform1' not in self.default_dict:
+            self.default_dict['seqform1'] = EOL
+        if 'seqform2' not in self.default_dict:
+            self.default_dict['seqform2'] = EMPTYCHAR
+        if 'main_sequences' not in self.default_dict:
+            self.default_dict['main_sequences'] = ['title','author','date','datefrom','dateto','book','page','chapter','section']
+        if 'sequences_in_text' not in self.default_dict:
+            self.default_dict['sequences_in_text'] = True 
         if 'texttrim' not in self.default_dict:
             self.default_dict['texttrim'] = 40
         if 'enterhelp' not in self.default_dict:
@@ -7989,6 +8050,58 @@ class Console(Note_Shelf):
 
         global override
 
+        if mainterm in ['mainsequences']:
+
+            entry_temp = s_input(queries.MAIN_SEQUENCES,otherterms[0])
+            if not entry_temp:
+                pass
+            elif COMMA not in entry_temp and entry_temp.lower() == 'd':
+                self.default_dict['main_sequences'] = ['title','author','date','datefrom','dateto','book','page','chapter','section']
+            else:
+                self.default_dict['main_sequences'] = [x_temp.strip() for x_temp in entry_temp.split(COMMA)]
+            display.noteprint((alerts.ATTENTION,labels.MAIN_SEQUENCES+', '.join(self.default_dict['main_sequences'])))
+
+        if mainterm in ['seqformone']:
+            entry_temp = s_input(queries.SEQ_FORM_ONE,otherterms[0])
+            if entry_temp[0].lower() in ['s','l','c','b','n']:
+                if entry_temp[0].lower() == 's':
+                    self.default_dict['seqform1'] = BLANK
+                elif entry_temp[0].lower() == 'c':
+                    self.default_dict['seqform1'] = COMMA + BLANK
+                elif entry_temp[0].lower() == 'l':
+                    self.default_dict['seqform1'] = EOL
+                elif entry_temp[0].lower() == 'b':
+                    self.default_dict['seqform1'] = EOL + '/BREAK/'
+                elif entry_temp[0].lower() == 'n':
+                    self.default_dict['seqform1'] = EOL + '/NEW/'
+                    
+            else:
+                
+                self.default_dict['seqform1'] = entry_temp
+            display.noteprint((labels.SEQ_FORM_ONE,self.default_dict['seqform1'].
+                               replace(BLANK,'BLANK').
+                               replace(COMMA+BLANK,'COMMA + BLANK').
+                               replace(EOL,'EOL').
+                               replace('/BREAK/','BREAK').
+                               replace('/NEW/','NEW')))
+
+        if mainterm in ['seqformtwo']:
+            
+            entry_temp = s_input(queries.SEQ_FORM_TWO,otherterms[0])
+            if entry_temp[0].lower() in ['e','l','b','n']:
+                if entry_temp[0].lower() == 'e':
+                    self.default_dict['seqform2'] = EMPTYCHAR
+                elif entry_temp[0].lower() == 'l':
+                    self.default_dict['seqform2'] = EOL
+                elif entry_temp[0].lower() == 'b':
+                    self.default_dict['seqform2'] = '/BREAK/'
+                elif entry_temp[0].lower() == 'n':
+                    self.default_dict['seqform2'] = '/NEW/'     
+            else:
+                    self.default_dict['seqform2'] = entry_temp
+            display.noteprint((labels.SEQ_FORM_ONE,self.default_dict['seqform2'].
+                               replace(EOL,'NEW LINE').
+                               replace('/BREAK/','BREAK').replace('/NEW/','NEW')))
         if mainterm in ['dictionaryload']:
             filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
