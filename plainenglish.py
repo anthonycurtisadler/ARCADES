@@ -382,8 +382,8 @@ class Labels:
           self.MAIN_SEQUENCES = '/C/ MAIN SEQUENCES '
           self.SEQ_FORM_ONE = '/C/ FIRST SEQUENCE FORM '
           self.SEQ_FORM_TWO = '/C/ SECOND SEQUENCE FORM '
-          self.FROM_TEXT = '/C/ KEYWORDS FROM TEXT'
-          
+          self.FROM_TEXT = '/C/ KEYWORDS FROM TEXT '
+          self.CONVERT_BY_LINE = '/C/ CONVERT BY LINE '
 
           
 class Spelling:
@@ -482,7 +482,8 @@ binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'editdelete':("self.delete_by_edit",labels.DELETE_WHEN_EDITING),
                       'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE),
                       'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT),
-                      'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT)}
+                      'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT),
+                      'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'

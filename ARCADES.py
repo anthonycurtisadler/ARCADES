@@ -3900,6 +3900,14 @@ class Note_Shelf:
                 #asks for input if text has not been fed into the function
                 t_temp = input('PO '*poetry
                                +'PR '*(not poetry)+str(counter)+(4-len(str(counter)))*BLANK)
+                if self.default_dict['convertbyline']:
+                    if self.by_line.interpret(t_temp)[0]:
+                        keyset.update(self.by_line.interpret(t_temp)[0])
+                        t_temp = EMPTYCHAR
+                    
+                
+                
+                    
 
 
             else:
@@ -4108,7 +4116,7 @@ class Note_Shelf:
             self.default_dict['fromtext'] = True
             text = text.replace('//'+mode+'//',EMPTYCHAR)
       
-        if self.default_dict['fromtext']:
+        if self.default_dict['fromtext'] and not self.default_dict['convertbyline']:
             conv_keys, text = self.default_dict['convert'][self.default_dict['convertmode']].interpret(text)
             text = reform_text(text)
             text = self.default_dict['abbreviations'].do(text)
@@ -7182,8 +7190,11 @@ class Console(Note_Shelf):
         self.word_dict = self.pickle_dictionary['w']
             # keeps track of words to facilitate quick searches
         self.default_dict = self.pickle_dictionary['d']
-            # persistent default data
-
+            # persistent default date
+        self.by_line = Convert()
+        
+        if 'convertbyline' not in self.default_dict:
+            self.default_dict['convertbyline'] = False
         if 'convert' not in self.default_dict:
             self.default_dict['convert'] = {'default':Convert()}
         if  not isinstance(self.default_dict['convert'],dict):
@@ -7191,7 +7202,7 @@ class Console(Note_Shelf):
         if 'convertmode' not in self.default_dict:
             self.default_dict['convertmode'] = 'default'
         if 'fromtext' not in self.default_dict:
-            self.default_dict['fromtext'] = True
+            self.default_dict['fromtext'] = False
         if 'seqform1' not in self.default_dict:
             self.default_dict['seqform1'] = EOL
         if 'seqform2' not in self.default_dict:
@@ -7199,7 +7210,7 @@ class Console(Note_Shelf):
         if 'main_sequences' not in self.default_dict:
             self.default_dict['main_sequences'] = ['title','author','date','datefrom','dateto','book','page','chapter','section']
         if 'sequences_in_text' not in self.default_dict:
-            self.default_dict['sequences_in_text'] = True 
+            self.default_dict['sequences_in_text'] = False 
         if 'texttrim' not in self.default_dict:
             self.default_dict['texttrim'] = 40
         if 'enterhelp' not in self.default_dict:
