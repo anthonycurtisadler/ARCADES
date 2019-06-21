@@ -46,10 +46,16 @@ class Index:
             t_temp += str(a_temp)+PERIOD
         return t_temp[:-1]
 
+    def conv(self,this):
+        if isinstance(this,(str,int)):
+            return Index(this)
+        return this
+
 
     def __add__(self, other):
 
         """Operator overload. Adds two indexes together"""
+        other = self.conv(other)
 
         templist = []
         if isinstance(other, int):
@@ -72,6 +78,8 @@ class Index:
 
         """Operator overload.Subtracts one index from another."""
 
+        other = self.conv(other)
+
         templist = []
         if isinstance(other, int):
             other = Index(other)
@@ -90,6 +98,8 @@ class Index:
 
     def __eq__(self, other):
 
+        other = self.conv(other)
+
         """Operator overload. Equality."""
         if isinstance(other, (str, int)):
             other = Index (other)
@@ -102,11 +112,15 @@ class Index:
 
     def __ne__(self, other):
 
+        other = self.conv(other)
+
         """Operator overload. Indequality."""
 
         return not self == other
 
     def __lt__(self, other):
+
+        other = self.conv(other)
 
         """Operator overload. Less than."""
 
@@ -121,19 +135,26 @@ class Index:
 
     def __gt__(self, other):
 
+        other = self.conv(other)
+
         """Operator overload. Greater than."""
 
         return not self == other and not self < other
 
     def __le__(self, other):
 
+
         """Less than equal."""
+
+        other = self.conv(other)
 
         return self < other or self == other
 
     def __ge__(self, other):
 
         """Greater than equal."""
+
+        other = self.conv(other)
 
         return self > other or self == other
 
@@ -146,6 +167,7 @@ class Index:
     def previous(self):
 
         """Gets the previous note."""
+
 
         tl_temp = list(self.self)
         if len(tl_temp) > 1:
@@ -186,6 +208,8 @@ class Index:
 
         """Tests if self is a descendent of other."""
 
+        other = self.conv(other)
+
         la_temp = tuple(self.self)
         lb_temp = tuple(other.self)
         if len(la_temp) <= len(lb_temp):
@@ -197,6 +221,8 @@ class Index:
     def is_first_descendent(self, other):
 
         """Tests if one index is the immediate descendent of another."""
+
+        other = self.conv(other)
 
         if not self.is_descendent(other):
             return False
@@ -223,8 +249,12 @@ class Index:
 
     def subordinate(self, other):
 
+        other = self.conv(other)
+
         """Subordinates one index to another."""
         # NOT SURE ###
+
+        other = self.conv(other)
 
         la_temp = tuple(self.self)
         lb_temp = tuple(other.self)

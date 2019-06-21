@@ -109,7 +109,7 @@ command_stack = stack.Stack()
 ## global variables ##
 
 override = False #Overrides exception handling on main loop
-multi_dict = {} #Dictionary for story display outputs
+multi_dict = {}#Dictionary for story display outputs
 #For copyto/copyfrom -- holds notes for transfer from one notebase to another.
 temporary = TemporaryHolder()
 
@@ -150,11 +150,22 @@ def is_date(entry,returndate=False):
 
     if not isinstance(entry,(tuple,list)):
 
-        if entry.count(DASH)>1 and entry.count(COLON)>1 and entry.count(PERIOD)==1:
-             entry = entry.replace(DASH,BLANK).replace(COLON,BLANK).replace(PERIOD,BLANK).split(BLANK)
-             entry = [int(a.strip()) for a in entry]
+        if entry.count(DASH)>1 \
+           and entry.count(COLON)>1 \
+           and entry.count(PERIOD)==1:
+             entry = entry.replace(DASH,BLANK).\
+                     replace(COLON,BLANK).\
+                     replace(PERIOD,BLANK).split(BLANK)
+             entry = [int(a.strip())
+                      for a in entry]
              if returndate:
-                    return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6])
+                    return datetime.datetime(entry[0],
+                                             entry[1],
+                                             entry[2],
+                                             entry[3],
+                                             entry[4],
+                                             entry[5],
+                                             entry[6])
              
         else:
              
@@ -165,7 +176,8 @@ def is_date(entry,returndate=False):
              for x_temp in entry:
                  if not x_temp.isnumeric():
                      False
-             entry = [int(x_temp.replace(PLUS,DASH)) for x_temp in entry]
+             entry = [int(x_temp.replace(PLUS,DASH))
+                      for x_temp in entry]
 
                
     
@@ -173,16 +185,30 @@ def is_date(entry,returndate=False):
     for counter,x_temp in enumerate(entry):
         if not isinstance(x_temp,int):
             return False
-        if not (date_constraints[counter][0]<=x_temp<=date_constraints[counter][1]):
+        if not (date_constraints[counter][0]
+                <= x_temp
+                <= date_constraints[counter][1]):
             return False
     if returndate:
 
         if len(entry) == 3:
-            return datetime.date(entry[0],entry[1],entry[2])
+            return datetime.date(entry[0],
+                                 entry[1],
+                                 entry[2])
         elif len(entry) == 5:
-            return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4])
+            return datetime.datetime(entry[0],
+                                     entry[1],
+                                     entry[2],
+                                     entry[3],
+                                     entry[4])
         elif len(entry) == 7:
-            return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4],entry[5],entry[6])
+            return datetime.datetime(entry[0],
+                                     entry[1],
+                                     entry[2],
+                                     entry[3],
+                                     entry[4],
+                                     entry[5],
+                                     entry[6])
     
     return True 
 
@@ -221,7 +247,9 @@ def check_hyperlinks(entry=[],purge=False):
             x_temp = str(x_temp)
             if isindex(x_temp):
                 if x_temp not in notebook.indexes():
-                    display.noteprint((alerts.ATTENTION, alerts.INDEX+x_temp+alerts.NOT_FOUND_IN_NOTEBASE))
+                    display.noteprint((alerts.ATTENTION,
+                                       alerts.INDEX + x_temp
+                                       + alerts.NOT_FOUND_IN_NOTEBASE))
                 else:
                     returning.append(x_temp)
             else:
@@ -235,7 +263,9 @@ def check_hyperlinks(entry=[],purge=False):
             x_temp = str(x_temp)
             if isindex(x_temp):
                 if x_temp not in notebook.indexes():
-                    display.noteprint((alerts.ATTENTION, 'Index '+x_temp+' not found in notebase!'))
+                    display.noteprint((alerts.ATTENTION,
+                                       'Index ' + x_temp
+                                       + ' not found in notebase!'))
                 else:
                     returning.add(x_temp)
             else:
@@ -244,7 +274,8 @@ def check_hyperlinks(entry=[],purge=False):
     return returning
 
 
-def transpose_keys(entry_list=None,surround=True):
+def transpose_keys(entry_list=None,
+                   surround=True):
 
     """Transpose keys that are indexes"""
 
@@ -254,24 +285,35 @@ def transpose_keys(entry_list=None,surround=True):
         to_return = []
         
         for x_temp in entry_list:
-            to_return.append(str(notebook.default_dict['indextable'].transform(x_temp,surround=surround)))
+            to_return.append(str(notebook.default_dict['indextable']
+                                 .transform(x_temp,surround=surround)))
         return to_return
 
     elif isinstance(entry_list,set):
         to_return = set()
         
         for x_temp in entry_list:
-            to_return.add(str(notebook.default_dict['indextable'].transform(x_temp,surround=surround)))
+            to_return.add(str(notebook.default_dict['indextable']
+                              .transform(x_temp,surround=surround)))
         return to_return
 
     else:
-        to_return = notebook.default_dict['indextable'].transform(entry_list,surround=surround)
+        to_return = notebook.default_dict['indextable']\
+                    .transform(entry_list,surround=surround)
 
     return to_return
 
 
 def how_common(entrylist,
                dictionaryobject=None):
+
+    """ For a given dictionaryobject, returns a
+    sorted list of tuples containing two entries:
+    the key in the dictionary, and either
+    the size of its value, if a set or list,
+    or the integer value.
+    """
+
 
     returnlist = []
 
@@ -280,14 +322,19 @@ def how_common(entrylist,
 
         for w_temp in entrylist:
             if w_temp in dictionaryobject:
-                if isinstance(dictionaryobject[w_temp],(set,list)):
-                    returnlist.append((w_temp,len(dictionaryobject[w_temp])))
+                if isinstance(dictionaryobject[w_temp],
+                              (set,list)):
+                    returnlist.append((w_temp,
+                                       len(dictionaryobject[w_temp])))
                 if isinstance(dictionaryobject[w_temp],int):
-                    returnlist.append((w_temp,dictionaryobject[w_temp]))
+                    returnlist.append((w_temp,
+                                       dictionaryobject[w_temp]))
 
-        return sorted(returnlist,key=lambda x_temp: x_temp[1])
+        return sorted(returnlist,
+                      key=lambda x_temp: x_temp[1])
     else:
-        display.noteprint((alerts.ATTENTION, alerts.NO_DICTIONARY_OBJECT))
+        display.noteprint((alerts.ATTENTION,
+                           alerts.NO_DICTIONARY_OBJECT))
 
 def formkeys(entry_temp):
 
@@ -298,9 +345,11 @@ def formkeys(entry_temp):
 
 def switchlanguage(language='ple'):
 
-    """ switches from the instruction set in one language to another language.
-    loads definitions from appropriate module and then also runs the
-    language_switching method in the necessary objects, sending the default terms to them.
+    """ switches from the instruction set
+    in one language to another language.
+    loads definitions from appropriate module
+    and then also runs the language_switching method
+    in the necessary objects, sending the default terms to them.
     """
     
     global Queries, Alerts, Labels, queries, alerts, labels
@@ -330,7 +379,8 @@ def switchlanguage(language='ple'):
              binary_settings, simple_commands
         
     spellingheadings = Spelling() 
-    notebook.speller = SpellCheck(display, headings=spellingheadings)
+    notebook.speller = SpellCheck(display,
+                                  headings=spellingheadings)
     defaultheadings = DefaultConsoles()
     defaultterms = (ADDTERMS,
                     DELETETERMS,
@@ -412,7 +462,8 @@ def side_note(texts,
     linelists = []
     for column in range(len(texts)):
         linelists.append(divide_into_lines(texts[column],widths[column]))
-    maxrows = max(len(l_temp) for l_temp in linelists)
+    maxrows = max(len(l_temp)
+                  for l_temp in linelists)
     for column in range(len(texts)):
         linelists[column].extend([EMPTYCHAR]*(maxrows-len(linelists[column])))
 
@@ -420,7 +471,9 @@ def side_note(texts,
     returntext =  EOL + '/COL/' + EOL 
         
     for counter in range(0,maxrows):
-        returntext += (str(counter) + COLON + BLANK + columnchar)*counters 
+        returntext += (str(counter)
+                       + COLON + BLANK
+                       + columnchar)*counters 
         for column in range(len(texts)):
             returntext += linelists[column][counter] \
                           + BLANK + columnchar * (column < len(texts)-1)
@@ -445,19 +498,29 @@ def split_up_string(string,
     for segment in segments:
         if len(segment) > ((line_length * 2)/3):
             if length > (line_length/3):
-                returnlist.append(newline + COMMA + BLANK)
-                returnlist.append(segment + COMMA + BLANK)
+                returnlist.append(newline
+                                  + COMMA
+                                  + BLANK)
+                returnlist.append(segment
+                                  + COMMA
+                                  + BLANK)
                 length = 0
                 newline = EMPTYCHAR
             else:
-                returnlist.append(newline + segment + COMMA + BLANK)
+                returnlist.append(newline
+                                  + segment
+                                  + COMMA
+                                  + BLANK)
                 length = 0
                 newline = EMPTYCHAR
         elif length + len(segment) <= line_length:
             newline += segment + COMMA + BLANK
             length += len(segment)
         else:
-            returnlist.append(newline + segment + COMMA + BLANK)
+            returnlist.append(newline
+                              + segment
+                              + COMMA
+                              + BLANK)
             length = 0
             newline = EMPTYCHAR
     if newline:
@@ -468,7 +531,10 @@ def split_up_string(string,
     return returnlist
 
 
-def split_into_columns (t_temp,breaker=BLANK,width=80,columns=3):
+def split_into_columns (t_temp,
+                        breaker=BLANK,
+                        width=80,
+                        columns=3):
 
     """ splits text into columns.
     """
@@ -479,7 +545,8 @@ def split_into_columns (t_temp,breaker=BLANK,width=80,columns=3):
 
     columnwords = int(len(t_temp)/columns)
     columnwidth = int(width/columns)
-    columnlist =  [columnwidth]*(columns-1) + [width-columnwidth*(columns-1)]
+    columnlist =  [columnwidth]*(columns-1) \
+                 + [width-columnwidth*(columns-1)]
 
     textlist = []
     for c_temp in range(columns):
@@ -493,7 +560,9 @@ def split_into_columns (t_temp,breaker=BLANK,width=80,columns=3):
 
     return side_note(textlist,columnlist)
 
-def abridge (string,maxlength=60,overmark=BLANK+PERIOD*3+BLANK,rev=False):
+def abridge (string,
+             maxlength=60,
+             overmark=BLANK+PERIOD*3+BLANK,rev=False):
 
     """abridges a string if it is longer than maxlength"""
     
@@ -594,10 +663,12 @@ def get_range(entryterm,
                or (term[0]==DASH and (SLASH in term[1:] or DASH in term[1:])):
 
                 if DASH + DASH in term:
-                    term = term.replace(DASH+DASH, SLASH+DASH)
+                    term = term.replace(DASH+DASH,
+                                        SLASH+DASH)
                 if SLASH not in term:
                     if term[0] != DASH:
-                        term = term.replace(DASH, SLASH)
+                        term = term.replace(DASH,
+                                            SLASH)
                     else:
                         term = term[0] + term[1:].replace(DASH,SLASH)
 
@@ -661,16 +732,22 @@ def get_text_file(filename,folder=os.altsep+'textfiles',suffix='.txt'):
     directoryname = os.getcwd()+folder
     if os.altsep+'notebooks'+os.altsep+'textfiles' in directoryname:
         print(directoryname)
-        directoryname = directoryname.replace(os.altsep+'notebooks'+os.altsep+'textfiles',os.altsep+'textfiles')
+        directoryname = directoryname.replace(os.altsep + 'notebooks'
+                                              + os.altsep+'textfiles',
+                                              os.altsep+'textfiles')
         print(directoryname)
     if  os.altsep+'notebooks'+'/'+'textfiles' in directoryname:
         print(directoryname)
-        directoryname = directoryname.replace(os.altsep+'notebooks'+'/'+'textfiles',os.altsep+'textfiles')
+        directoryname = directoryname.replace(os.altsep + 'notebooks'
+                                              + '/' + 'textfiles',
+                                              os.altsep+'textfiles')
         print(directoryname)
         
     
-    textfile = open(directoryname+os.altsep+filename+suffix, 'r', encoding='utf-8')
-    returntext = textfile.read().replace('\ufeff', EMPTYCHAR)
+    textfile = open(directoryname+os.altsep+filename+suffix,'r',
+                    encoding='utf-8')
+    returntext = textfile.read().replace('\ufeff',
+                                         EMPTYCHAR)
     textfile.close()
     return returntext
 
@@ -692,13 +769,15 @@ def get_words(text):
 
 def get_keys_to_add(keys_to_add):
 
-    """ Expands the list of keys by applying keymacros and checks hyperlinks """
+    """ Expands the list of keys by applying
+    keymacros and checks hyperlinks """
 
     keyset = set()
     for k_temp in keys_to_add:
        if k_temp != EMPTYCHAR:
            if k_temp[0] == DOLLAR:
-               keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
+               keyset.update(self.default_dict['keymacros'].
+                             get_definition(k_temp[1:]))
            else:
                keyset.add(k_temp)
     return list(check_hyperlinks(keyset))
@@ -707,7 +786,8 @@ def get_keys_to_add(keys_to_add):
 def frequency_count(text):
 
 
-    """returns a histogram of the word frequency count of text"""
+    """returns a histogram of the word
+    frequency count of text"""
 
     returndictionary = {}
     
@@ -743,16 +823,21 @@ def textedit_new(text,
                  splitchar=BLANK,
                  annotate=False):
 
-    """ updated text editing function. Allows the user to edit inputed text"""
+    """ updated text editing function.
+    Allows the user to edit inputed text"""
 
     text = text.replace(EOL,VERTLINE)
     # add the annotation mark if needed.
     if annotate and '/COL/' not in text:
         text = '/COL/|' + text
     maxlen = 0
-    text = text.replace('/COL/|','/COL/'+EOL).replace(VERTLINE+'/ENDCOL/',EOL+'/ENDCOL/')
+    text = text.replace('/COL/|',
+                        '/COL/'+EOL).replace(VERTLINE+'/ENDCOL/',
+                                             EOL+'/ENDCOL/')
     # to establish the maximum length of the line.
-    maxlen = max(len(l_temp) for l_temp in text.split(VERTLINE))
+    maxlen = max(len(l_temp)
+                 for l_temp
+                 in text.split(VERTLINE))
     # the actual size of the note.
     size = min(size, maxlen+5)
     go_on_deleting = False
@@ -760,7 +845,8 @@ def textedit_new(text,
 
 
     linelist = [] 
-    # either add line, if less than size, or split into smaller lines.
+    # either add line, if less than size,
+    #or split into smaller lines.
     for l_temp in text.split(VERTLINE):
         if len(l_temp) < size:
             linelist.append(l_temp+VERTLINE)
@@ -816,7 +902,8 @@ def textedit_new(text,
                 # if RETURN then keep as it was.
                 counter += 1
                 if annotate:
-                    returnlist.append(l_temp.replace(VERTLINE,EMPTYCHAR)+annotation+VERTLINE)
+                    returnlist.append(l_temp.replace(VERTLINE,EMPTYCHAR)
+                                      +annotation+VERTLINE)
                 else:
                     returnlist.append(l_temp)
                 print(returnlist[-1])
@@ -833,9 +920,11 @@ def textedit_new(text,
             elif nl_temp[0] == POUND:
                 counter += 1
                 # to add to the RIGHT 
-                returnlist.append(l_temp.replace(EOL,EMPTYCHAR)
+                returnlist.append(l_temp.replace(EOL,
+                                                 EMPTYCHAR)
                                   +nl_temp[1:]+VERTLINE)
-            elif nl_temp[0] in [PLUS, CARET]:
+            elif nl_temp[0] in [PLUS,
+                                CARET]:
                 # to insert new lines before 
                 keepgoing = True
                 addline = EOL
@@ -851,7 +940,7 @@ def textedit_new(text,
                                          +(size-len(l_temp)-5)
                                          *BLANK+VERTLINE)
                     if nnl_temp and nnl_temp[-1] != VERTLINE:
-                        addline += nnl_temp+BLANK
+                        addline += nnl_temp + BLANK
                     elif nnl_temp and nnl_temp[-1] == VERTLINE:
                         addline += nnl_temp[:-1]
                         returnlist.append(addline+VERTLINE)
@@ -866,13 +955,16 @@ def textedit_new(text,
 
                 # to replace with new line/lines
                 for ll in nl_temp.split(VERTLINE):
-                    returnlist.append(ll+annotation+VERTLINE*annotate)
+                    returnlist.append(ll+annotation
+                                      +VERTLINE*annotate)
                     annotation = UNDERLINE * annotate
                     counter += 1
     for l_temp in returnlist:
         # to replcae VERTLINE with EOL
 
-        l_temp = l_temp.replace(VERTLINE+VERTLINE,VERTLINE).replace(EOL+VERTLINE,VERTLINE)\
+        l_temp = l_temp.replace(VERTLINE+VERTLINE,
+                                VERTLINE).replace(EOL+VERTLINE,
+                                                  VERTLINE)\
                       .replace(VERTLINE+EOL,VERTLINE)\
                       .replace(VERTLINE,EOL)
         if l_temp:
@@ -988,7 +1080,9 @@ def add_form(keyset,
         if as_next:
             returntext += "' "    # mark for a next note
 
-    returntext += (text.replace(LEFTNOTE, LEFTBRACKET).replace(RIGHTNOTE, RIGHTBRACKET)
+    returntext += (text.replace(LEFTNOTE,
+                                LEFTBRACKET).replace(RIGHTNOTE,
+                                                     RIGHTBRACKET)
                    +EOL+metatext[0:-1]+' >'+EOL*2)
     # transforms the arrow brackets into square brackets
     #to make sure  that encoding is possible
@@ -1001,7 +1095,8 @@ def select_func (entrylist):
 
     to_keep = input(queries.ENTER_KEYWORDS)
     to_keep = rangelist.range_set(to_keep)
-    return [entrylist[a_temp] for a_temp in to_keep
+    return [entrylist[a_temp]
+            for a_temp in to_keep
             if a_temp in range(len(entrylist))]
 
 def show_list(entrylist,
@@ -1047,7 +1142,8 @@ def show_list(entrylist,
                 text += str(counter)+COLON+BLANK+funky[0]+EOL
 
                 counter += 1
-                for f_temp in funky[1:]:   # for subsequent lines
+                for f_temp in funky[1:]:
+                    # for subsequent lines
                     text += f_temp + EOL
     ##                    showlist.append(f_temp+EOL)
 
@@ -1254,7 +1350,8 @@ def edit_keys (keyobject,
         listcopy = list(keyobject)
         for counter, key in enumerate(listcopy):
             keylist.append(str(counter)+' : '+key)
-        keylist.show(header=prompt, centered=True)
+        keylist.show(header=prompt,
+                     centered=True)
         i_temp = input(queries.AUTOKEYS_KEEP+askabort*queries.ALSO_ABORT)
 
         if i_temp:
@@ -1434,6 +1531,12 @@ class Note_Shelf:
     def parse_sequence_key(self,
                            seq_value):
 
+            """ takes the value of a sequence, following the identifier, and returns a tuple indicating
+            the mark used for the sequence, the value itself, and the type of the value.
+            """
+
+        
+
             seq_type = str
             seq_mark = EMPTYCHAR
 
@@ -1596,7 +1699,7 @@ class Note_Shelf:
         """changes the user in the metadata over a range of notes"""
 
         if entrylist is None:
-            entrylist = self.apply_limit(find_within(indexfrom=0,orequal=True))
+            entrylist = self.apply_limit(self.find_within(indexfrom=0,orequal=True))
 
         if not isinstance(entrylist[0], str):
             entrylist = [str(a_temp)
@@ -1999,7 +2102,9 @@ class Note_Shelf:
     def index_sort(self,indexlist,
                    by_date=False, #changed from true 
                    most_recent=False,
-                   quick=True):
+                   quick=True,
+                   no_check=True,
+                   check_object=None):
 
 
         """sorts an list of the type Index"""
@@ -2013,10 +2118,15 @@ class Note_Shelf:
             return sorted(indexlist,
                           key=lambda x_temp: Index(str(x_temp)))
 
+        if not no_check:
+            if not check_object:
+                check_object = self.note_dict
+            indexlist = [x_temp for x_temp in indexlist if str(x_temp) in check_object]
         return sorted(indexlist,
-                      key=lambda x_temp: \
-                      self.note_dict[str(Index(str(x_temp)))].date(convert=False,
-                                                                   most_recent=most_recent))
+                     key=lambda x_temp: \
+                         self.note_dict[str(Index(str(x_temp)))].date(convert=False,
+                                                                       most_recent=most_recent))
+      
 
     ### CORE METHODS
     ### operations that modify shelf, key dictionary,
@@ -2512,7 +2622,9 @@ class Note_Shelf:
         """returns 2-entry list for note at given index;
         list[0]=keys; list[1]=text
         """
-
+        if str(index) not in self.note_dict:
+            display.noteprint((alerts.ATTENTION,'INDEX NOT FOUND'))
+            return [set(),EMPTYCHAR]
         if not deepest:
             deepest = self.deepest(is_string=True,abridged=True)
         deepest += 3
@@ -2638,7 +2750,7 @@ class Note_Shelf:
                     if self.last_sides != self.sides:
                         self.side=0
                         self.last_sides = self.sides
-                tex_temp =  sides_temp[self.side%len(sides_temp)]
+                tex_temp =  sides_temp[self.side%len(sides_temp)]          
                 suffix =  '[' + str(self.side%len(sides_temp)+1) + ']' 
                 
                 
@@ -4533,7 +4645,7 @@ class Note_Shelf:
             else:
                 to_enumerate = self.index_sort([Index(a_temp)
                                                          for a_temp in entrylist],
-                                                             by_date=self.default_dict['sortbydate'],quick=False)
+                                                             by_date=self.default_dict['sortbydate'],quick=False,no_check=False)
 
 
             for counter, i_temp in enumerate(to_enumerate):
@@ -4850,46 +4962,58 @@ class Note_Shelf:
                 if dictionary[k_temp] == {}:
 
                     if self.default_dict['variablesize']:
-                        display.noteprint(self.show(k_temp,
-                                                    shortform=(self.shortshow
-                                                               or len(entrylist) > self.longmax),
-                                                    yestags=self.tagdefault,
-                                                    highlight=highlight),
-                                          param_width=display.width_needed
-                                          (self.show(k_temp),
-                                           self.note_dict[str(k_temp)].meta['size'],
-                                           leftmargin=self.default_dict['leftmargin']),
-                                          param_indent=(level-1)*self.default_dict['indentmultiplier'],
-                                          leftmargin=self.default_dict['leftmargin'])
+                        if k_temp not in self.note_dict:
+                            display.noteprint((alerts.ATTENTION,str(k_temp)+' '+'NOT FOUND'))
+                        else:
+                            display.noteprint(self.show(k_temp,
+                                                        shortform=(self.shortshow
+                                                                   or len(entrylist) > self.longmax),
+                                                        yestags=self.tagdefault,
+                                                        highlight=highlight),
+                                              param_width=display.width_needed
+                                              (self.show(k_temp),
+                                               self.note_dict[str(k_temp)].meta['size'],
+                                               leftmargin=self.default_dict['leftmargin']),
+                                              param_indent=(level-1)*self.default_dict['indentmultiplier'],
+                                              leftmargin=self.default_dict['leftmargin'])
                     else:
-                        display.noteprint(
-                            self.show(k_temp,
-                                      yestags=self.tagdefault,
-                                      shortform=(self.shortshow
-                                                 or len(entrylist) > self.longmax)),
-                            param_width=self.default_dict['size'],
-                            param_indent=(level-1)*self.default_dict['indentmultiplier'],leftmargin=self.default_dict['leftmargin'])
+                        if k_temp not in self.note_dict:
+                            display.noteprint((alerts.ATTENTION,str(k_temp)+' '+'NOT FOUND'))
+                        else:
+                            display.noteprint(
+                                self.show(k_temp,
+                                          yestags=self.tagdefault,
+                                          shortform=(self.shortshow
+                                                     or len(entrylist) > self.longmax)),
+                                param_width=self.default_dict['size'],
+                                param_indent=(level-1)*self.default_dict['indentmultiplier'],leftmargin=self.default_dict['leftmargin'])
 
                 else:
                     if self.default_dict['variablesize']:
-                        display.noteprint(
-                            self.show(k_temp,
-                                      shortform=(self.shortshow
-                                                 or len(entrylist) > self.longmax),
-                                      yestags=self.tagdefault,
-                                      highlight=highlight),
-                            param_width=display.width_needed(self.show(k_temp),
-                                                             self.note_dict[str(k_temp)].
-                                                             meta['size']),
-                            param_indent=(level-1)*self.default_dict['indentmultiplier'],leftmargin=self.default_dict['leftmargin'])
+                        if k_temp not in self.note_dict:
+                            display.noteprint((alerts.ATTENTION,str(k_temp)+' '+'NOT FOUND'))
+                        else:
+                            display.noteprint(
+                                self.show(k_temp,
+                                          shortform=(self.shortshow
+                                                     or len(entrylist) > self.longmax),
+                                          yestags=self.tagdefault,
+                                          highlight=highlight),
+                                param_width=display.width_needed(self.show(k_temp),
+                                                                 self.note_dict[str(k_temp)].
+                                                                 meta['size']),
+                                param_indent=(level-1)*self.default_dict['indentmultiplier'],leftmargin=self.default_dict['leftmargin'])
                     else:
-                        display.noteprint(self.show
-                                          (k_temp, yestags=self.tagdefault,
-                                           shortform=(self.shortshow
-                                                      or len(entrylist) > self.longmax)),
-                                          param_width=self.default_dict['size'],
-                                          param_indent=(level-1)*self.default_dict['indentmultiplier'],
-                                          leftmargin=self.default_dict['leftmargin'])
+                        if k_temp not in self.note_dict:
+                            display.noteprint((alerts.ATTENTION,str(k_temp)+' '+'NOT FOUND'))
+                        else:
+                            display.noteprint(self.show
+                                              (k_temp, yestags=self.tagdefault,
+                                               shortform=(self.shortshow
+                                                          or len(entrylist) > self.longmax)),
+                                              param_width=self.default_dict['size'],
+                                              param_indent=(level-1)*self.default_dict['indentmultiplier'],
+                                              leftmargin=self.default_dict['leftmargin'])
                     recursive_show(dictionary[k_temp],
                                    level=level+1)
 
@@ -7423,12 +7547,6 @@ class Console(Note_Shelf):
         self.show_key_freq = True
         self.how_many = 30
 
-
-        
-
-        
-
-
         self.first_time = True
             #true if entry loop is running for the first time
         self.counter = 0
@@ -7453,7 +7571,8 @@ class Console(Note_Shelf):
         command_menu = DisplayList(displayobject=display)
         for counter, h_temp in enumerate(commandscript.HEADERS):
             command_menu.append(str(counter+1)+': '+h_temp)
-        command_menu.show(header='COMMANDS', centered=True)
+        command_menu.show(header='COMMANDS',
+                          centered=True)
         choice = input(QUESTIONMARK)
         command_menu.clear()
         if choice.isnumeric() and int(choice) > 0 and int(choice) <= 8:
@@ -7464,12 +7583,18 @@ class Console(Note_Shelf):
                              and x_temp.split(VERTLINE)[0].strip() != EMPTYCHAR)]
 
             for counter, c_temp in enumerate(menu_list):
-                command_menu.append(str(counter+1)+': '+c_temp.split(VERTLINE)[0].strip())
+                command_menu.append(str(counter+1)
+                                    +': '
+                                    +c_temp.split(VERTLINE)[0].strip())
             command_menu.show(header=new_menu[0],
                               centered=True)
         choice = input(QUESTIONMARK)
-        if choice.isnumeric() and int(choice) > 0 and int(choice) <= len(menu_list):
-            mainterm = menu_list[int(choice)-1].split(VERTLINE)[0].split(COMMA)[0].strip()
+        if choice.isnumeric() \
+           and int(choice) > 0 \
+           and int(choice) <= len(menu_list):
+            mainterm = menu_list[int(choice)-1]\
+                       .split(VERTLINE)[0]\
+                       .split(COMMA)[0].strip()
             print(mainterm)
 
         return mainterm
@@ -7502,8 +7627,11 @@ class Console(Note_Shelf):
                 else: 
                     newline += ' |'
             menu_script += newline[:-1]+EOL
-        nformat.columns(menu_script, listobject=command_menu,not_centered=set(range(-50,0)))
-        command_menu.show(header=labels.ALL_COMMANDS,centered=True)
+        nformat.columns(menu_script,
+                        listobject=command_menu,
+                        not_centered=set(range(-50,0)))
+        command_menu.show(header=labels.ALL_COMMANDS,
+                          centered=True)
         choice = input('X:Y? ')
         if COLON in choice:
             x_choice, y_choice = choice.split(COLON)[0],choice.split(COLON)[1]
@@ -7526,7 +7654,8 @@ class Console(Note_Shelf):
 
             self.last_results = rangelist.range_find([Index(a_temp)
                                                      for a_temp
-                                                     in self.default_dict['marked'] if a_temp in self.indexes()])
+                                                     in self.default_dict['marked']
+                                                      if a_temp in self.indexes()])
             
             display.noteprint((labels.MARKED,self.last_results))
 
@@ -7538,14 +7667,15 @@ class Console(Note_Shelf):
                                                 in get_range(s_input(queries.DELETE_FROM_TO,
                                                                      otherterms[0]),
                                                              True, False,
-                                                             sort=True, many=True)})
+                                                             sort=True,
+                                                             many=True)})
             self.dd_changed = True
         elif mainterm in ['deletemarks']:
             self.default_dict['marked'].difference_update({str(a_temp) \
                                                            for a_temp
                                                            in get_range(s_input(queries.DELETE_FROM_TO,otherterms[0]),
                                                                                    True,False,
-                                                                                   sort=True, many=True)})
+                                                                                   sort=True,many=True)})
             self.dd_changed = True
 
     def documentation_com(self):
@@ -7602,7 +7732,10 @@ class Console(Note_Shelf):
                                    query=not predicate[2])
 
 
-    def  autokey_com(self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
+    def  autokey_com(self,
+                     mainterm=EMPTYCHAR,
+                     otherterms=EMPTYCHAR,
+                     predicate=EMPTYCHAR):
         
         # called from command line
         
@@ -7659,7 +7792,9 @@ class Console(Note_Shelf):
         display.noteprint((labels.DEFAULT_KEYS,
                            formkeys(self.default_dict['defaultkeys'])))
 
-    def limitlist_com(self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR):
+    def limitlist_com(self,
+                      mainterm=EMPTYCHAR,
+                      otherterms=EMPTYCHAR):
 
         # called from command line
      
@@ -7668,7 +7803,8 @@ class Console(Note_Shelf):
                           'resetll']:
             self.set_limit_list('R')
             display.noteprint((labels.LIMIT_LIST_RESET,
-                               rangelist.range_find([Index(a_temp) for a_temp in self.limitlist])))
+                               rangelist.range_find([Index(a_temp)
+                                                     for a_temp in self.limitlist])))
 
         elif  mainterm in ['limitlist']:
 
@@ -7676,13 +7812,16 @@ class Console(Note_Shelf):
                 self.set_limit_list(s_input(queries.NEW_LIMIT_LIST,
                                             otherterms[0]))
                 display.noteprint((labels.LIMIT_LIST_CHANGED,
-                                   rangelist.range_find([Index(a_temp) for a_temp in self.limitlist])))
+                                   rangelist.range_find([Index(a_temp)
+                                                         for a_temp in self.limitlist])))
                 
             else:
                 self.limitlist = []
                 
                 self.get_range_from_results (self.last_results,self.limitlist,indexobject=self.indexes())
-                display.noteprint((labels.LIMIT_LIST_CHANGED,rangelist.range_find([Index(x_temp) for x_temp in self.limitlist])))
+                display.noteprint((labels.LIMIT_LIST_CHANGED,
+                                   rangelist.range_find([Index(x_temp)
+                                                         for x_temp in self.limitlist])))
 
                 
         else:
@@ -7694,16 +7833,22 @@ class Console(Note_Shelf):
         # called from command line
         if mainterm in ['streams']:
             display.noteprint((labels.STREAMS,
-                               ", ".join([str(x_temp) for x_temp in multi_dict.keys()])))
+                               ", ".join([str(x_temp)
+                                          for x_temp in multi_dict[notebookname].keys()
+                                          if x_temp not in self.indexes()])))
 
 
         if mainterm in ['deletestream']:
             display_stream = s_input(queries.DISPLAY_STREAM,
-                                     otherterms[0])
-            if (display_stream in multi_dict
+                                     otherterms[0],
+                                     typeflag='str',
+                                     must_be_in=[x_temp for x_temp in multi_dict[notebookname].keys()
+                                                 if x_temp not in self.indexes()])
+            if (display_stream in [notebookname]
                     and (predicate[0]
-                         or input(queries.SURE) in YESTERMS)):
-                del multi_dict[display_stream]
+                         or s_input(queries.SURE,typeflag='str',
+                                    must_be_in=YESTERMS+NOTERMS) in YESTERMS)):
+                del multi_dict[notebookname][display_stream]
               #  $ to circumvent query
 
 
@@ -7721,7 +7866,10 @@ class Console(Note_Shelf):
         elif mainterm in ['copyfrom']:
             if not predicate[0]:
                 copy_count = int(s_input(queries.COPY_HOW_MANY,
-                                         otherterms[0]))
+                                         otherterms[0],
+                                         typeflag='int',
+                                         conditions=(0,temporary.size()),
+                                         returnvalue=0))
             else:
                 copy_count = self.tempobject.size()
             self.copy_many_from_temp(copy_count)
@@ -7897,7 +8045,10 @@ class Console(Note_Shelf):
         if mainterm in ['changedeterminant','changedet']:
             olddet = self.default_dict['determinant']
             display.noteprint((labels.DETERMINANT,formkeys(DETERMINANTS)))
-            self.default_dict['determinant'] = s_input(queries.DETERMINANT,otherterms[0])
+            self.default_dict['determinant'] = s_input(queries.DETERMINANT,
+                                                       otherterms[0],
+                                                       typeflag='str',
+                                                       must_be_in=DETERMINANTS)
             self.dd_changed=True
             if not self.default_dict['determinant'] or \
                self.default_dict['determinant'] not in DETERMINANTS:
@@ -7952,11 +8103,14 @@ class Console(Note_Shelf):
                and not predicate[3]:
                 self.speller.show_added()
             if longphrase:
-                self.speller.show_added(s_input(queries.LANGUAGE,otherterms[0]))
+                self.speller.show_added(s_input(queries.LANGUAGE,
+                                                otherterms[0],
+                                                typeflag='str',
+                                                must_be_in=['en','de','fr','es']))
             if predicate[0]:
                 self.speller.show_added('en')
             if predicate[1]:
-                self.speller.show_added('ge')
+                self.speller.show_added('de')
             if predicate[2]:
                 self.speller.show_added('fr')
             if predicate[3]:
@@ -7965,7 +8119,10 @@ class Console(Note_Shelf):
         elif mainterm in ['defaultspelling']:
             l_temp = 'en'
             if longphrase:
-                l_temp = (s_input(queries.LANGUAGE,otherterms[0]))
+                l_temp = (s_input(queries.LANGUAGE,
+                                  otherterms[0],
+                                  typeflag='str',
+                                  must_be_in=['en','de','fr','es']))
             if predicate[0]:
                 l_temp = 'en'
             if predicate[1]:
@@ -7998,7 +8155,10 @@ class Console(Note_Shelf):
             elif totalterms == 1:
                 temp_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
 
-                if SLASH not in temp_entry and DASH not in temp_entry and COMMA not in temp_entry and temp_entry.replace(PERIOD,EMPTYCHAR).isnumeric():
+                if SLASH not in temp_entry \
+                   and DASH not in temp_entry\
+                   and COMMA not in temp_entry \
+                   and temp_entry.replace(PERIOD,EMPTYCHAR).isnumeric():
                     self.default_dict['flipbook'] = self.all_descendents(temp_entry)
                     self.dd_changed=True
                     self.parent = temp_entry
@@ -8006,7 +8166,12 @@ class Console(Note_Shelf):
                     self.show_full_top = False
                     self.children_too = False
                     
-                elif temp_entry.replace(BLANK,EMPTYCHAR).replace(DASH,EMPTYCHAR).replace(LONGDASH,EMPTYCHAR).replace(SLASH,EMPTYCHAR).replace(COMMA,EMPTYCHAR).replace(PERIOD,EMPTYCHAR).isnumeric():
+                elif temp_entry.replace(BLANK,EMPTYCHAR)\
+                     .replace(DASH,EMPTYCHAR)\
+                     .replace(LONGDASH,EMPTYCHAR)\
+                     .replace(SLASH,EMPTYCHAR)\
+                     .replace(COMMA,EMPTYCHAR)\
+                     .replace(PERIOD,EMPTYCHAR).isnumeric():
                     
                     self.default_dict['flipbook'] = get_range(temp_entry,many=True)
                     self.dd_changed=True
@@ -8023,22 +8188,23 @@ class Console(Note_Shelf):
             display.noteprint((alerts.FLIP_CHANGED,
                                rangelist.range_find
                                (self.default_dict['flipbook'])))
-            self.set_iterator(self.default_dict['flipbook'],flag=self.default_dict['setitflag'])
+            self.set_iterator(self.default_dict['flipbook'],
+                              flag=self.default_dict['setitflag'])
         elif mainterm in ['showflip','showflipbook']:
 
             self.last_results = rangelist.range_find (self.default_dict['flipbook'])
             
-            display.noteprint(('FLIPBOOK',self.last_results))
+            display.noteprint(('FLIPBOOK',
+                               self.last_results))
 
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
 
 
-
-
-
     def culkeys_com (self,mainterm=EMPTYCHAR):
 
-        d_temp = {'capkeys':0,'upperkeys':1,'lowerkeys':2}[mainterm]
+        d_temp = {'capkeys':0,
+                  'upperkeys':1,
+                  'lowerkeys':2}[mainterm]
             
 
         self.histio = histogram(displayobject=display)
@@ -8065,7 +8231,8 @@ class Console(Note_Shelf):
 
             if self.default_dict['projects'] == {}:
                 filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
-                                              file_suffix='.txt', file_prefix=EMPTYCHAR,
+                                              file_suffix='.txt',
+                                              file_prefix=EMPTYCHAR,
                                               get_filename=otherterms[0])[0].rstrip()
                 display.noteprint((alerts.LOADING_FILE,filename_temp))
                 project = get_text_file(filename_temp)
@@ -8076,7 +8243,8 @@ class Console(Note_Shelf):
                 self.dd_changed=True
 
         if mainterm in ['clearprojects']:
-            if input('Are your sure?') in YESTERMS and input('Are you really sure?') in YESTERMS:
+            if input('Are your sure?') in YESTERMS \
+               and input('Are you really sure?') in YESTERMS:
                 self.default_dict['projects'] = {}
                 self.dd_changed=True
             
@@ -8103,10 +8271,13 @@ class Console(Note_Shelf):
                                'e':COMMA}
                 inp_temp = input(queries_dic[x_temp])
                 if inp_temp:
-                    self.default_dict['convert'][self.default_dict['convertmode']].change(inp_temp,x_temp)
+                    self.default_dict['convert'][self.default_dict['convertmode']].change(inp_temp,
+                                                                                     x_temp)
                 else:
-                    self.default_dict['convert'][self.default_dict['convertmode']].change(defaults[x_temp],x_temp)
-                display.noteprint((self.default_dict['convertmode'],'/'.join(self.default_dict['convert'][self.default_dict['convertmode']].show()).
+                    self.default_dict['convert'][self.default_dict['convertmode']].change(defaults[x_temp],
+                                                                                      x_temp)
+                display.noteprint((self.default_dict['convertmode'],
+                                   '/'.join(self.default_dict['convert'][self.default_dict['convertmode']].show()).
                                                     replace(EOL,'EOL').
                                                     replace(COMMA,'COMMA').
                                                     replace(COLON,'COLON')))
@@ -8115,9 +8286,13 @@ class Console(Note_Shelf):
             ex_temp = s_input('New convert mode?',otherterms[0])
             if ex_temp not in self.default_dict['convert']:
                 self.default_dict['convert'][ex_temp] = Convert()
-            display.noteprint(('/C/ Convert modes',', '.join(self.default_dict['convert'])))
+            display.noteprint(('/C/ Convert modes',
+                               ', '.join(self.default_dict['convert'])))
         if mainterm in ['switchconvertmode']:
-            ex_temp = s_input('convert mode?',otherterms[0])
+            ex_temp = s_input('convert mode?',
+                              otherterms[0],
+                              typeflag='str',
+                              must_be_in=list(self.default_dict['convert']))
             if ex_temp in self.default_dict['convert']:
                 self.default_dict['convertmode']=ex_temp
             display.noteprint((self.default_dict['convertmode'],
@@ -8141,14 +8316,37 @@ class Console(Note_Shelf):
             if not entry_temp:
                 pass
             elif COMMA not in entry_temp and entry_temp.lower() == 'd':
-                self.default_dict['main_sequences'] = ['title','author','date','datefrom','dateto','book','page','chapter','section']
+                self.default_dict['main_sequences'] = ['title',
+                                                       'author',
+                                                       'date',
+                                                       'datefrom',
+                                                       'dateto',
+                                                       'book',
+                                                       'page',
+                                                       'chapter',
+                                                       'section']
             else:
-                self.default_dict['main_sequences'] = [x_temp.strip() for x_temp in entry_temp.split(COMMA)]
-            display.noteprint((alerts.ATTENTION,labels.MAIN_SEQUENCES+', '.join(self.default_dict['main_sequences'])))
+                self.default_dict['main_sequences'] = [x_temp.strip()
+                                                       for x_temp in entry_temp.split(COMMA)]
+            display.noteprint((alerts.ATTENTION,
+                               labels.MAIN_SEQUENCES
+                               +', '.join(self.default_dict['main_sequences'])))
 
         if mainterm in ['seqformone']:
-            entry_temp = s_input(queries.SEQ_FORM_ONE,otherterms[0])
-            if entry_temp[0].lower() in ['s','l','c','b','n']:
+            entry_temp = s_input(queries.SEQ_FORM_ONE,
+                                 otherterms[0],
+                                 typeflag='str',
+                                 must_be_in=['s',
+                                             'l',
+                                             'c',
+                                             'b',
+                                             'n'],
+                                 returnvalue=self.default_dict['seqform1'])
+            if entry_temp[0].lower() in ['s',
+                                         'l',
+                                         'c',
+                                         'b',
+                                         'n']:
                 if entry_temp[0].lower() == 's':
                     self.default_dict['seqform1'] = BLANK
                 elif entry_temp[0].lower() == 'c':
@@ -8163,12 +8361,18 @@ class Console(Note_Shelf):
             else:
                 
                 self.default_dict['seqform1'] = entry_temp
-            display.noteprint((labels.SEQ_FORM_ONE,self.default_dict['seqform1'].
-                               replace(BLANK,'BLANK').
-                               replace(COMMA+BLANK,'COMMA + BLANK').
-                               replace(EOL,'EOL').
-                               replace('/BREAK/','BREAK').
-                               replace('/NEW/','NEW')))
+            display.noteprint((labels.SEQ_FORM_ONE,
+                               self.default_dict['seqform1'].
+                               replace(BLANK,
+                                       'BLANK').
+                               replace(COMMA+BLANK,
+                                       'COMMA + BLANK').
+                               replace(EOL,
+                                       'EOL').
+                               replace('/BREAK/',
+                                       'BREAK').
+                               replace('/NEW/',
+                                       'NEW')))
 
         if mainterm in ['seqformtwo']:
             
@@ -8196,7 +8400,10 @@ class Console(Note_Shelf):
             self.dictionaryload(filename_temp)
 
         if mainterm in ['language']:
-            lang_temp = s_input(queries.LANGUAGE_SELECT,otherterms[0])
+            lang_temp = s_input(queries.LANGUAGE_SELECT,
+                                otherterms[0],
+                                typeflag='str',
+                                must_be_in=['en','es','fr','de'])
             if len(lang_temp) > 1:
                 lang_temp = lang_temp[0:2].lower()
             if lang_temp in ['en','es','fr','de']:
@@ -8270,7 +8477,8 @@ class Console(Note_Shelf):
                                                       for a_temp in self.indexes()
                                                       if Index(a_temp)>Index(0)
                                                       and Index(a_temp)
-                                                      not in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
+                                                      not in get_range(s_input(queries.RANGE_TO_FROM,
+                                                                               otherterms[0]),
                                         many=True)])
             self.last_results = self.last_results.replace(LONGDASH,SLASH)          
             self.last_results_used = False
@@ -8278,23 +8486,35 @@ class Console(Note_Shelf):
 
         elif mainterm in ['setreturnquit','rtq']:
             self.default_dict['returnquit'] = int(s_input(queries.RETURN_QUIT,
-                                                    otherterms[0]))
+                                                          otherterms[0],
+                                                          typeflag='int',
+                                                          conditions=(2,10),
+                                                          returnvalue=self.default_dict['returnquit']))
             self.dd_changed=True
 
         elif mainterm in ['resize', 'size', 'sz']:
             self.default_dict['size'] = int(s_input(queries.NEW_NOTE_SIZE,
-                                                    otherterms[0]))
+                                                    otherterms[0],
+                                                    typeflag='int',
+                                                    conditions=(10,300),
+                                                    returnvalue=self.default_dict['size']))
             self.dd_changed=True
             display.noteprint((labels.SIZE, str(self.default_dict['size'])))
         elif mainterm in ['flashto','ft']:
             self.side = int(s_input(queries.SIDE,
-                                    otherterms[0]))
+                                    otherterms[0],
+                                    typeflag='int',
+                                    conditions=(0,self.sides),
+                                    returnvalue=0))
             display.noteprint((labels.SIDE, str(self.side)))
 
         elif mainterm in ['setsides']:
             while True:
                 self.sides = int(s_input(queries.SIDES,
-                                        otherterms[0]))
+                                        otherterms[0],
+                                         typeflag='int',
+                                         conditions=(1,10000),
+                                         returnvalue=self.sides))
                 if self.sides > 0:
                     break
     
@@ -8311,7 +8531,10 @@ class Console(Note_Shelf):
         elif mainterm in ['setflipat']:
             while True:
                 self.flip_at = int(s_input(queries.FLIP_AT,
-                                        otherterms[0]))
+                                           otherterms[0],
+                                           typeflag='int',
+                                           conditions=(0,self.sides+self.flexflip*10-1),
+                                           returnvalue=0))
                 if self.sides > 0:
                     break
     
@@ -8321,13 +8544,22 @@ class Console(Note_Shelf):
 
 
         elif mainterm in ['keytrim']:
-            self.default_dict['keytrim'] = int(s_input(queries.SET_KEY_TRIM,otherterms[0]))
+            self.default_dict['keytrim'] = int(s_input(queries.SET_KEY_TRIM,
+                                                       otherterms[0],
+                                                       typeflag='int',
+                                                       conditions=(0,100),
+                                                       returnvalue=self.default_dict['keytrim']))
             display.noteprint((labels.KEY_TRIM, str(self.default_dict['keytrim'])))
             self.dd_changed=True
 
         elif mainterm in ['texttrim']:
-            self.default_dict['texttrim'] = int(s_input(queries.SET_TEXT_TRIM,otherterms[0]))
-            display.noteprint((labels.TEXT_TRIM, str(self.default_dict['texttrim'])))
+            self.default_dict['texttrim'] = int(s_input(queries.SET_TEXT_TRIM,
+                                                        otherterms[0],
+                                                        typeflag='int',
+                                                        conditions=(0,200),
+                                                        returnvalue=self.default_dict['texttrim']))
+            display.noteprint((labels.TEXT_TRIM,
+                               str(self.default_dict['texttrim'])))
             self.dd_changed=True
 
 
@@ -8344,7 +8576,8 @@ class Console(Note_Shelf):
                           changekeys=True,
                           annotate=predicate[0],
                           update_table=True)
-        elif mainterm in ['editnotekeys', 'enk']:
+        elif mainterm in ['editnotekeys',
+                          'enk']:
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
                                         many=True)]:
@@ -8352,7 +8585,13 @@ class Console(Note_Shelf):
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.note_dict[
                                                                        str(i_temp)].meta['size']))
-                if not self.edit(i_temp,{},EMPTYCHAR,changekeys=True,changetext=False,askabort=True,update_table=True):
+                if not self.edit(i_temp,
+                                 {},
+                                 EMPTYCHAR,
+                                 changekeys=True,
+                                 changetext=False,
+                                 askabort=True,
+                                 update_table=True):
                     break
         elif mainterm in ['editnotetext', 'ent']:
             for i_temp in [a_temp for a_temp
@@ -8365,11 +8604,13 @@ class Console(Note_Shelf):
                 self.edit(i_temp,{},EMPTYCHAR,annotate=predicate[0],update_table=True)
 
         elif mainterm in ['link']:
-            temp_range = [str(x_temp) for x_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]))]
+            temp_range = [str(x_temp) for x_temp
+                          in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]))]
             
     
             if len(temp_range) > 10:
-                display.noteprint((alerts.ATTENTION,alerts.TOO_LARGE))
+                display.noteprint((alerts.ATTENTION,
+                                   alerts.TOO_LARGE))
             else:
                 for x_temp in temp_range:
 
@@ -8379,12 +8620,18 @@ class Console(Note_Shelf):
                     range_copy.discard(x_temp)
                     temp_keys.update(range_copy)
                     print(temp_keys)
-                    self.edit(Index(x_temp),newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,changekeys=False,changetext=False,update_table=False)
+                    self.edit(Index(x_temp),
+                              newkeyset=temp_keys,
+                              newtext=self.note_dict[x_temp].text,
+                              changekeys=False,
+                              changetext=False,
+                              update_table=False)
 
         elif mainterm in ['chain','loop']:
             range_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
             
-            temp_range = [str(x_temp) for x_temp in get_range(range_entry)]
+            temp_range = [str(x_temp) for x_temp
+                          in get_range(range_entry)]
 
             if len(temp_range) > 1:
                 link_from = temp_range[0]
@@ -8394,28 +8641,50 @@ class Console(Note_Shelf):
                     if counter == 0:
                         temp_keys = self.note_dict[temp_range[0]].keyset
                         temp_keys.add(temp_range[1])
-                        self.edit(Index(x_temp),newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,changekeys=False,changetext=False,update_table=False)
+                        self.edit(Index(x_temp),
+                                  newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,
+                                  changekeys=False,
+                                  changetext=False,
+                                  update_table=False)
                     elif counter == len(temp_range)-1:
                         temp_keys = self.note_dict[temp_range[counter]].keyset
                         temp_keys.add(temp_range[counter-1])
                         if mainterm in ['loop']:
                             temp_keys.add(temp_range[0])
-                        self.edit(Index(x_temp),newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,changekeys=False,changetext=False,update_table=False)
+                        self.edit(Index(x_temp),
+                                  newkeyset=temp_keys,
+                                  newtext=self.note_dict[x_temp].text,
+                                  changekeys=False,
+                                  changetext=False,
+                                  update_table=False)
                     else:
                         temp_keys = self.note_dict[temp_range[counter]].keyset
                         temp_keys.add(temp_range[counter-1])
                         temp_keys.add(temp_range[counter+1])
-                        self.edit(Index(x_temp),newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,changekeys=False,changetext=False,update_table=False)
+                        self.edit(Index(x_temp),
+                                  newkeyset=temp_keys,
+                                  newtext=self.note_dict[x_temp].text,
+                                  changekeys=False,
+                                  changetext=False,
+                                  update_table=False)
 
 
         elif mainterm in ['unlink']:
 
             range_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
-            temp_range = [str(x_temp) for x_temp in get_range(range_entry)]
+            temp_range = [str(x_temp) for x_temp
+                          in get_range(range_entry)]
 
             for x_temp in temp_range:
-                temp_keys = {k_temp for k_temp in self.note_dict[x_temp].keyset if not isindex(k_temp)}
-                self.edit(Index(x_temp),newkeyset=temp_keys,newtext=self.note_dict[x_temp].text,changekeys=False,changetext=False,update_table=False)
+                temp_keys = {k_temp for k_temp
+                             in self.note_dict[x_temp].keyset
+                             if not isindex(k_temp)}
+                self.edit(Index(x_temp),
+                          newkeyset=temp_keys,
+                          newtext=self.note_dict[x_temp].text,
+                          changekeys=False,
+                          changetext=False,
+                          update_table=False)
              
 
         elif mainterm in ['compress']:
@@ -8434,13 +8703,20 @@ class Console(Note_Shelf):
                                               many=True)])
         elif mainterm in ['showdel']:
             
-            self.last_results = rangelist.range_find([Index(temp_l) for temp_l in self.indexes() if Index(temp_l) < Index(0)])
+            self.last_results = rangelist.range_find([Index(temp_l)
+                                                      for temp_l in self.indexes()
+                                                      if Index(temp_l) < Index(0)])
             display.noteprint((labels.DELETED,self.last_results))
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
 
 
+
         elif mainterm in ['gc','gocluster']:
-            temp_count = int(s_input(queries.CLUSTER,otherterms[0]))-1
+            temp_count = int(s_input(queries.CLUSTER,
+                                     otherterms[0],
+                                     typeflag='int',
+                                     conditions=(1,len(self.default_dict['iterators'])),
+                                     returnvalue=1)-1)
             if temp_count >= 0 and temp_count < len(self.default_dict['iterators']):
                 temp_list = self.default_dict['iterators'][temp_count]
                 self.set_iterator(temp_list)
@@ -8472,10 +8748,14 @@ class Console(Note_Shelf):
                                                  many=True)])
             if predicate[0]:
                 fn_temp = s_input(queries.FIELDNAME,otherterms[0])
-                from_temp, to_temp = int(s_input(queries.STRICT_RANGE_TO_FROM,otherterms[1]).split(DASH)[0]), int(s_input(queries.STRICT_RANGE_TO_FROM,otherterms[1]).split(DASH)[1]) 
-                self.add_field(s_input(queries.FIELDNAME,otherterms[0]),
+                temp_range = s_input(queries.STRICT_RANGE_TO_FROM,
+                                                 otherterms[1])
+                from_temp, to_temp = int(temprange.split(DASH)[0]),int(temprange.split(DASH)[1])
+                self.add_field(s_input(queries.FIELDNAME,
+                                       otherterms[0]),
                                    [str(a_temp) for a_temp in 
-                                    range(from_temp,to_temp+1)])
+                                    range(from_temp,
+                                          to_temp+1)])
                 
 
 
@@ -8485,19 +8765,21 @@ class Console(Note_Shelf):
             self.display_fields()
         elif mainterm in ['deletefield']:
             if not longphrase:
-                self.delete_field(input(queries.FIELDNAME),
-                                  rangelist.range_set(queries.RANGE_TO_FROM))
+                self.delete_field(s_input(queries.FIELDNAME),
+                                  get_range(s_input(queries.RANGE_TO_FROM)))
             elif totalterms == 1:
                 self.delete_field(s_input(queries.FIELDNAME,
                                           otherterms[0]))
             elif totalterms == 2:
                 self.delete_field(s_input(queries.FIELDNAME,
                                           otherterms[0]),
-                                  rangelist.range_set(s_input(queries.RANGE_TO_FROM,
+                                  get_range(s_input(queries.RANGE_TO_FROM,
                                                               otherterms[1])))
-            display.noteprint((labels.FIELD,
-                               str(self.show_fields())),
-                              param_is_emb=True)
+            
+            self.display_fields()
+##            display.noteprint((labels.FIELD,
+##                               str(self.show_fields())),
+##                              param_is_emb=True)
 
         elif mainterm in ['undo']:
             if not predicate[0]:
@@ -8507,11 +8789,16 @@ class Console(Note_Shelf):
 
         elif mainterm in ['conflate']:
             inbetween = EMPTYCHAR
-            if not (predicate[0] or predicate[1] or predicate[2] or  predicate[3]):
+            if not (predicate[0]
+                    or predicate[1]
+                    or predicate[2]
+                    or predicate[3]):
                 inbetween = {'e':EMPTYCHAR,
                              'b':'|/BREAK/|',
                              'n':'|/NEW/|'}[s_input(queries.EMPTY_BREAK_NEW,
-                                                otherterms[2])[0].lower()]
+                                                    otherterms[2],
+                                                    typeflag='str',
+                                                    must_be_in=('e','b','n'))[0].lower()]
             if predicate[1]:
                 inbetween += '|/BREAK/|'
             if predicate[2]:
@@ -8519,14 +8806,19 @@ class Console(Note_Shelf):
             if predicate[3]:
                 inbetween = s_input(queries.BREAK_MARK,
                                     otherterms[3])
-            self.conflate([str(x_temp) for x_temp in get_range(s_input(queries.RANGE_TO_FROM,
-                                                                              otherterms[0]),
-                                                               many=True)],
+            self.conflate([str(x_temp)
+                           for x_temp
+                           in get_range(s_input(queries.RANGE_TO_FROM,
+                                                otherterms[0]),
+                                        many=True)],
                           destinationindex=otherterms[1],
                           inbetween = inbetween)
 
         elif mainterm in ['cluster']:
-            indexlist_temp = [str(x_temp) for x_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True)]
+            indexlist_temp = [str(x_temp)
+                              for x_temp
+                              in get_range(s_input(queries.RANGE_TO_FROM,
+                                                                          otherterms[0]),many=True)]
             if not indexlist_temp:
                 indexlist_temp = None
             if totalterms > 1:
@@ -8534,7 +8826,10 @@ class Console(Note_Shelf):
                 self.cluster(indexlist=indexlist_temp,
                              iterate_over=predicate[0],
                              keycount=int(s_input(queries.KEY_COUNT,
-                                                  otherterms[1])),
+                                                  otherterms[1],
+                                                  typeflag='int',
+                                                  conditions=(1,30),
+                                                  returnvalue=5)),
                              usepurge=predicate[1])
                 
             else:
@@ -8550,17 +8845,21 @@ class Console(Note_Shelf):
                 if DASH not in temp_entry and COMMA not in temp_entry:
                     self.iterate_over_descendents(self.group_into_descendents(self.all_descendents(temp_entry,as_index=False)))
                     self.parent = temp_entry
-                    self.display_attributes = (self.show_full_top,self.children_too)
+                    self.display_attributes = (self.show_full_top,
+                                               self.children_too)
                     self.show_full_top = False
                     self.children_too = False
                     try:
-                        self.set_iterator(nextiterator=True,flag=self.default_dict['setitflag'])
+                        self.set_iterator(nextiterator=True,
+                                          flag=self.default_dict['setitflag'])
                     except AttributeError:
                         display.noteprint((alerts.ATTENTION,
                                            alerts.NOT_YET_CLUSTERED))
                 else:
                     temp_range = get_range(temp_entry,many=True)
-                    temp_range = [str(x_temp) for x_temp in temp_range]
+                    temp_range = [str(x_temp)
+                                  for x_temp
+                                  in temp_range]
                     self.iterate_over_descendents(self.group_into_descendents(temp_range))
                     self.parent = EMPTYCHAR
                     self.show_full_top,self.children_too = self.display_attributes[0],self.display_attributes[1]
@@ -8640,10 +8939,14 @@ class Console(Note_Shelf):
         elif mainterm in ['header','footer','leftmargin']:
             
             self.default_dict[mainterm] = min([max([int(s_input(mainterm+QUESTIONMARK,
-                                                                otherterms[0])),0]),10])
+                                                                otherterms[0],
+                                                                typeflag='int',
+                                                                conditions=(0,20),
+                                                                returnvalue=0)),0]),10])
             self.dd_changed=True
             
-            display.noteprint(('/C/'+mainterm.upper(),str(self.default_dict[mainterm])))
+            display.noteprint(('/C/'+mainterm.upper(),
+                               str(self.default_dict[mainterm])))
         elif mainterm in ['deeper','shallower']:
 
             if mainterm == 'deeper':
@@ -8657,12 +8960,17 @@ class Console(Note_Shelf):
             self.update_user(s_input(queries.OLD_USER,
                                      otherterms[0]),
                              s_input(queries.NEW_USER,
-                                     otherterms[1]))
+                                     otherterms[1],
+                                     typeflag='str',
+                                     returnvalue='user'))
         elif mainterm in ['updatesize']:
             sourcerange = get_range(s_input(queries.RANGE_TO_FROM,
                                             otherterms[0]))
             self.update_size(sourcerange, int(s_input(queries.NEW_NOTE_SIZE,
-                                                      otherterms[1])))
+                                                      otherterms[1],
+                                                      typeflag='int',
+                                                      conditions=(10,300),
+                                                      returnvalue=60)))
 
         elif mainterm in ['testdate']:
             self.find_dates_for_keys_in_indexes(determinant='ymd')
@@ -8672,7 +8980,8 @@ class Console(Note_Shelf):
             display.noteprint(('USER',
                                self.default_dict['user']))
             self.default_dict['user'] = s_input('User? ',
-                                                otherterms[0])
+                                                otherterms[0],
+                                                returnvalue=self.default_dict['user'])
             self.dd_changed=True
             self.configurations = Configuration(self.default_dict['user'])
             display.noteprint(('USER',
@@ -8694,12 +9003,20 @@ class Console(Note_Shelf):
                                                  otherterms[1])),
                                metashow=(predicate[0]
                                          or s_input(queries.INCLUDE_META,
-                                                    otherterms[2]) in YESTERMS),
+                                                    otherterms[2],
+                                                    typeflag='str',
+                                                    must_be_in=YESTERMS+NOTERMS,
+                                                    returnvalue='no') in YESTERMS),
                                index_data=(predicate[1]
                                            or s_input(queries.SHOW_INDEXES,
-                                                      otherterms[3]) in YESTERMS),
+                                                      otherterms[3],
+                                                      must_be_in=YESTERMS+NOTERMS,
+                                                      returnvalue='no') in YESTERMS),
                                include_project=(predicate[3] or s_input(queries.INCLUDE_PROJECTS,
-                                                                       otherterms[4]) in YESTERMS))
+                                                                        otherterms[4],
+                                                                        typeflag='str',
+                                                                        must_be_in=YESTERMS+NOTERMS,
+                                                                        returnvalue='no' in YESTERMS)))
         elif mainterm in ['findwithin']:
             print(self.find_within(s_input(queries.FROM,
                                            otherterms[0]),
@@ -8707,24 +9024,48 @@ class Console(Note_Shelf):
                                            otherterms[1]),
                                    orequal=predicate[0]))
         elif mainterm in ['inspect']:
-            print(self.note_dict[s_input(queries.INDEX,otherterms[0])].text.replace(EOL,'|'))
+            temp_entry = s_input(queries.INDEX,
+                                 otherterms[0],
+                                 typeflag='index')
+            if temp_entry in self.note_dict:
+                print()
+                print()
+                print('****KEYSET****')
+                print(str(self.note_dict[temp_entry].keyset))
+                print()
+                print('****TEXT****')
+                print(self.note_dict[temp_entry].text.replace(EOL,'|'))
+                print()
+                print('****META****')
+                print(str(self.note_dict[temp_entry].meta))
+                print()
+                print()
         elif mainterm in ['updatetags']:
             for i_temp in self.indexes():             
                 self.add_keys_tags(0,self.note_dict[i_temp].keyset,
                                    addkeys=False)
         elif mainterm in ['showmeta']:
             noteindex = s_input(queries.INDEX,
-                                otherterms[0])
-            display.noteprint((labels.METADATA+str(noteindex),
-                               nformat.format_meta(self.showmeta(Index(noteindex)))),
-                              param_is_emb=True)
+                                otherterms[0],
+                                typeflag='index')
+            if noteindex  in self.indexes():              
+                display.noteprint((labels.METADATA+str(noteindex),
+                                   nformat.format_meta(self.showmeta(Index(noteindex)))),
+                                  param_is_emb=True)
         elif mainterm in ['depth']:
             self.iterator.change_level(int(s_input(queries.CHILD_DEPTH,
-                                                   otherterms[0])))
+                                                   otherterms[0],
+                                                   typeflag='int',
+                                                   conditions=(0,10000),
+                                                   returnvalue=0)))
             display.noteprint((labels.DEPTH, str(self.iterator.level)))
         elif mainterm in ['indentmultiplier']:
             while True:
-                mult_temp = int(s_input(queries.INDENT_MULTIPLIER,otherterms[0]))
+                mult_temp = int(s_input(queries.INDENT_MULTIPLIER,
+                                        otherterms[0],
+                                        typeflag='int',
+                                        conditions=(0,20),
+                                        returnvalue=0))
                 if 0 <= mult_temp <= 20:
                     break
 
@@ -8743,13 +9084,20 @@ class Console(Note_Shelf):
             for td_temp in todeleterange:
                 self.softdelete(td_temp, withchildren=True)
         elif mainterm in ['killchild']:
-            self.softdelete(Index(s_input(queries.CHILD_KILL,otherterms[0])))
+            
+            self.softdelete(Index(s_input(queries.CHILD_KILL,
+                                          otherterms[0],
+                                          typeflag='index')))
         elif mainterm in ['all']:
             if not otherterms[0]:
                 l_temp = 0
             else:
                 try:
-                    l_temp = int(s_input(queries.LEVELS_TO_SHOW, otherterms[0]))
+                    l_temp = int(s_input(queries.LEVELS_TO_SHOW,
+                                         otherterms[0],
+                                         typeflag='int',
+                                         conditions=(0,1000),
+                                         returnvalue=0))
                 except:
                     l_temp = 0
             self.showall(show_date=self.default_dict['showdate'] or predicate[4],
@@ -8766,7 +9114,11 @@ class Console(Note_Shelf):
                 l_temp = 0
             else:
                 try:
-                    l_temp = int(s_input(queries.LEVELS_TO_SHOW, otherterms[1]))
+                    l_temp = int(s_input(queries.LEVELS_TO_SHOW,
+                                         otherterms[1],
+                                         typeflag='int',
+                                         conditions=(0,500),
+                                         returnvalue=0))
                 except:
                     l_temp = 0
             self.showall(get_range(s_input(queries.RANGE_TO_FROM,
@@ -8888,21 +9240,25 @@ class Console(Note_Shelf):
             t_size = 180
 
             if totalterms >2 and (otherterms[2] == EMPTYCHAR or otherterms[2] or predicate[0]):
-                t_size = int(s_input(queries.WIDTH,otherterms[2]))
-            if t_size < 40 or t_size > (200):
+                t_size = int(s_input(queries.WIDTH,
+                                     otherterms[2],
+                                     typeflag='int',
+                                     conditions=(40,450),
+                                     returnvalue=180))
+            if t_size < 40 or t_size > (450):
                 t_size = 180
             display.noteprint((labels.SIZE,str(t_size)))
             if totalterms == 1 or not otherterms[1]:
                 display_stream = 'standard'
                
-                multi_dict[display_stream] = Note_Display(t_size)
+                multi_dict[notebookname][display_stream] = Note_Display(t_size)
             else:
                 display_stream = s_input(queries.DISPLAY_STREAM,
                                          otherterms[1])
-                if display_stream not in multi_dict.keys():
+                if display_stream not in multi_dict[notebookname].keys():
                     if not otherterms[2]:
                         otherterms[2] = '0'
-                    multi_dict[display_stream] = Note_Display(t_size)
+                    multi_dict[notebookname][display_stream] = Note_Display(t_size)
             self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
                                                      otherterms[0]),
                                              True,
@@ -8910,7 +9266,7 @@ class Console(Note_Shelf):
                                              sort=True,
                                              many=True),
                          multi=True,
-                         output=multi_dict[display_stream],
+                         output=multi_dict[notebookname][display_stream],
                          vary=predicate[2],
                          show_date=self.default_dict['showdate'],
                          curtail={True:self.default_dict['smallsize'],
@@ -8918,7 +9274,7 @@ class Console(Note_Shelf):
             save_stream = display_stream
             if otherterms[3]:
                 save_stream = otherterms[3]
-            self.text_result = multi_dict[display_stream].print_all(pause=predicate[3],
+            self.text_result = multi_dict[notebookname][display_stream].print_all(pause=predicate[3],
                                                  show=not predicate[4],
                                                  save=predicate[4],
                                                  filename=save_stream)
@@ -8929,8 +9285,8 @@ class Console(Note_Shelf):
             else:
                 display_stream = s_input(queries.DISPLAY_STREAM,
                                          otherterms[0])
-            if display_stream in multi_dict.keys():
-                multi_dict[display_stream].print_all(pause=predicate[3])
+            if display_stream in multi_dict[notebookname].keys():
+                multi_dict[notebookname][display_stream].print_all(pause=predicate[3])
 
             
 
@@ -9221,7 +9577,11 @@ class Console(Note_Shelf):
             keysets = set()
 
             entries = get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True)
-            totalwidth = int(s_input(queries.WIDTH,otherterms[1]))
+            totalwidth = int(s_input(queries.WIDTH,
+                                     otherterms[1],
+                                     typeflag='int',
+                                     conditions=(5,200),
+                                     returnvalue=10))
             if len(entries) > 15:
                 display.noteprint((alerts.ATTENTION,alerts.TOO_MANY_INDEXES))
             else:
@@ -9405,9 +9765,20 @@ class Console(Note_Shelf):
                         temp_words = temp_words.intersection(get_words(self.note_dict[str(t_temp)].text))
 
             if predicate[1]:
-                results += self.most_common_words(words=temp_words,number=int(s_input('How many words?',otherterms[1])))
+                results += self.most_common_words(words=temp_words,number=int(s_input('How many words?',
+                                                                                      otherterms[1],
+                                                                                      typeflag='int',
+                                                                                      conditions=(1,1000),
+                                                                                      returnvalue=5)))
+                
             if predicate[2]:
-                results += self.most_common_words(words=temp_words,number=int(s_input('How many words?',otherterms[1]+otherterms[2])),dictionaryobject=frequency_count(temp_words),reverse=True)
+                results += self.most_common_words(words=temp_words,number=int(s_input('How many words?',
+                                                                                      otherterms[1]+otherterms[2],
+                                                                                      typeflag='int',
+                                                                                      conditions=(1,1000),
+                                                                                      returnvalue=5)),
+                                                  dictionaryobject=frequency_count(temp_words),
+                                                  reverse=True)
             if not predicate[1] and not predicate[2]:
                 results = temp_words
 
@@ -9424,7 +9795,9 @@ class Console(Note_Shelf):
                                                                               complete=False,
                                                                               sort=True,
                                                                               many=True)}                    
-                    temp_keys = {str(x_temp) for x_temp in self.keys() if self.key_dict[x_temp].intersection(temp_range)}
+                    temp_keys = {str(x_temp)
+                                 for x_temp in self.keys()
+                                 if self.key_dict[x_temp].intersection(temp_range)}
                 else:
                     temp_keys = self.keys()
 
@@ -9496,9 +9869,9 @@ class Console(Note_Shelf):
                             # if automulti function is
                             #selected, and the note top-level
 
-                            if str(uptohere) not in multi_dict.keys():
+                            if str(uptohere) not in multi_dict[notebookname].keys():
                                 # load into note_display if not already loaded
-                                multi_dict[str(uptohere)] = Note_Display(180)
+                                multi_dict[notebookname][str(uptohere)] = Note_Display(180)
                                 note_with_children = ([uptohere]
                                                       +[Index(a_temp)
                                                         for a_temp
@@ -9506,10 +9879,10 @@ class Console(Note_Shelf):
                                                                             int(uptohere)+1)])
         
                                 self.showall(note_with_children, multi=True,
-                                             output=multi_dict[str(uptohere)],
+                                             output=multi_dict[notebookname][str(uptohere)],
                                              vary=False,show_date=self.default_dict['showdate'])
 
-                            multi_dict[str(uptohere)].print_all(pause=False)
+                            multi_dict[notebookname][str(uptohere)].print_all(pause=False)
                                 # show content of note_display
 
                         else:  #if not automulti
@@ -9932,74 +10305,7 @@ class Console(Note_Shelf):
 
 
         return biginputterm, oldlimit
-                    
-                    
-                    
-
-        
-
-##        if '!!' in biginputterm:
-##            #set the limit list to the flipbook
-##            self.set_limit_list('F')
-##            biginputterm = biginputterm.replace(EXCLAMATION+EXCLAMATION, EMPTYCHAR)
-##
-##        if PERCENTAGE+PERCENTAGE in biginputterm:
-##
-##            limit_factor = biginputterm.split(PERCENTAGE+PERCENTAGE)[1]
-##            biginputterm = biginputterm.split(PERCENTAGE+PERCENTAGE)[0]
-##            index_limit = None
-##
-##            for l_temp in 
-##
-##            
-##
-##            if STAR in limit_factor:
-##                index_limit = limit_factor.split(STAR)[0].strip()
-##                time_limit = limit_factor.split(STAR)[1].strip()
-##                self.set_limit_list(index_limit)
-##
-##            else:
-##                time_limit = limit_factor.strip()
-##                self.set_limit_list('R')
-##
-##            self.set_limit_list(time_limit,intersection=True)
-##            
-##                                  
-##            
-##
-##                        
-##        #set the limitlist to a list of fields or an index range
-##        elif PERCENTAGE in biginputterm and EXCLAMATION not in biginputterm:
-##            
-##
-##
-##            allfields = True
-##
-##            for t_temp in biginputterm.split(PERCENTAGE)[1].split(COMMA):
-##                if t_temp not in self.show_fields():
-##                    allfields = False
-##            if allfields:
-##
-##                field_limit = set()
-##                for t_temp in biginputterm.split(PERCENTAGE)[1].split(COMMA):
-##                    field_limit = field_limit.union(set(self.give_field(t_temp)))
-##
-##                self.set_limit_list(list(field_limit))
-##            else:
-##
-##                self.set_limit_list(biginputterm.split(PERCENTAGE)[1])
-##            biginputterm = biginputterm.split(PERCENTAGE)[0]
-##        elif PERCENTAGE not in biginputterm and EXCLAMATION in biginputterm:
-##            self.set_limit_list(biginputterm.split(EXCLAMATION)[1].strip())
-##            biginputterm = biginputterm.split(EXCLAMATION)[0]
-##        elif PERCENTAGE in biginputterm and EXCLAMATION in biginputterm:
-##            self.set_limit_list(biginputterm.split(EXCLAMATION)[1].strip())
-##            biginputterm = biginputterm.split(EXCLAMATION)[0]
-##            self.set_limit_list(biginputterm.split(PERCENTAGE)[1])
-##            biginputterm = biginputterm.split(PERCENTAGE)[0]
-
-
-                      
+                     
 ## ENTER COMMAND ##
 
 
@@ -10074,6 +10380,9 @@ class Console(Note_Shelf):
         if self.flipmode: #if using flashcards, then flip the flashcard before going to next index
 
             self.side += 1
+            print('side',self.side)
+            print('sides',self.sides)
+            print('flip_at',self.flip_at)
             if self.side % self.sides == self.flip_at % self.sides:
 
                 lastup = uptohere
@@ -10685,7 +10994,6 @@ class Console(Note_Shelf):
         elif mainterm in ['switch']:
             continuelooping = False
             close_notebook = False
-            multi_dict.clear()
             if longphrase:
                 command_stack.add(otherterms[0])
 
@@ -10917,6 +11225,7 @@ while bigloop:
             if reconstitute and input('Reconstitute key dictionary? ') in YESTERMS:
 
                 allnotebooks[notebookname].constitute_key_freq_dict()
+                
                 display.noteprint((labels.CONSTITUTING_KEY_FREQ,
                                    alerts.WAIT))
 
@@ -10943,6 +11252,7 @@ while bigloop:
 
         continuelooping = True
         series_enter = EMPTYCHAR
+        multi_dict[notebookname] = {}
 
         while continuelooping:
 
