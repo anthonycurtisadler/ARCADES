@@ -280,6 +280,7 @@ class Alerts:
           self.FAILED = 'FAILED '
           self.SAVED = ' SAVED! '
           self.TOO_LARGE = 'TOO LARGE '
+          self.ADDED_TO_KEYLIST = ' added to keylist! '
           
           
 class Labels:
@@ -384,6 +385,7 @@ class Labels:
           self.SEQ_FORM_TWO = '/C/ SECOND SEQUENCE FORM '
           self.FROM_TEXT = '/C/ KEYWORDS FROM TEXT '
           self.CONVERT_BY_LINE = '/C/ CONVERT BY LINE '
+          self.ADD_DIAGNOSTICS = '/C/ ADD DIAGNOSTICS '
 
           
 class Spelling:
@@ -483,7 +485,8 @@ binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE),
                       'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT),
                       'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT),
-                      'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE)}
+                      'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE),
+                      'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -526,6 +529,7 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'updatesize':RESIZE_COM,
                     'run':RESIZE_COM,
                     'interpret':RESIZE_COM,
+                    'diagnosticnote':'diagnostics.addline("##"+input("?"))',
                     'variables':'self.show_variables()',
                     'showvariables':'self.show_variables()',
                     'showvar':'self.show_variables()',
