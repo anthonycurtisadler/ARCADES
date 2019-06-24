@@ -59,6 +59,7 @@ from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      QUITTERMS, SHOWTERMS, DELETETERMS, CLEARTERMS, binary_settings, simple_commands
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
+from registry import Registry
 from spellcheck import SpellCheck                                       #pylint 8.83/10
 import stack                                                            #pylint 10.0/10     
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
@@ -2180,6 +2181,11 @@ class Note_Shelf:
         is not the undoing of a previous deletion. Show is TRUE if the
         note is to be displayed
         """
+
+        if self.read_only:
+            display.noteprint((alerts.ATTENTION,'CANNOT EXECUTE: READ ONLY'))
+            return index
+        
         self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True
         self.indexchanges += 1
 
@@ -2371,6 +2377,12 @@ class Note_Shelf:
         notundoing is true if it is not undoing a previous action
         Note that the command 'delete' moves a note to a negative index, rather than
         permanently deleting it"""
+
+        if self.read_only:
+            display.noteprint((alerts.ATTENTION,'CANNOT EXECUTE: READ ONLY'))
+            return {'keys': set(),
+                    'text': '',
+                    'meta': {}}
         self.indexchanged, self.indexchanged_key, self.indexchanged_tag = True, True, True        
         self.indexchanges += 1
 
@@ -2418,6 +2430,10 @@ class Note_Shelf:
           flatten=False,
           copy=False,
              update_table=True):
+
+        if self.read_only:
+            display.noteprint((alerts.ATTENTION,'CANNOT EXECUTE: READ ONLY'))
+            return False
 
         if isinstance(indexfrom,str):
             indexfrom = Index(indexfrom)
@@ -2566,6 +2582,9 @@ class Note_Shelf:
                   check=False):
 
         """ adds a new field, named fieldname, covering the index #s in entrylist """
+        if self.read_only:
+            display.noteprint((alerts.ATTENTION,'CANNOT EXECUTE: READ ONLY'))
+            return False
 
         for e_temp in entrylist:
             if str(e_temp) in self.default_dict['field'] and check:
@@ -2582,6 +2601,9 @@ class Note_Shelf:
                      fieldname,
                      rl=None):
         """ deletes a field"""
+        if self.read_only:
+            display.noteprint((alerts.ATTENTION,'CANNOT EXECUTE: READ ONLY'))
+            return False
 
         if rl is None:
             searchset = set(self.indexes())
@@ -3204,6 +3226,8 @@ class Note_Shelf:
                           indexrange=None,
                           allindexes=True,
                           keysonly=True):
+
+
 
         def dict_format(x_temp):
 
@@ -7236,7 +7260,7 @@ class Configuration:
 
 
 
-class Console(Note_Shelf):
+class Console (Note_Shelf):
 
 
     """ Instantiating the Cosole creates a
@@ -7254,9 +7278,14 @@ class Console(Note_Shelf):
                  tempobject=temporary):
 
 
-##        flagvalue2={'c': 'wb',
-##                    'r': 'rb',
-##                    'w': 'wb'}[flagvalue]
+        flagvalue2={'c': 'wb',
+                    'r': 'rb',
+                    'w': 'wb'}[flagvalue]
+        print(flagvalue,flagvalue2)
+
+        self.read_only = True
+        if flagvalue in ['c','w']:
+            self.read_only = False 
 
         self.indexchanged = True
         self.indexchanged_key = True
@@ -7322,7 +7351,7 @@ class Console(Note_Shelf):
             try:
                 self.divided = False
                 tempfile = open(self.directoryname
-                                +SLASH+self.filename+'.pkl', 'rb')
+                                +SLASH+self.filename+'.pkl', flagvalue2)
                 self.pickle_dictionary = pickle.load(tempfile)
                 tempfile.close()
             except OSError:
@@ -7332,7 +7361,7 @@ class Console(Note_Shelf):
                                           't':{},
                                           'w':{},
                                           'd':{}}
-                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
+                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', flagvalue2)
                 pickle.dump(self.pickle_dictionary, tempfile)
                 tempfile.close()
         display.noteprint(('DIVIDED',str(self.divided)))
@@ -11155,14 +11184,16 @@ add_new_notebook = True
 
 while bigloop:
     successful = False # if a new notebook is successfully loaded
-    flagvalue = None 
+    flagvalue = None
+    register = Registry()
+    dict_temp = EMPTYCHAR 
  
     
-    while add_new_notebook and not isinstance(flagvalue, str) and not successful:
+    while (add_new_notebook and not isinstance(flagvalue, str)) or  not successful:
 
 
 ##        try:
-            
+            add_new_notebook = True
             notebookname = prefix+'defaultnotebook'
             flagvalue = 'w'
             inputterm = stack_input(queries.OPEN_DIFFERENT,command_stack)
@@ -11173,6 +11204,9 @@ while bigloop:
                         flagvalue = notebookname.split(SLASH)[0]
                         notebookname = notebookname.split(SLASH)[1]
                         display.noteprint((alerts.ATTENTION,'opening ' + notebookname))
+                        display.noteprint(('OPEN FILES',register.show_openfiles))
+                       
+                            
                     else:
                         flagvalue = 'c'
                 else:
@@ -11195,46 +11229,85 @@ while bigloop:
                 continuelooping = True
                 add_new_notebook = False
                 break
-            if bigloop and add_new_notebook:
-                if command_stack.size() > 0:
-                    if command_stack.pop() not in YESTERMS or \
-                       stack_input(queries.READ_ONLY,command_stack) not in YESTERMS:
-                        pass
-                    else:
-                        flagvalue = 'r'
-                        readonly = True
+            inp_temp = EMPTYCHAR
+            if register.is_open(notebookname):
+                display.noteprint(('ATENTION!',notebookname +
+                                  ' is still in use or has not been closed properly!'))
 
-            if bigloop and add_new_notebook:
-                try:
-                    print(notebookname, alerts.OPENING, {'c':'new file',
+                while not inp_temp or inp_temp not in ['o','c','s']:
+                    inp_temp = input('(o)pen as read only, (c)orrect registry and continue, (s)elect another?')
+                    if inp_temp:
+                        inp_temp = inp_temp[0].lower()
+                        
+                    
+                if inp_temp == 's':
+                    continuelooping = True
+                    add_new_notebook = False
+                elif inp_temp == 'c':
+                    register.end(notebookname)
+                elif inp_temp == 'o':
+                    flagvalue = 'r'
+                                
+
+            if not register.is_open(notebookname) or inp_temp == 'o':
+
+                if bigloop and add_new_notebook:
+                    if command_stack.size() > 0:
+                        if command_stack.pop() not in YESTERMS or \
+                           stack_input(queries.READ_ONLY,command_stack) not in YESTERMS:
+                            pass
+                        else:
+                            flagvalue = 'r'
+                            readonly = True
+
+                if bigloop and add_new_notebook:
+                    try:
+                        print(notebookname, alerts.OPENING, {'c':'new file',
                                                                 'r':'read only',
                                                                 'w':'read and write'}[flagvalue])
-##                    print('FLAG=',flagvalue)
-                    notebook = Console(notebookname, flagvalue)
-                except:
-                    if input(queries.OPEN_AS_NEW):
-                        flagvalue = 'c'
-                        print(notebookname, alerts.OPENING, {'c':'new file',
-                                            'r':'read only',
-                                            'w':'read and write'}[flagvalue])
-##                        print('FLAG=',flagvalue)
+##                   print('FLAG=',flagvalue)
                         notebook = Console(notebookname, flagvalue)
+                        if not notebook.read_only:
+                            register.start(notebookname)
+                        if register.exists(notebookname):
+                            if input('Do you want to start from where you left off?') in YESTERMS:
+                                dict_temp = register.fetch(notebookname)
+                                
                         
+                    except:
+                        if input(queries.OPEN_AS_NEW):
+                            flagvalue = 'c'
+                            print(notebookname, alerts.OPENING, {'c':'new file',
+                                                'r':'read only',
+                                                'w':'read and write'}[flagvalue])
+    ##                        print('FLAG=',flagvalue)
+                            notebook = Console(notebookname, flagvalue)
+                            if not notebook.read_only:
+                                register.start(notebookname)
+                                
+                            
 
-                
-                notebook.configuration.load()
+                    
+                    notebook.configuration.load()
 
-                notebook.constitute_key_freq_dict()
+                    notebook.constitute_key_freq_dict()
 
-                successful = True
+                    successful = True
 
-                allnotebooks[notebookname] = notebook
-                allnotebooks_tracking [notebookname] = {'lastup':1,
-                                                        'uptohere':1,
-                                                        'next_up':True,
-                                                        'skipped':False}
-                diagnostics = DiagnosticTracking(filename=notebookname)
-                diagnostics.start()
+                    allnotebooks[notebookname] = notebook
+                    if dict_temp and  '{' in dict_temp and '}' in dict_temp:
+                            display.noteprint((alerts.ATTENTION,'Successfully resumed!'))
+                            dict_temp = transform(eval(dict_temp))
+                            allnotebooks_tracking [notebookname] = copy.deepcopy(dict_temp)
+
+                    else:
+                        allnotebooks_tracking [notebookname] = {'lastup':1,
+                                                                'uptohere':1,
+                                                                'next_up':True,
+                                                                'skipped':False,
+                                                                'readonly':notebook.read_only}
+                    diagnostics = DiagnosticTracking(filename=notebookname)
+                    diagnostics.start()
                 
                                                     
                 
@@ -11418,6 +11491,8 @@ while bigloop:
                 allnotebooks[notebookname].close()
                 display.noteprint((alerts.ATTENTION,notebookname+alerts.IS_CLOSING))
                 del allnotebooks[notebookname]
+                if not allnotebooks_tracking[notebookname]['readonly']:
+                    register.end(notebookname,str(transform(allnotebooks_tracking[notebookname])))
                 opennotebooks.clear()
                 for counter, nb_temp in enumerate(sorted(allnotebooks.keys())):
                     opennotebooks.append(str(counter+1) + COLON + BLANK + nb_temp)
@@ -11447,6 +11522,8 @@ while bigloop:
                             allnotebooks[notebookname].close()
                             del allnotebooks[notebookname]
                             display.noteprint((alerts.ATTENTION,notebookname+alerts.IS_CLOSING))
+                            if not allnotebooks_tracking[notebookname]['readonly']:
+                                register.end(notebookname,str(transform(allnotebooks_tracking[notebookname])))
                         bigloop = False
                         go_temp = False 
                         

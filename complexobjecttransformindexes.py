@@ -98,6 +98,7 @@ def transform(complexobject,start=True):
 
                
      else:
+
                if type(complexobject) == type(Index(0)):
                     return '<'+str(complexobject)+'>'
                elif isinstance(complexobject,str) and len(complexobject)>4\
@@ -118,6 +119,14 @@ def transform(complexobject,start=True):
 ##                        return eval(complexobject)
                elif type(complexobject) == type(ordlist_example):
                     return '<<['+str(complexobject)+']>>'
+               elif isinstance(complexobject,str) and complexobject in ['b#True','b#False']:
+                   if complexobject == 'b#True':
+                       return True
+                   return False
+               elif isinstance(complexobject,bool):
+                   if complexobject:
+                       return 'b#True'
+                   return 'b#False'
                else:
                     return complexobject
                
