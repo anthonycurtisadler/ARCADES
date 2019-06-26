@@ -6459,7 +6459,7 @@ class Note_Shelf:
                 
                 self.default_dict['projects'] = transform(eval(projecttext))
                 if self.default_dict['projects']:
-                    display.noteprint(('ATTENTION!','SUCCESSFULLY LOADED'))
+                    display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                 self.dd_changed=True
 
         if loadindexes:
@@ -7278,17 +7278,17 @@ class Console (Note_Shelf):
                  tempobject=temporary):
 
 
-        flagvalue2={'c': 'wb',
-                    'r': 'rb',
-                    'w': 'wb'}[flagvalue]
-        print(flagvalue,flagvalue2)
+##        flagvalue2={'c': 'wb',
+##                    'r': 'wn',
+##                    'w': 'wb'}[flagvalue]
+##        print(flagvalue,flagvalue2)
 
         self.read_only = True
         if flagvalue in ['c','w']:
             self.read_only = False 
 
-        self.indexchanged = True
-        self.indexchanged_key = True
+        self.indexchanged = True    
+        self.indexchanged_key = True    
         self.indexchanged_tag = True
         self.usesequence = False
         
@@ -7351,7 +7351,7 @@ class Console (Note_Shelf):
             try:
                 self.divided = False
                 tempfile = open(self.directoryname
-                                +SLASH+self.filename+'.pkl', flagvalue2)
+                                +SLASH+self.filename+'.pkl', 'rb')
                 self.pickle_dictionary = pickle.load(tempfile)
                 tempfile.close()
             except OSError:
@@ -8302,7 +8302,7 @@ class Console (Note_Shelf):
 
                 self.default_dict['projects'] = transform(eval(project))
                 if self.default_dict['projects']:
-                    display.noteprint(('ATTENTION!','SUCCESSFULLY LOADED'))
+                    display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                 self.dd_changed=True
 
         if mainterm in ['clearprojects']:
@@ -8417,9 +8417,9 @@ class Console (Note_Shelf):
                 elif entry_temp[0].lower() == 'l':
                     self.default_dict['seqform1'] = EOL
                 elif entry_temp[0].lower() == 'b':
-                    self.default_dict['seqform1'] = EOL + '/BREAK/'
+                    self.default_dict['seqform1'] = EOL + '/BREAK/' 
                 elif entry_temp[0].lower() == 'n':
-                    self.default_dict['seqform1'] = EOL + '/NEW/'
+                    self.default_dict['seqform1'] = EOL + '/NEW/' 
                     
             else:
                 
@@ -8446,14 +8446,14 @@ class Console (Note_Shelf):
                 elif entry_temp[0].lower() == 'l':
                     self.default_dict['seqform2'] = EOL
                 elif entry_temp[0].lower() == 'b':
-                    self.default_dict['seqform2'] = '/BREAK/'
+                    self.default_dict['seqform2'] = EOL + '/BREAK/' + EOL
                 elif entry_temp[0].lower() == 'n':
-                    self.default_dict['seqform2'] = '/NEW/'     
+                    self.default_dict['seqform2'] =  EOL + '/NEW/'  + EOL   
             else:
                     self.default_dict['seqform2'] = entry_temp
             display.noteprint((labels.SEQ_FORM_ONE,self.default_dict['seqform2'].
-                               replace(EOL,'NEW LINE').
-                               replace('/BREAK/','BREAK').replace('/NEW/','NEW')))
+                               replace(EOL,' EOL ').
+                               replace('/BREAK/',' BREAK ').replace('/NEW/',' NEW ')))
         if mainterm in ['dictionaryload']:
             filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
@@ -10819,6 +10819,7 @@ class Console (Note_Shelf):
                 
 
                 self.project.append(project_name)
+                allnotebooks_tracking[notebookname]['projectset'].add(project_name)
 
 
         elif mainterm in ['saveproject']:
@@ -10894,6 +10895,7 @@ class Console (Note_Shelf):
     ##                command_stack.add('skip:'+temp_uptohere)
                 
                 self.project.append(project_name)
+                allnotebooks_tracking[notebookname]['projectset'].add(project_name)
                 self.dd_changed=True
 
 
@@ -11109,6 +11111,7 @@ INTROSCRIPT = INTROSCRIPT.replace(PERCENTAGE, BLANK*int((OPENING_WIDTH-150)/2))
 
 
 display = Display()
+register = Registry(displayobject=display)
 display.noteprint([INTROSCRIPT],
                   param_is_emb=True,
                   param_indent=0)
@@ -11120,7 +11123,7 @@ commandlist = list(range(len(commandscript.COMMANDSCRIPT)))
 helploaded=False
 
 while True:
-    display.noteprint(('SELECT',"(1) Display commands \n(2) display commands in compact mode\n(3) Start in Betamode \n(4) Start in regular mode \n(5) Start in the advanced mode"))
+    display.noteprint((labels.SELECT,queries.INITIAL_MENU))
     option = input('?')
     if option == '1' or option == '2':
         compactmode = False
@@ -11151,14 +11154,18 @@ while True:
         
                       
     if option == '3':
-            betastart, reconstitute = True, True
-            break
+        betastart, reconstitute = True, True
+        break
     if option == '4':
-            betastart, reconstitute = False, False
-            break
+        betastart, reconstitute = False, False
+        break
     if option == '5':
-            betastart, reconstitute = False, True
-            break
+        betastart, reconstitute = False, True
+        break
+    if option =='6':
+        register.console()
+            
+        
                       
             
     
@@ -11185,7 +11192,7 @@ add_new_notebook = True
 while bigloop:
     successful = False # if a new notebook is successfully loaded
     flagvalue = None
-    register = Registry()
+
     dict_temp = EMPTYCHAR 
  
     
@@ -11203,8 +11210,8 @@ while bigloop:
                     if SLASH in notebookname:
                         flagvalue = notebookname.split(SLASH)[0]
                         notebookname = notebookname.split(SLASH)[1]
-                        display.noteprint((alerts.ATTENTION,'opening ' + notebookname))
-                        display.noteprint(('OPEN FILES',register.show_openfiles))
+                        display.noteprint((alerts.ATTENTION,labels.OPENING + notebookname))
+                        display.noteprint((labels.OPEN_FILES,register.show_openfiles))
                        
                             
                     else:
@@ -11231,11 +11238,12 @@ while bigloop:
                 break
             inp_temp = EMPTYCHAR
             if register.is_open(notebookname):
-                display.noteprint(('ATENTION!',notebookname +
-                                  ' is still in use or has not been closed properly!'))
+                display.noteprint((alerts.ATTENTION,notebookname +
+                                  alerts.NOT_CLOSED))
 
                 while not inp_temp or inp_temp not in ['o','c','s']:
-                    inp_temp = input('(o)pen as read only, (c)orrect registry and continue, (s)elect another?')
+                    display.noteprint((labels.SELECT,queries.REGISTRY))
+                    inp_temp = input('?')
                     if inp_temp:
                         inp_temp = inp_temp[0].lower()
                         
@@ -11263,17 +11271,17 @@ while bigloop:
                 if bigloop and add_new_notebook:
                     try:
                         print(notebookname, alerts.OPENING, {'c':'new file',
-                                                                'r':'read only',
+                                                            'r':'read only',
                                                                 'w':'read and write'}[flagvalue])
-##                   print('FLAG=',flagvalue)
+                        print('FLAG=',flagvalue)
                         notebook = Console(notebookname, flagvalue)
                         if not notebook.read_only:
                             register.start(notebookname)
                         if register.exists(notebookname):
-                            if input('Do you want to start from where you left off?') in YESTERMS:
+                            if input(queries.RESUME_FROM_WHERE) in YESTERMS:
                                 dict_temp = register.fetch(notebookname)
                                 
-                        
+                            
                     except:
                         if input(queries.OPEN_AS_NEW):
                             flagvalue = 'c'
@@ -11281,9 +11289,10 @@ while bigloop:
                                                 'r':'read only',
                                                 'w':'read and write'}[flagvalue])
     ##                        print('FLAG=',flagvalue)
-                            notebook = Console(notebookname, flagvalue)
-                            if not notebook.read_only:
-                                register.start(notebookname)
+##                            notebook = Console(notebookname, flagvalue)
+##                            if not notebook.read_only:
+
+                    register.start(notebookname)
                                 
                             
 
@@ -11296,16 +11305,22 @@ while bigloop:
 
                     allnotebooks[notebookname] = notebook
                     if dict_temp and  '{' in dict_temp and '}' in dict_temp:
-                            display.noteprint((alerts.ATTENTION,'Successfully resumed!'))
+                            display.noteprint((alerts.ATTENTION,alerts.SUCCESSFULLY_RESUMED))
                             dict_temp = transform(eval(dict_temp))
                             allnotebooks_tracking [notebookname] = copy.deepcopy(dict_temp)
+                            if 'projectset' in allnotebooks_tracking[notebookname]:
+                                display.noteprint((labels.PREVIOUS_PROJECTS,
+                                                   ', '.join(sorted(allnotebooks_tracking[notebookname]['projectset']))))
+                            allnotebooks_tracking[notebookname]['projectset'] = set()
+                                
 
                     else:
                         allnotebooks_tracking [notebookname] = {'lastup':1,
                                                                 'uptohere':1,
                                                                 'next_up':True,
                                                                 'skipped':False,
-                                                                'readonly':notebook.read_only}
+                                                                'readonly':notebook.read_only,
+                                                                'projectset':set()}
                     diagnostics = DiagnosticTracking(filename=notebookname)
                     diagnostics.start()
                 
@@ -11324,7 +11339,7 @@ while bigloop:
 
             # procedures upon opening a new index
 
-            if reconstitute and input('Reconstitute word dictionary? ') in YESTERMS:
+            if reconstitute and input(queries.RECON_WORD) in YESTERMS:
 
                 display.noteprint((alerts.CONSTITUTING_WORD_DICT,
                                    alerts.WAIT))
@@ -11343,7 +11358,7 @@ while bigloop:
                                labels.WELCOME_BODY)
                 allnotebooks[notebookname].autobackup = backup_was
             allnotebooks[notebookname].check_spelling = spelling_was
-            if reconstitute and input('Reconstitute key dictionary? ') in YESTERMS:
+            if reconstitute and input(queries.RECON_KEY) in YESTERMS:
 
                 allnotebooks[notebookname].constitute_key_freq_dict()
                 
@@ -11384,19 +11399,20 @@ while bigloop:
 
             if prefix == 'beta' or override:
                 continuelooping, skipped, lastup, next_up, uptohere,\
-                                 close_notebook,series_enter = allnotebooks[notebookname].enter_command(skipped=skipped,
-                                                                                                        lastup=lastup,
-                                                                                                        next_up=next_up,
-                                                                                                        uptohere=uptohere,
-                                                                                                        notebookname=notebookname,
-                                                                                                        series_enter=series_enter)
+                                 close_notebook,series_enter = \
+                                 allnotebooks[notebookname].enter_command(skipped=skipped,
+                                                                          lastup=lastup,
+                                                                          next_up=next_up,
+                                                                          uptohere=uptohere,
+                                                                          notebookname=notebookname,
+                                                                          series_enter=series_enter)
 
             else:
 
                 try:
                     continuelooping, skipped, lastup, \
                                      next_up, uptohere, \
-                                     close_notebook,series_enter= allnotebooks[notebookname].enter_command(
+                                     close_notebook,series_enter=allnotebooks[notebookname].enter_command(
                         skipped=skipped,
                         lastup=lastup,
                         next_up=next_up,
@@ -11409,7 +11425,8 @@ while bigloop:
                     notebook.usesequence = False
                     notebook.indexchanged = True
                     print('RECONSTITING INDEX SEQUENCE')
-                    notebook.default_dict['indexlist'] = OrderedList(notebook.indexes(),indexstrings=True)
+                    notebook.default_dict['indexlist'] = OrderedList(notebook.indexes(),
+                                                                     indexstrings=True)
                     uptohere = Index(notebook.indexes()[-1])
                     lastup = uptohere
                     print(uptohere)
