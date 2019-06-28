@@ -119,6 +119,17 @@ temporary = TemporaryHolder()
 
 # other utilities
 
+def nprint(*entries):
+    text = ''
+    for entry in entries:
+        text += entry + BLANK
+
+    if text.strip:    
+        display.noteprint(('',text))
+    else:
+        print()
+    
+
     
 
 def si_input (prompt=EMPTYCHAR,
@@ -747,17 +758,17 @@ def get_text_file(filename,folder=os.altsep+'textfiles',suffix='.txt'):
 
     directoryname = os.getcwd()+folder
     if os.altsep+'notebooks'+os.altsep+'textfiles' in directoryname:
-        print(directoryname)
+        nprint(directoryname)
         directoryname = directoryname.replace(os.altsep + 'notebooks'
                                               + os.altsep+'textfiles',
                                               os.altsep+'textfiles')
-        print(directoryname)
+        nprint(directoryname)
     if  os.altsep+'notebooks'+'/'+'textfiles' in directoryname:
-        print(directoryname)
+        nprint(directoryname)
         directoryname = directoryname.replace(os.altsep + 'notebooks'
                                               + '/' + 'textfiles',
                                               os.altsep+'textfiles')
-        print(directoryname)
+        nprint(directoryname)
         
     
     textfile = open(directoryname+os.altsep+filename+suffix,'r',
@@ -922,7 +933,7 @@ def textedit_new(text,
                                       +annotation+VERTLINE)
                 else:
                     returnlist.append(l_temp)
-                print(returnlist[-1])
+                nprint(returnlist[-1])
             elif nl_temp == DASH:
                 # DASH to delete the line. 
                 pass
@@ -1196,7 +1207,7 @@ def save_file(returntext=EMPTYCHAR,
     
               
     directoryname = os.getcwd()+folder
-    print(directoryname)
+    nprint(directoryname)
     textfile = open(directoryname+os.altsep
                     +filename+'.txt',
                     'x',
@@ -1260,7 +1271,7 @@ def get_file_name(file_path=EMPTYCHAR,
         go_on = True
         while go_on:
             newfile = input(queries.SELECT_FILE)
-            print()
+            nprint()
 
             if newfile in ['b','B','BACK','back']:
                 return 'BACK', EMPTYCHAR
@@ -1509,7 +1520,7 @@ class Note_Shelf:
                     pickle.dump(self.pickle_dictionary[suffix],
                                 tempfile)
                     #globaldirectoryname+SLASH+self.filename+'PIC'
-                    print(suffix,'saved')
+                    nprint(suffix,'saved')
                     tempfile.close()
             if q_temp in ['R','r']:
                 self.divide_no_query = True
@@ -3011,7 +3022,7 @@ class Note_Shelf:
         if not isinstance(copy_note, bool):
             index = copy_note[0]
             c_note = copy_note[1]
-            print(PERIOD,end=EMPTYCHAR)
+            nprint(PERIOD,end=EMPTYCHAR)
 
 
             self.addnew(c_note.keyset,
@@ -3046,7 +3057,7 @@ class Note_Shelf:
         """Copies X number of notes from temporary object"""
 
         for counter in range(count):
-            print(PERIOD,end=EMPTYCHAR)
+            nprint(PERIOD,end=EMPTYCHAR)
             self.copy_from_temp(self.tempobject)
         self.constitute_key_freq_dict()
         print()
@@ -3330,7 +3341,7 @@ class Note_Shelf:
 
             if not nk_temp or nk_temp != k_temp:
                 for i_temp in [x_temp for x_temp in set(il_temp) if Index(x_temp)>Index(0)]:
-                    print(i_temp)
+                    nprint(i_temp)
 
 
                     tempks = self.note_dict[str(i_temp)].keyset
@@ -3837,7 +3848,8 @@ class Note_Shelf:
                      entrylist=None,
                      nextiterator=False,
                      children_too=False,
-                     flag=False):
+                     flag=False,
+                     starting=None):
 
         """Set the active iterator from the next iterator in the cyclically
         iterated list of iterators
@@ -3864,6 +3876,8 @@ class Note_Shelf:
                                      or i_temp.is_top())]
 
         self.iterator = pointerclass.Pointer(entrylist)
+        if starting:
+            self.iterator.go_to(starting)
 
         if flag or len(entrylist)<1:
 
@@ -3935,7 +3949,7 @@ class Note_Shelf:
         for u in undeletelist:
             print(u)
 
-            print(PERIOD,end=EMPTYCHAR)
+            nprint(PERIOD,end=EMPTYCHAR)
             
             self.move(u,
                       Index(next(m_temp)),
@@ -5597,7 +5611,7 @@ class Note_Shelf:
                 modifier = ('t'*tilda)
                 searched_list = list(self.word_dict.keys())
 
-            print(starts_with,mid_terms,ends_with)
+            nprint(starts_with,mid_terms,ends_with)
 
             return find_terms(starts_with,
                               mid_terms,
@@ -5963,9 +5977,9 @@ class Note_Shelf:
                     q_temp = q_temp.strip()
                         
                     if q_temp:
-                        print(q_temp)
+                        nprint(q_temp)
                 except:
-                    print('too big')
+                    nprint('too big')
 
             
                 
@@ -6661,7 +6675,7 @@ class Note_Shelf:
 
             possible_keys = set()
             if len(self.keys())>50:
-                print  ("TOO MANY KEYS")
+                nprint  ("TOO MANY KEYS")
                 for key in self.keys():
                     #grab all keys, removing tags.
                     #DESIDERATUM: Make it possible to
@@ -7043,7 +7057,7 @@ class Configuration:
             tempfile.close()
 
         except:
-            print(alerts.FAILED_CONF_LOAD)
+            nprint(alerts.FAILED_CONF_LOAD)
 
 
             self.pause = True
@@ -7361,7 +7375,7 @@ class Console (Note_Shelf):
                                           't':{},
                                           'w':{},
                                           'd':{}}
-                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', flagvalue2)
+                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
                 pickle.dump(self.pickle_dictionary, tempfile)
                 tempfile.close()
         display.noteprint(('DIVIDED',str(self.divided)))
@@ -7499,7 +7513,7 @@ class Console (Note_Shelf):
             self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                             headings=defaultheadings,
                                                             terms=defaultterms)
-            print('updated')
+            nprint('updated')
             self.default_dict['updated data'] = True
 
         if 'keysbefore' not in self.default_dict:
@@ -8290,6 +8304,8 @@ class Console (Note_Shelf):
                       filename='PROJ'+notebookname+datesuffix,
                       folder='/textfiles')
 
+            
+
         if mainterm in ['loadprojects']:
 
             if self.default_dict['projects'] == {}:
@@ -8305,11 +8321,16 @@ class Console (Note_Shelf):
                     display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                 self.dd_changed=True
 
+
         if mainterm in ['clearprojects']:
             if input('Are your sure?') in YESTERMS \
                and input('Are you really sure?') in YESTERMS:
                 self.default_dict['projects'] = {}
                 self.dd_changed=True
+
+
+
+        
             
             
             
@@ -9425,7 +9446,7 @@ class Console (Note_Shelf):
                 if len(to_purge) > 1:
                     terms = to_purge[1].split(COMMA)
                     
-                print('SPECS',specs,terms)
+                nprint('SPECS',specs,terms)
                 if 'a' in specs:
                     self.default_dict['purge'].allcaps()
                 if 'u' in specs:
@@ -9753,7 +9774,7 @@ class Console (Note_Shelf):
 
                         action = (s_input(queries.SUB_OR_MAKE_CHILDREN,
                                           otherterms[2])+BLANK)[0]
-                        print(action)
+                        nprint(action)
 
                     if action in ['S', 's']  or predicate[0]:
                         subordinate = True
@@ -10445,9 +10466,9 @@ class Console (Note_Shelf):
         if self.flipmode: #if using flashcards, then flip the flashcard before going to next index
 
             self.side += 1
-            print('side',self.side)
-            print('sides',self.sides)
-            print('flip_at',self.flip_at)
+            nprint('side',self.side)
+            nprint('sides',self.sides)
+            nprint('flip_at',self.flip_at)
             if self.side % self.sides == self.flip_at % self.sides:
 
                 lastup = uptohere
@@ -10475,7 +10496,7 @@ class Console (Note_Shelf):
     
                     
 ##            except:
-##                print('Iterator error #1')
+##                nprint('Iterator error #1')
         skipped = False
 
         if self.parent and biginputterm:
@@ -10792,7 +10813,7 @@ class Console (Note_Shelf):
                         if not temp_name[0:x_temp+2].isnumeric():
                             break
                     project_number = project_number[::-1]
-                    print(project_number)
+                    nprint(project_number)
                     project_number = int(project_number)
                     project_number += 1
                     project_name = project_name[0:-(x_temp+1)]+ str(project_number)
@@ -11230,7 +11251,7 @@ while bigloop:
                                  'Quit',
                                  'Q']:
                     bigloop = False
-            print(notebookname)
+            nprint(notebookname)
             if notebookname in allnotebooks:
                 display.noteprint((alerts.ATTENTION,notebookname + alerts.ALREADY_OPEN))
                 continuelooping = True
@@ -11270,10 +11291,10 @@ while bigloop:
 
                 if bigloop and add_new_notebook:
                     try:
-                        print(notebookname, alerts.OPENING, {'c':'new file',
+                        nprint(notebookname, alerts.OPENING, {'c':'new file',
                                                             'r':'read only',
                                                                 'w':'read and write'}[flagvalue])
-                        print('FLAG=',flagvalue)
+                        nprint('FLAG=',flagvalue)
                         notebook = Console(notebookname, flagvalue)
                         if not notebook.read_only:
                             register.start(notebookname)
@@ -11285,7 +11306,7 @@ while bigloop:
                     except:
                         if input(queries.OPEN_AS_NEW):
                             flagvalue = 'c'
-                            print(notebookname, alerts.OPENING, {'c':'new file',
+                            nprint(notebookname, alerts.OPENING, {'c':'new file',
                                                 'r':'read only',
                                                 'w':'read and write'}[flagvalue])
     ##                        print('FLAG=',flagvalue)
@@ -11323,6 +11344,7 @@ while bigloop:
                                                                 'projectset':set()}
                     diagnostics = DiagnosticTracking(filename=notebookname)
                     diagnostics.start()
+
                 
                                                     
                 
@@ -11337,7 +11359,7 @@ while bigloop:
 
         if add_new_notebook:
 
-            # procedures upon opening a new index
+            # procedures upon opening a new notebook
 
             if reconstitute and input(queries.RECON_WORD) in YESTERMS:
 
@@ -11348,7 +11370,8 @@ while bigloop:
 ##                allnotebooks[notebookname].make_consistent()
 
             allnotebooks[notebookname].set_iterator(children_too=True,
-                                                    flag=allnotebooks[notebookname].default_dict['setitflag'])
+                                                    flag=allnotebooks[notebookname].default_dict['setitflag'],
+                                                    starting=allnotebooks_tracking [notebookname]['uptohere'])
             spelling_was = allnotebooks[notebookname].check_spelling
             allnotebooks[notebookname].check_spelling = False
             if not allnotebooks[notebookname].indexes():
@@ -11421,38 +11444,38 @@ while bigloop:
                         series_enter=series_enter)
 
                 except KeyError:
-                    print('KEY ERROR')
+                    nprint('KEY ERROR')
                     notebook.usesequence = False
                     notebook.indexchanged = True
-                    print('RECONSTITING INDEX SEQUENCE')
+                    nprint('RECONSTITING INDEX SEQUENCE')
                     notebook.default_dict['indexlist'] = OrderedList(notebook.indexes(),
                                                                      indexstrings=True)
                     uptohere = Index(notebook.indexes()[-1])
                     lastup = uptohere
-                    print(uptohere)
+                    nprint(uptohere)
                 except AttributeError:
-                    print('ATTRIBUTE ERROR')
+                    nprint('ATTRIBUTE ERROR')
                 except FileNotFoundError:
-                    print('FILE NOTE FOUND ERROR')
+                    nprint('FILE NOTE FOUND ERROR')
                     
                 except IndexError:
-                    print('INDEX ERROR')
+                    nprint('INDEX ERROR')
                 except TypeError:
-                    print('TYPE ERROR')
+                    nprint('TYPE ERROR')
                 except NameError:
-                    print('NAME ERROR')
+                    nprint('NAME ERROR')
                 except EOFError:
-                    print('EOF ERROR')
+                    nprint('EOF ERROR')
                 except RuntimeError:
-                    print('Runtime Error')
+                    nprint('Runtime Error')
                 except UnicodeError:
-                    print('Unicode Error')
+                    nprint('Unicode Error')
                 except PermissionError:
-                    print('Permission Error')
+                    nprint('Permission Error')
                 except OSError:
-                    print('OSError')
+                    nprint('OSError')
                 except:
-                    print('OTHER ERROR')
+                    nprint('OTHER ERROR')
             
             allnotebooks_tracking[notebookname]['lastup'] = lastup
             allnotebooks_tracking[notebookname]['uptohere'] = uptohere

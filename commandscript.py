@@ -397,6 +397,55 @@ randomoff       | |turn off random mode
 indentmultiplier ||Adjust the indentation for displaying
 ||chilren 
 ||
+usesequence | |uses sequences for keeping track of indexes
+itshow | |show all indexes rather than greatest and
+| |smallest when resetting the iterator
+noflash | |don't show flashcards as flashcards
+flashmode | |flip through flashcards
+setsides | | set the number of sides for flashcards
+setflipat | | set the side at which the side flips
+flexflip| | automatically adjust to
+ | |number of sides of flashcards
+flashforward, ff | |advanced to the next side 
+flashback, fb | | go back to the previous side 
+flashreset, fr | | reset to the first side 
+flastto, ft | | advance to given side 
+
+sortbydate | |display notes sorted by date 
+showimages | | enable display of embedded images
+showtext | | enable display of embedded text
+seqintext | | include sequences in the main text
+fromtext | | extract keywords and sequences from text
+convertbyline | | extract keywords and sequences by line
+nodiagnostics | | disable diagnostic tracking
+updateuser | | update user over a range of notes 
+updatesize | | update size over a range of notes 
+run | |
+interpret | |
+diagnosticnote | |
+dictionaryload ||
+seqformone | |define seqformone for seqintext
+seqformtwo | |definte seqformtwo for seqintext
+mainsequences | |define mainsequence for seqintext
+convertdefinition | |define parsing information for fromtext
+newconvertmode | |add a new convert mode
+switchconvertmode | |switch to a new convert mode
+showallconvertmodes | |show all convert modes 
+
+
+
+
+||
+dumpprojects | |save a backup textfile of projects
+loadprojects | |load a backup textfile of projects
+clearprojects | |clear existing projects 
+
+
+
+
+
+
+
 ||"""
 
 KNOWLEDGE = """

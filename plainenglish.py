@@ -53,6 +53,12 @@ NOTERMS = ['no',
 class Queries:
 
      def __init__(self):
+          self.INITIAL_MENU = "(1) Display commands \n"+\
+                       "(2) display commands in compact mode\n"+\
+                       "(3) Start in Betamode \n"+\
+                       "(4) Start in regular mode \n"+ \
+                       "(5) Start in the advanced mode \n"+\
+                       "(6) View file registry"
           self.SELECTING_NOTEBOOK ="""Name or index of notebook,
                                    (N)ew to open a new notebook,
                                    or quit(A)ll to close all notebooks"""
@@ -209,6 +215,13 @@ class Queries:
           self.SEQ_FORM_TWO = 'Formatting after all sequence? (e) for emptychar, '+ EOL + \
                               '(l) for EOL, (b)reak, (n)ew or OTHER TEXT '
           self.MAIN_SEQUENCES = 'Main sequences? Enter as a list separated by commas or (d)efaults! '
+          self.REGISTRY = '(o)pen as read only \n'+\
+                          '(c)orrect registry and continue' +\
+                          '\n (s)elect another?'
+          self.RECON_KEY = 'Reconstitute key dictionary? '
+          self.RECON_WORD = 'Reconstitute word dictionary? '
+          self.RESUME_FROM_WHERE = 'Do you want to start from where you left off?'
+          
           
           
           
@@ -281,12 +294,16 @@ class Alerts:
           self.SAVED = ' SAVED! '
           self.TOO_LARGE = 'TOO LARGE '
           self.ADDED_TO_KEYLIST = ' added to keylist! '
+          self.SUCCESSFULLY_RESUMED = 'Successfully resumed!'
+          self.NOT_CLOSED = ' is still in use or has not been closed properly!'
+          
           
           
 class Labels:
      def __init__(self):
 
-          self.ENTRYCOMMANDS = '/C/ENTRYCOMMANDS'
+          self.SELECT = '/C/ SELECT'
+          self.ENTRYCOMMANDS = '/C/ ENTRYCOMMANDS'
           self.SEARCHES = '/C/ SEARCHES'
           self.CLUSTER = '/C/ CLUSTER'
           self.CONFIGURATIONS = '/C/ CONFIGURATIONS'
@@ -386,6 +403,9 @@ class Labels:
           self.FROM_TEXT = '/C/ KEYWORDS FROM TEXT '
           self.CONVERT_BY_LINE = '/C/ CONVERT BY LINE '
           self.ADD_DIAGNOSTICS = '/C/ ADD DIAGNOSTICS '
+          self.PREVIOUS_PROJECTS = '/C/ PREVIOUS PROJECTS!'
+          self.OPEN_FILES = '/C/ OPEN FILES'
+          self.OPENING = 'opening '
 
           
 class Spelling:
