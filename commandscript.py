@@ -8,15 +8,19 @@ HELP_DICTIONARY = {}
 COMMANDSCRIPT = []
 
 HEADERS = ['COMMANDS',
+           'DEFAULTKEYS',
+           'NAVIGATION',
            'DISPLAY',
            'SEARCHING',
            'ORGANIZING NOTES',
            'DEFAULTS',
            'INPUT/OUTPUT',
+           'ADVANCED',
+           'HYPERLINKS',
            'DEFAULT',
-           'ADVANCED DISPLAY',
-           'KNOWLEDGE BASE & SYSTEM',
-           'ADVANCED']
+           'ADVANCED DISPLAY ONE',
+           'ADVANCED DISPLAY TWO',
+           'KNOWLEDGE BASE & SYSTEM']
 
 PERIOD = '.'
 BLANK = ' '
@@ -103,15 +107,26 @@ connext | |Enter a series of nextnotes
 delete,del,d|index or indexrange			    	|delete note(s)
 /|To quit entering mode and continue |
 |cycling through notes |
+|MODIFYING NOTES|
+editnote|indexrange.. /$ annotate		    	|edit note(s) keys and text
+editnotekeys|indexrange                                 |edit note(s) keys
+editnotetext|indexrange                                 |edit note(s) text 
+revise,rev|indexrange;index to merge;break mark|revise a note..
+| /$ in back /&.. front and back /*BREAK /?Newu
 
+undo|undo						|undo last action
+redo|redo						|redo last action
+"""
+
+DEFAULTKEYS = """
+|MARKING NOTES|
 marked | |show all marked keys
 [ | |mark current key
 ] | |unmark current key
 addmarks |indexranges |mark notes in range
 deletemarks |indexranges|unmark notes in range
 clearmarks | |unmark all notes 
-revise,rev|indexrange;index to merge;break mark|revise a note..
-| /$ in back /&.. front and back /*BREAK /?New
+|DEFAULT KEYS|
 addkeys,ak|key,key...;keymacroname /$ to save macro |add new default keys
 addkey|key |add one key to default keys
 newkeys|keymacro.. /$ keep old|change to new keys from keymacro
@@ -120,12 +135,9 @@ deletekey,dk| |delete last default key
 deletedefaultkeys| |delete default keys
 clearkeys| |clear all default keys 
 grabkeys|indexrange.. /$ no all caps.. /& no first caps     |
-editnote|indexrange.. /$ annotate		    	|edit note(s) keys and text
-editnotekeys|indexrange                                 |edit note(s) keys
-editnotetext|indexrange                                 |edit note(s) text 
-undel|undel 						|undelete soft-deleted notes
-undo|undo						|undo last action
-redo|redo						|redo last action
+"""
+
+NAVIGATION = """
 skip|index                                          |skip to index
 hop|int                                            |jump ahead
 first| |go to the first index
@@ -137,13 +149,7 @@ last| |go to the last index
 '| |move to the next/previousnotes
 "| |move to the child/parent notes
 =| |return to ordinary mode
-move             |indexrange;indexrange;S or M or C;Yes/no..  |move to notes from.. sourcerange to destinationrange
-|S=Subordinate /$..|Preserves hierarchical.. structure when subordinating
-|M=Make Compact /&..|Collapses hierarchical.. structure
-|Children /*|Each note is a child of the last
-copy            |See Above |copy from source.. to destination
-copyto          |indexrange|copy notes into buffer
-copyfrom        |integer.. /$ to copy all |copy notes from.. buffer into notebook
+
 ||
 ||"""
 
@@ -176,10 +182,6 @@ keysfortags     | |show keys for tags
 defaultkeys, dfk | |show default keys
 showdel		| |show soft-deleted notes
 keystags	| |show tags and their keys
-flipforward,ff  | |flipcard forward
-flibback, fb    | |flipcard back
-flipreset,fr    | |return to the first side
-flipto,ft       | |go to side
 
 
 ||"""
@@ -236,45 +238,67 @@ conflate	|indexrange;e - b - m;destinationindex;BREAKMARK  |conflate many notes 
                 | b(reak)                               |
                 | n(ew note)
                 | /$ emptychar /& break /* new  /? BREAKMARK |
-split           |index;columns;width;breaking mark              |splits a note into columns
-sidenote        |indexrange;total width.. /$ add counters         |side-by-side notes 
+move             |indexrange;indexrange;S or M or C;Yes/no..  |move to notes from.. sourcerange to destinationrange
+|S=Subordinate /$..|Preserves hierarchical.. structure when subordinating
+|M=Make Compact /&..|Collapses hierarchical.. structure
+|Children /*|Each note is a child of the last
+copy            |See Above |copy from source.. to destination
+copyto          |indexrange|copy notes into buffer
+copyfrom        |integer.. /$ to copy all |copy notes from.. buffer into notebook
+ndel|undel 						|undelete soft-deleted notes
 permdel		|     {$ to suppress query}			|perminately delete soft-deleted notes
 clear		|     {$ to suppress query}			|soft-delete all notes
 addfield	|fieldname;indexrange				|define a new field
                 |/$ for a prerange                              |
 deletefield	|fieldname;range				|delete a field
 compress		|					|remove gaps between notes
+|ADVANCED FORMATTING |
+split           |index;columns;width;breaking mark              |splits a note into columns
+sidenote        |indexrange;total width.. /$ add counters         |side-by-side notes 
 ||
 ||"""
+
+
 SETTING = """||
+|FLIPBOOK|
 flipout, f	|						|automatically channel search results into flipbook
 showflip,       |                                               |show flip book
 showflipbook    |                                               |
 flipbook|indexrange or fields or index |define the flipbook ---
+|DISPLAY|
 shortshow	|						|display notes in short format
 resize, size, sz	|integer					|set the default size for notes
 showtags	|						|show tags attached to keys when displaying notes
 setlongmax	|integer					|set the maximum number of notes
 | |that can be displayed long-form
-limitlist	|indexrange or F or R				|define an automatic limiting range;
-|F for flipbook; R to reset|
-showlimitlist| |show limitlist
-resetlimitlist, resetl| |reset limit list
-quickenter	|						|enable quick-entry mode
-autobackup	|						|suspend automatic backup of notes
-cpara		|keys to purge;(a)allcap (c)aps (l)ower 	|cluster settings (exclude ALL CAPS;capitalized word;lower case)
-                |/$ all caps /& caps /* lower case              |
-changeuser	|username					|changes username saved in metadata
-boxconfigs      |                                               |show configurations in boxed notes
-spelling        |                                               |turn on or off spelling correction
-enterhelp       |                                               |turn on or off note entry helpscript
-formathelp  |                                               |turn on or off formatting helpscript
 curtail         |                                               |eliminate EOL at beginning and end of note
 header          |integer                                        |blank lines at top of note
 footer          |integer                                        |blank lines at foot of note
 leftmargin      |                                               |
 orderkeys       |                                               |arrange keys by increasing frequency
 rectify         |                                               |equalize the width of columns
+cpara		|keys to purge;(a)allcap (c)aps (l)ower 	|cluster settings (exclude ALL CAPS;capitalized word;lower case)
+                |/$ all caps /& caps /* lower case              |
+|LIMITLIST|
+limitlist	|indexrange or F or R				|define an automatic limiting range;
+|F for flipbook; R to reset|
+showlimitlist| |show limitlist
+resetlimitlist, resetl| |reset limit list
+|NOTE ENTRY|
+quickenter	|						|enable quick-entry mode
+autobackup	|						|suspend automatic backup of notes
+
+changeuser	|username					|changes username saved in metadata
+boxconfigs      |                                               |show configurations in boxed notes
+spelling        |                                               |turn on or off spelling correction
+enterhelp       |                                               |turn on or off note entry helpscript
+formathelp  |                                               |turn on or off formatting helpscript
+keysbefore||ask for keys before entering note
+keyafter||ask for keys after entering note
+carryoverkeys||carry over keys for child and nextnotes
+carryall||carry over keys from all parents
+returnquit| |Exit note entry mode after pressing successive returns
+setreturnquit| |Set number of returns for returnquit
 ||"""
 
 INPUT = """||
@@ -286,9 +310,6 @@ loadbyparagraph |/$ don't apply keywords.. /& apply definitions   |load text, di
 splitload       |string                                         |Load text, divide by splitterm, and apply keywords
 |$ don't apply keywords.. /& apply definitions..|
 |/* suppress queries|
-saveconfigurations| |save configurations
-loadconfigurations| |load configurations
-
 
 ||"""
 
@@ -304,13 +325,15 @@ eliminatekeys|keys						|globally removes keys
 correctkeys|indexrange..  /$ keys+tags |corrects keys
 refresh|						|reconstitute word.. concordance used for searching
 reform|range|applying reformating to range of notes!
-keysbefore||ask for keys before entering note
-keyafter||ask for keys after entering note
-carryoverkeys||carry over keys for child and nextnotes
-carryall||carry over keys from all parents
-returnquit| |Exit note entry mode after pressing successive returns
-setreturnquit| |Set number of returns for returnquit
+
+saveconfigurations| |save configurations
+loadconfigurations| |load configurations
+dumpprojects | |save a backup textfile of projects
+loadprojects | |load a backup textfile of projects
+clearprojects | |clear existing projects 
 ||
+"""
+HYPERLINKS = """
 |HYPERLINKS|
 link |indexrange |links together notes
 chain |indexrange |enchains notes
@@ -369,7 +392,7 @@ defaultspelling|language.. /$  en.. /& gr.. /* fr.. /? es |load added words from
 | |NOT RECOMMENDED for large ranges"""
 
 
-ADVANCEDDISPLAY = """||
+ADVANCEDDISPLAYONE = """||
 multi|streamname;width;savename.. |display notes packed into columns, channeled to a stream,
      |/$ smallsize /* vary.. /? pause.. /= save |
 | |with option to vary
@@ -400,6 +423,7 @@ indentmultiplier ||Adjust the indentation for displaying
 usesequence | |uses sequences for keeping track of indexes
 itshow | |show all indexes rather than greatest and
 | |smallest when resetting the iterator
+|FLASHCARDS|
 noflash | |don't show flashcards as flashcards
 flashmode | |flip through flashcards
 setsides | | set the number of sides for flashcards
@@ -409,8 +433,9 @@ flexflip| | automatically adjust to
 flashforward, ff | |advanced to the next side 
 flashback, fb | | go back to the previous side 
 flashreset, fr | | reset to the first side 
-flastto, ft | | advance to given side 
-
+flastto, ft | | advance to given side
+"""
+ADVANCEDDISPLAYTWO = """
 sortbydate | |display notes sorted by date 
 showimages | | enable display of embedded images
 showtext | | enable display of embedded text
@@ -430,22 +455,8 @@ mainsequences | |define mainsequence for seqintext
 convertdefinition | |define parsing information for fromtext
 newconvertmode | |add a new convert mode
 switchconvertmode | |switch to a new convert mode
-showallconvertmodes | |show all convert modes 
-
-
-
-
+showallconvertmodes | |show all convert modes
 ||
-dumpprojects | |save a backup textfile of projects
-loadprojects | |load a backup textfile of projects
-clearprojects | |clear existing projects 
-
-
-
-
-
-
-
 ||"""
 
 KNOWLEDGE = """
@@ -472,30 +483,41 @@ quit|  {$ to suppress query}			|save and quit
 
 """
 COMMANDSCRIPT.append(COMMANDS.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(DEFAULTKEYS.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(NAVIGATION.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(DISPLAY.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(SEARCHING.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(ORGANIZING.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(SETTING.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(INPUT.replace(PERIOD+PERIOD,EMPTYCHAR))
-COMMANDSCRIPT.append(DEFAULTS.replace(PERIOD+PERIOD,EMPTYCHAR))
-COMMANDSCRIPT.append(ADVANCEDDISPLAY.replace(PERIOD+PERIOD,EMPTYCHAR))
-COMMANDSCRIPT.append(KNOWLEDGE.replace(PERIOD+PERIOD,EMPTYCHAR))
 COMMANDSCRIPT.append(ADVANCED.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(HYPERLINKS.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(DEFAULTS.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(ADVANCEDDISPLAYONE.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(ADVANCEDDISPLAYTWO.replace(PERIOD+PERIOD,EMPTYCHAR))
+COMMANDSCRIPT.append(KNOWLEDGE.replace(PERIOD+PERIOD,EMPTYCHAR))
 
-COMMAND_TEXT = COMMANDS+DISPLAY+SEARCHING+ORGANIZING+SETTING+INPUT+DEFAULTS+ADVANCEDDISPLAY+KNOWLEDGE+ADVANCED
+COMMAND_TEXT = COMMANDS+DEFAULTKEYS+NAVIGATION+DISPLAY+SEARCHING\
+               +ORGANIZING+SETTING+INPUT+ADVANCED+HYPERLINKS\
+               +DEFAULTS+ADVANCEDDISPLAYONE+ADVANCEDDISPLAYTWO+KNOWLEDGE
 make_command_dict(COMMAND_TEXT.replace('\t', ''))
 
 
 MENU_DICTIONARY[0] = (HEADERS[0], COMMANDS.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[1] = (HEADERS[1], DISPLAY.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[2] = (HEADERS[2], SEARCHING.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[3] = (HEADERS[3], ORGANIZING.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[4] = (HEADERS[4], SETTING.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[5] = (HEADERS[5], INPUT.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[6] = (HEADERS[6], DEFAULTS.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[7] = (HEADERS[7], ADVANCEDDISPLAY.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[8] = (HEADERS[8], KNOWLEDGE.replace(PERIOD+PERIOD,EMPTYCHAR))
-MENU_DICTIONARY[9] = (HEADERS[9], ADVANCED.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[1] = (HEADERS[1], DEFAULTKEYS.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[2] = (HEADERS[2], NAVIGATION.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[3] = (HEADERS[3], DISPLAY.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[4] = (HEADERS[4], SEARCHING.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[5] = (HEADERS[5], ORGANIZING.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[6] = (HEADERS[6], SETTING.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[7] = (HEADERS[7], INPUT.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[8] = (HEADERS[8], ADVANCED.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[9] = (HEADERS[9], HYPERLINKS.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[10] = (HEADERS[10], DEFAULTS.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[11] = (HEADERS[11], ADVANCEDDISPLAYONE.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[12] = (HEADERS[12], ADVANCEDDISPLAYTWO.replace(PERIOD+PERIOD,EMPTYCHAR))
+MENU_DICTIONARY[13] = (HEADERS[13], KNOWLEDGE.replace(PERIOD+PERIOD,EMPTYCHAR))
+
 
 
 ##del COMMAND_DICTIONARY['COMMAND']
