@@ -147,7 +147,7 @@ def si_input (prompt=EMPTYCHAR,
         inputtext = EMPTYCHAR
         display.noteprint(alert)
 
-def is_date(entry,returndate=False):
+def is_date(entry,returndate=False,maxlen=0):
 
 
 
@@ -205,11 +205,11 @@ def is_date(entry,returndate=False):
             return False
     if returndate:
 
-        if len(entry) == 3:
+        if len(entry) == 3 or maxlen <= 3:
             return datetime.date(entry[0],
                                  entry[1],
                                  entry[2])
-        elif len(entry) == 5:
+        elif len(entry) == 5 or maxlen <= 5:
             return datetime.datetime(entry[0],
                                      entry[1],
                                      entry[2],
@@ -717,8 +717,6 @@ def get_range(entryterm,
                                                             termto,
                                                             orequal=orequal)]
 
-##                    [a_temp for a_temp
-##                                    in range(int(termfrom),int(termto)+1)]
             else:
                 if indexes:
                     returnrange += [Index(term)]
@@ -1881,9 +1879,6 @@ class Note_Shelf:
 
         return [x_temp[0] for x_temp in temp_words]
 
-            
-    
-        
 
     ### index management ###
 
@@ -2633,6 +2628,7 @@ class Note_Shelf:
         return [a_temp for a_temp in self.default_dict['field']
                 if self.default_dict['field'][a_temp] == fieldname]
 
+
     ### CORE DISPLAY METHODS ###
 
 
@@ -2738,25 +2734,32 @@ class Note_Shelf:
             other_seq.sort()
 
             if proj_seq:
-                seq_text = 'PROJECTS: ' + ', '.join(proj_seq) + self.default_dict['seqform1']
+                seq_text = 'PROJECTS: ' + ', '.join(proj_seq) \
+                           + self.default_dict['seqform1']
             if main_seq: 
                 for kx_temp in main_seq:
                     ident_temp= kx_temp.split(ATSIGN)[0]
                     value_temp = kx_temp.split(ATSIGN)[1]
-                    seq_text += ident_temp + ':' + value_temp + self.default_dict['seqform1']
+                    seq_text += ident_temp + ':' + value_temp \
+                                + self.default_dict['seqform1']
             if other_seq:
                 seq_text += EOL 
                 for kx_temp in other_seq:
                     ident_temp= kx_temp.split(ATSIGN)[0]
                     value_temp = kx_temp.split(ATSIGN)[1]
-                    seq_text += ident_temp + ':' + value_temp + self.default_dict['seqform1']
+                    seq_text += ident_temp + ':' + value_temp \
+                                + self.default_dict['seqform1']
             if seq_text:
                 seq_text += EOL + self.default_dict['seqform2']
 
             seq_text = seq_text.replace(BLANK+EOL,EOL)
 
-            if COMMA + EOL in seq_text or COLON +EOL in seq_text or SEMICOLON + EOL in seq_text:
-                seq_text = seq_text.replace(COMMA+EOL,EOL).replace(COLON+EOL,EOL).replace(SEMICOLON+EOL,EOL)
+            if COMMA + EOL in seq_text or COLON +EOL \
+               in seq_text or SEMICOLON + EOL in seq_text:
+                seq_text = seq_text\
+                           .replace(COMMA+EOL,EOL)\
+                           .replace(COLON+EOL,EOL)\
+                           .replace(SEMICOLON+EOL,EOL)
                 
 
         
@@ -2781,15 +2784,20 @@ class Note_Shelf:
                                            STAR:'/attachments'}[n_temp[0]]
                             n_temp = n_temp[1:]
                             try:
-                                textfile = get_text_file(n_temp,folder=folder_temp)
-                                tex_temp = tex_temp.replace('{{'+ATSIGN+n_temp+'}}',textfile)
+                                textfile = get_text_file(n_temp,
+                                                         folder=folder_temp)
+                                tex_temp = tex_temp.replace('{{'+ATSIGN+n_temp+'}}',
+                                                            textfile)
                             except:
-                                display.noteprint((alerts.ATTENTION,labels.FILE_ERROR))
+                                display.noteprint((alerts.ATTENTION,
+                                                   labels.FILE_ERROR))
                     elif n_temp and n_temp[0] in ['^']:
                         if self.show_images:
                             folder_temp = '/pictures'
                             directoryname = os.getcwd()+folder_temp
-                            picture = Image.open(directoryname+'/'+n_temp[1:]+'.jpg')
+                            picture = Image.open(directoryname
+                                                 +'/'+n_temp[1:]
+                                                 +'.jpg')
                             picture.show()
                             
                         
@@ -2832,24 +2840,25 @@ class Note_Shelf:
 
             t_temp = self.note_dict[str(index)].text
             t_temp = t_temp[0 : min([len(t_temp), length])]
-            t_temp = nformat.purgeformatting(t_temp).replace(EOL,
-                                                             EMPTYCHAR).replace(TAB,
-                                                                                EMPTYCHAR).replace(VERTLINE,
-                                                                                                   EMPTYCHAR).\
-                     replace(UNDERLINE,EMPTYCHAR)
+            t_temp = nformat\
+                     .purgeformatting(t_temp)\
+                     .replace(EOL,EMPTYCHAR)\
+                     .replace(TAB,EMPTYCHAR)\
+                     .replace(VERTLINE,EMPTYCHAR)\
+                     .replace(UNDERLINE,EMPTYCHAR)
         
             t_temp = nformat.encase(t_temp,highlight)
             
             
             
             l_temp.append(d_index+self.mark(index)
-                          +max([deepest-(len(d_index+self.mark(index))), 0])*BLANK+BLANK+VERTLINE+BLANK
+                          +max([deepest-(len(d_index+self.mark(index))),0])
+                          *BLANK+BLANK+VERTLINE+BLANK
                           +self.field(index)
                           +max([self.field_length()
                                 -(len(self.field(index))), 0])*BLANK+BLANK
                           +date_insert
                           +BLANK
-                         
                           +VERTLINE+BLANK+kl
                           +(self.default_dict['keytrim']-len(kl))*BLANK\
                           +BLANK+VERTLINE
@@ -2864,9 +2873,9 @@ class Note_Shelf:
 
         if not self.usesequence:
 
-            if len(self.note_dict.keys()) != len(self.sortedindexes) or self.indexchanged or not self.sortedindexes:
+            if len(self.note_dict.keys()) != len(self.sortedindexes) \
+               or self.indexchanged or not self.sortedindexes:
                 self.indexchanged = False 
-
                 self.sortedindexes = sorted(self.note_dict.keys(),
                                             key=lambda x_temp: Index(x_temp))
                 return self.sortedindexes
@@ -3090,8 +3099,9 @@ class Note_Shelf:
         if not withchildren:
             sourcerange = [a_temp for a_temp in sourcerange if a_temp.is_top()]
 
-        if len(destinationrange)==1 and (subordinate and str(destinationrange[0]) in self.indexes()
-                and str(destinationrange[0].child()) not in self.indexes()):
+        if len(destinationrange)==1 and \
+           (subordinate and str(destinationrange[0]) in self.indexes()
+            and str(destinationrange[0].child()) not in self.indexes()):
 
             for i_temp in sourcerange:
 
@@ -3111,7 +3121,8 @@ class Note_Shelf:
                           copy=copy)
                 j_temp = j_temp.next()
 
-        elif len(destinationrange)==1 and all_children and str(destinationrange[0]) in self.indexes():
+        elif len(destinationrange)==1 and all_children \
+             and str(destinationrange[0]) in self.indexes():
 
             childcount = 1
             for i_temp in sourcerange:
@@ -3304,7 +3315,8 @@ class Note_Shelf:
         list_to_show = []
         
 
-        for counter, key in enumerate(sorted (keyset,key=lambda x: x.lower())):
+        for counter, key in enumerate(sorted (keyset,
+                                              key=lambda x: x.lower())):
 
             list_to_show.append((key,key_index_dict[key]))
         key_list = []
@@ -3318,12 +3330,14 @@ class Note_Shelf:
                     key_list.append(list_to_show[int(a_temp)-1])
         for k_temp in key_list:
             k_temp,il_temp = k_temp[0], k_temp[1]
-            display.noteprint((k_temp,rangelist.range_find([Index(x_temp) for x_temp in il_temp])))
+            display.noteprint((k_temp,rangelist.range_find([Index(x_temp)
+                                                            for x_temp in il_temp])))
             nk_temp = input(queries.REVISE_DELETE_BEG+BLANK+k_temp+BLANK+alerts.REVISE_DELETE_END)
 
             if nk_temp not in ['delete', 'Delete','d','D']:
                 if nk_temp in self.keys() and nk_temp != EMPTYCHAR:
-                    display.noteprint((alerts.ATTENTION,nk_temp+alerts.ALREADY_IN_USE+self.key_dict[nk_temp]))
+                    display.noteprint((alerts.ATTENTION,
+                                       nk_temp+alerts.ALREADY_IN_USE+self.key_dict[nk_temp]))
                     tp_temp = alerts.STILL_CHANGED + nk_temp+QUESTIONMARK
                     if input(tp_temp) not in YESTERMS:
                         nk_temp = k_temp.strip()
@@ -3331,7 +3345,10 @@ class Note_Shelf:
                     nk_temp = k_temp.strip()
                 elif nk_temp in NOTERMS:
                     nk_temp = k_temp.strip()
-                display.noteprint((EMPTYCHAR,alerts.CHANGE+BLANK+k_temp+BLANK+alerts.TO+BLANK+nk_temp))
+                display.noteprint((EMPTYCHAR,
+                                   alerts.CHANGE+BLANK\
+                                   +k_temp+BLANK+alerts.TO\
+                                   +BLANK+nk_temp))
             else:
                 xx_temp = set(il_temp)
                 self.delete_key(k_temp)
@@ -3340,7 +3357,9 @@ class Note_Shelf:
 
 
             if not nk_temp or nk_temp != k_temp:
-                for i_temp in [x_temp for x_temp in set(il_temp) if Index(x_temp)>Index(0)]:
+                for i_temp in [x_temp for x_temp \
+                               in set(il_temp) \
+                               if Index(x_temp)>Index(0)]:
                     nprint(i_temp)
 
 
@@ -3363,7 +3382,12 @@ class Note_Shelf:
                     temptext = self.note_dict[str(i_temp)].text
                     tempmeta = self.note_dict[str(i_temp)].meta
                     self.softdelete(i_temp)
-                    self.addnew(keyset=tempks,text=temptext,metadata=tempmeta,show=True,right_at=True,ind=i_temp)
+                    self.addnew(keyset=tempks,
+                                text=temptext,
+                                metadata=tempmeta,
+                                show=True,
+                                right_at=True,
+                                ind=i_temp)
 
                     
 
@@ -3969,7 +3993,8 @@ class Note_Shelf:
                        if Index(n) > Index(str(0))
                        and str(Index(n)) in noterange]:
             if (len(str(self.note_dict[str(i_temp)].keyset)) < 5
-                    and self.note_dict[str(i_temp)].text.replace(EOL, EMPTYCHAR).strip() == EMPTYCHAR):
+                    and self.note_dict[str(i_temp)].text.replace(EOL,
+                                                                 EMPTYCHAR).strip() == EMPTYCHAR):
 
                 self.softdelete(i_temp)
 
@@ -4004,7 +4029,8 @@ class Note_Shelf:
         if ek is None:
             from_keys = False
             
-        if not et and not em and not ek and (self.default_dict['enterhelp'] or self.default_dict['formattinghelp']):
+        if not et and not em and not ek and (self.default_dict['enterhelp']\
+                                             or self.default_dict['formattinghelp']):
             display.noteprint((labels.ENTRYCOMMANDS,
                                ENTERSCRIPT*self.default_dict['enterhelp']
                                +EOL+FORMATTINGSCRIPT*self.default_dict['formattinghelp']),
@@ -4032,7 +4058,8 @@ class Note_Shelf:
                         
                             
 
-        if not from_keys and self.default_dict['keysbefore'] and not self.default_dict['fromtext']:
+        if not from_keys and self.default_dict['keysbefore']\
+           and not self.default_dict['fromtext']:
 
             for k_temp in check_hyperlinks(input(queries.KEYS).split(COMMA)):
                 if k_temp != EMPTYCHAR:
@@ -4074,16 +4101,12 @@ class Note_Shelf:
             elif et == EMPTYCHAR:
                 #asks for input if text has not been fed into the function
                 t_temp = input('PO '*poetry
-                               +'PR '*(not poetry)+str(counter)+(4-len(str(counter)))*BLANK)
+                               +'PR '*(not poetry)
+                               +str(counter)+(4-len(str(counter)))*BLANK)
                 if self.default_dict['convertbyline']:
                     if self.by_line.interpret(t_temp)[0]:
                         keyset.update(self.by_line.interpret(t_temp)[0])
                         t_temp = EMPTYCHAR
-                    
-                
-                
-                    
-
 
             else:
                 lastline = True
@@ -4103,7 +4126,9 @@ class Note_Shelf:
 
             else:
                 if len(t_temp)>len(t_temp.lstrip()):
-                    t_temp = VERTLINE*(not poetry) + '_'*(len(t_temp)-len(t_temp.lstrip()))+t_temp.lstrip()
+                    t_temp = VERTLINE*(not poetry)\
+                             + '_'*(len(t_temp)-len(t_temp.lstrip()))\
+                             + t_temp.lstrip()
                 if not poetry:  # prosaic text entry mode
 
                     counter += 1
@@ -4487,7 +4512,10 @@ class Note_Shelf:
                 if not indexrange:
                     dictionaryobject[date].add(project_temp)
                 else:
-                    if entryset.intersection({str(x_temp) for x_temp in self.default_dict['projects'][project_temp]['indexes'].list}):
+                    if entryset.intersection({str(x_temp)
+                                              for x_temp
+                                              in self.default_dict['projects']\
+                                              [project_temp]['indexes'].list}):
                         dictionaryobject[date].add(project_temp)
 
     def find_dates_for_keys_in_indexes (self,
@@ -4547,6 +4575,185 @@ class Note_Shelf:
                     dictionaryobject[date]=self.note_dict[index].keyset
                 else:
                     dictionaryobject[date].update(self.note_dict[index].keyset)
+
+    def reconstitute_sequences(self,
+                               entrylist=None):
+
+        """ Reconstitutes sequences """
+        if input('Clear sequences?') in YESTERMS and input('Are you sure?') in YESTERMS:
+
+            del self.default_dict['sequences']
+            self.default_dict['sequences'] = {}
+            self.default_dict['sequences']['#TYPE#'] = {}
+            nprint('Sequences purged!')
+
+            
+
+        if entrylist is None:
+
+            entrylist = self.apply_limit(self.find_within(indexfrom=Index(0),orequal=True))
+
+        sequencedictionary = {'o':{},
+                              'd':{},
+                              'i':{}}
+        
+        for entry in entrylist:
+            if entry in self.note_dict:
+                temp_keys = self.note_dict[entry].keyset
+                for key in temp_keys:
+                    if ATSIGN in key:
+                        if ATSIGN + UNDERLINE in key:
+                            identifier = key.split(ATSIGN)[0]
+                            if identifier not in sequencedictionary['i']:
+                                sequencedictionary['i'][identifier] = {key.split(ATSIGN+UNDERLINE)[1]}
+                            else:
+                                sequencedictionary['i'][identifier].add(key.split(ATSIGN+UNDERLINE)[1])
+                        elif ATSIGN + POUND in key:
+                            identifier = key.split(ATSIGN)[0]
+                            if identifier not in sequencedictionary['d']:
+                                sequencedictionary['d'][identifier] = {key.split(ATSIGN+POUND)[1]}
+                                
+                            else:
+                                sequencedictionary['d'][identifier].add(key.split(ATSIGN+POUND)[1])
+                        else:
+                            identifier = key.split(ATSIGN)[0]
+                            if identifier not in sequencedictionary['o']:
+                                sequencedictionary['o'][identifier] = {key.split(ATSIGN)[1]}
+                                
+                            else:
+                                sequencedictionary['o'][identifier].add(key.split(ATSIGN)[1])
+            print(PERIOD,end=EMPTYCHAR)
+        print()
+
+                                
+        for identifier in set(sequencedictionary['o'].keys()).union(set(sequencedictionary['d'].keys())).union(set(sequencedictionary['i'].keys())):
+
+            if identifier in sequencedictionary['o']:
+            
+                if identifier not in sequencedictionary['d'] and identifier not in sequencedictionary['i']:
+
+                    all_float = True
+                    for x_temp in sequencedictionary['o'][identifier]:
+                        if x_temp.count(PERIOD)>1 or x_temp[-1]==PERIOD or not x_temp.replace(PERIOD,EMPTYCHAR).isnumeric():
+                            all_float = False
+                    if all_float:
+                        seq_type = float
+                    else:
+                        seq_type = str
+
+
+                elif identifier in sequencedictionary['d'] and identifier not in sequencedictionary['i']:
+                    nprint('Sequence '+identifier+' is inconsistent!')
+                    if input('Date sequence?') in YESTERMS:
+                        seq_type = type(datetime.date(1970,5,17))
+                    else:
+                        seq_type = str
+
+                elif identifier in sequencedictionary['i'] and identifier not in sequencedictionary['d']:
+                    nprint('Sequence '+identifier+' is inconsistent!')
+                    if input('Index sequence?') in YESTERMS:
+                        seq_type = type(Index(0))
+                    else:
+                        seq_type = str
+                else:
+                    nprint('Sequence '+identifier+' is inconsistent!')
+                    entry_temp = input('Date or Index or Float')
+                    if entry_temp:
+                        entry_temp = entry_temp[0].lower()
+                    if entry_temp == 'i':
+                        seq_type = type(Index(0))
+                    elif entry_temp == 'd':
+                        seq_type = type(datetime.date(1970,5,17))
+                    elif entry_temp == 'f':
+                        seq_type = float
+                    else:
+                        seq_type = str
+
+            elif identifier in sequencedictionary['d']:
+                if identifier not in sequencedictionary['i']: 
+                    seq_type = type(datetime.date(1970,5,17))
+                else:
+                    nprint('Sequence '+identifier+' is inconsistent!')
+                    entry_temp = input('Date or Index')
+                    if entry_temp:
+                        entry_temp = entry_temp[0].lower()
+                    if entry_temp == 'i':
+                        seq_type = type(Index(0))
+                    else:
+                        seq_type = type(datetime.date(1970,5,17))
+
+                    
+                    
+
+            else:
+                seq_type = type(Index(0))
+
+            seq_values = set()
+            for t_temp in ['o','i','d']:
+                if identifier in sequencedictionary[t_temp]:
+                    seq_values = seq_values.union(sequencedictionary[t_temp][identifier])
+
+                
+            for seq_value in seq_values:
+                if seq_type != str:
+                    if seq_type == float:
+                        seq_value = float(seq_value)
+                    if seq_type == type(datetime.date(1970,5,17)):
+                        if BLANK in seq_value:
+                            seq_value = seq_value.split(BLANK)[0]
+                        if DASH not in seq_value:
+                            seq_value += '-01-01'
+                        try:
+                            seq_value = is_date(seq_value,returndate=True,maxlen=3)
+                        except:
+                            nprint('DATE CONVERSION ERROR')
+                            seq_value = False
+                    if seq_type == type(Index(0)):
+                        if seq_value[0] != PERIOD and seq_value[-1] != PERIOD\
+                           and PERIOD+PERIOD not in seq_value \
+                           and seq_value.replace(PERIOD,EMPTYCHAR).isnumeric():
+                            seq_value = Index(seq_value)
+                        else:
+                            seq_value = False
+
+
+                        
+                    
+                if seq_value and not isinstance(seq_value,bool):
+                    if identifier not in self.default_dict['sequences']:
+
+                        if identifier not in self.default_dict['sequences']['#TYPE#']:
+                            self.default_dict['sequences']['#TYPE#'][identifier] = seq_type
+                            display.noteprint((alerts.ATTENTION,alerts.NEW_SEQUENCE+str(seq_type)))
+                        else:
+                            del self.default_dict['sequences']['#TYPE#'][identifier]
+                            self.default_dict['sequences']['#TYPE#'][identifier] = type(seq_value)
+                            display.noteprint((alerts.ATTENTION,alerts.OVERWRITTEN+str(seq_type)))
+                        self.default_dict['sequences'][identifier] = OrderedList()
+                        try:
+                            self.default_dict['sequences'][identifier].add(seq_value)
+                        except:
+                            nprint('SEQUENCE ERROR')
+
+                                            
+
+                    else:
+                        if seq_type == self.default_dict['sequences']['#TYPE#'][identifier]:
+                            try:
+                                self.default_dict['sequences'][identifier].add(seq_value)                       
+                            except:
+                                nprint('SEQUENCE ERROR')
+
+            print(PERIOD,end=EMPTYCHAR)
+        print()
+                        
+
+                                                           
+                            
+                            
+                        
+
+        
 
         
     def show_date_dictionary (self,
@@ -4651,7 +4858,9 @@ class Note_Shelf:
 
         if not quick and shortshow:
             self.buf_abr_depth = self.abr_maxdepth_found
-            self.abr_maxdepth_found = self.deepest(entrylist=entrylist,is_string=True,abridged=True)
+            self.abr_maxdepth_found = self.deepest(entrylist=entrylist,
+                                                   is_string=True,
+                                                   abridged=True)
 
 
         def xformat (x_temp):
@@ -4659,7 +4868,10 @@ class Note_Shelf:
             return (x_temp)
 
         if quick and not entrylist and self.indexchanges < 20:
-            show_list(self.default_dict['all'],'INDEXES',0,40,func=xformat,present=True)
+            show_list(self.default_dict['all'],
+                      'INDEXES',0,40,
+                      func=xformat,
+                      present=True)
 
         else:
             if self.indexchanges == 20:
@@ -4684,7 +4896,9 @@ class Note_Shelf:
 
  
             if shortshow is None:
-                shortform =  (self.shortshow or len(entrylist) > self.longmax) and len(entrylist)!=1
+                shortform =  (self.shortshow
+                              or len(entrylist) > self.longmax)\
+                              and len(entrylist)!=1
             else:
                 shortform = shortshow
 
@@ -4712,11 +4926,15 @@ class Note_Shelf:
 
             if not self.default_dict['sortbydate']:
 
-                to_enumerate =  [x_temp for x_temp in self.default_dict['indexlist_indexes'].list if str(x_temp) in entrylist]
+                to_enumerate =  [x_temp for x_temp
+                                 in self.default_dict['indexlist_indexes'].list
+                                 if str(x_temp) in entrylist]
             else:
                 to_enumerate = self.index_sort([Index(a_temp)
                                                          for a_temp in entrylist],
-                                                             by_date=self.default_dict['sortbydate'],quick=False,no_check=False)
+                                                             by_date=self.default_dict['sortbydate'],
+                                               quick=False,
+                                               no_check=False)
 
 
             for counter, i_temp in enumerate(to_enumerate):
@@ -4729,7 +4947,10 @@ class Note_Shelf:
 
 
                     if group> lastgroup:
-                        deepest_temp = self.deepest(to_enumerate[min_temp:max_temp],is_string=True,abridged=True,always=True)
+                        deepest_temp = self.deepest(to_enumerate[min_temp:max_temp],
+                                                    is_string=True,
+                                                    abridged=True,
+                                                    always=True)
                         lastgroup = group
 
                     if quick:
@@ -4740,7 +4961,9 @@ class Note_Shelf:
                         k_temp = k_temp[0:min([len(k_temp),30])]
                         t_temp = self.note_dict[str(i_temp)].text
                         t_temp = nformat.purgeformatting(t_temp[0:min([len(t_temp),40])])
-                        t_temp = t_temp.replace(VERTLINE,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR).replace(EOL,EMPTYCHAR)
+                        t_temp = t_temp.replace(VERTLINE,EMPTYCHAR)\
+                                 .replace(UNDERLINE,EMPTYCHAR)\
+                                 .replace(EOL,EMPTYCHAR)
                         d_temp = str(self.note_dict[str(i_temp)].date(most_recent=True,
                                                                       short=True,
                                                                       convert=False))
@@ -4905,9 +5128,14 @@ class Note_Shelf:
             if not quick and shortform and not multi:
 
                 if not header:
-                    self.text_result = self.default_dict['display'].present(dump=True,howmany=self.how_many)
+                    self.text_result = self.default_dict['display']\
+                                       .present(dump=True,
+                                                howmany=self.how_many)
                 else:
-                    self.text_result = self.default_dict['display'].present(header=header,dump=True,howmany=self.how_many)
+                    self.text_result = self.default_dict['display']\
+                                       .present(header=header,
+                                                dump=True,
+                                                howmany=self.how_many)
             if quick:
 
                 show_list(self.default_dict['all'],
@@ -5295,7 +5523,8 @@ class Note_Shelf:
             """formats output of the list of search results"""
 
             if not isinstance(x_temp[1],str):
-                shown_indexes = rangelist.range_find([Index(a_temp) for a_temp in x_temp[1]])
+                shown_indexes = rangelist.range_find([Index(a_temp)
+                                                      for a_temp in x_temp[1]])
             else:
                 shown_indexes = x_temp[1]
             if third_term:
@@ -5403,7 +5632,10 @@ class Note_Shelf:
             return returnvalue 
         else:
             if SLASH in key:
-                afterslash = key.split(SLASH)[1].split(ATSIGN)[1].replace(POUND,EMPTYCHAR).replace(UNDERLINE,EMPTYCHAR)
+                afterslash = key.split(SLASH)[1]\
+                             .split(ATSIGN)[1]\
+                             .replace(POUND,EMPTYCHAR)\
+                             .replace(UNDERLINE,EMPTYCHAR)
                 key = key.split(SLASH)[0]
             else:
                 afterslash = EMPTYCHAR
@@ -5425,7 +5657,9 @@ class Note_Shelf:
 
             sequence = self.default_dict['sequences'][identifier]
 
-            sub_sequence = sequence.get(func=func_pred,item=key_value,item2=afterslash)
+            sub_sequence = sequence.get(func=func_pred,
+                                        item=key_value,
+                                        item2=afterslash)
 
 
 
@@ -5441,7 +5675,8 @@ class Note_Shelf:
 
                 x_temp = x_temp[:-2]
 
-            for y_temp in [x_temp+'.0',x_temp,DASH.join(x_temp.split(DASH)[0:2]),DASH.join(x_temp.split(DASH)[0:1])]:
+            for y_temp in [x_temp+'.0',x_temp,DASH.join(x_temp.split(DASH)[0:2]),
+                           DASH.join(x_temp.split(DASH)[0:1])]:
 
                 if y_temp in self.keys():
                     returnset = returnset.union(self.key_dict[y_temp])
@@ -5550,7 +5785,9 @@ class Note_Shelf:
 
                         
 
-                    if (yes_start or starts_with=='@@@') and (yes_end or ends_with=='@@@') and (yes_mid or not mid_terms):
+                    if (yes_start or starts_with=='@@@') \
+                       and (yes_end or ends_with=='@@@') \
+                       and (yes_mid or not mid_terms):
                                 
                         returnlist.append(modify(a_temp, modifier))
                         
@@ -5825,7 +6062,8 @@ class Note_Shelf:
 
                                 elif SLASH not in word:
                                     if word and word[0] != LEFTBRACKET:
-                                        if word and len(word)>2 and word[-2] == ATSIGN and word[-1] in [DOLLAR,CARET,POUND,UNDERLINE,PLUS]:
+                                        if word and len(word)>2 and word[-2] == ATSIGN \
+                                           and word[-1] in [DOLLAR,CARET,POUND,UNDERLINE,PLUS]:
                                             result_temp, ft_temp = self.sequence_key_search('ALL_'+word,
                                                                                    return_found_terms=True)
                                         else:     
@@ -5925,8 +6163,8 @@ class Note_Shelf:
                                 'set']:
 
                 querycopy = querycopy.replace(termcopy,
-                                              str(temp_set).replace(LEFTCURLY, '({').replace(RIGHTCURLY,
-                                                                                       '})'))
+                                              str(temp_set).replace(LEFTCURLY,
+                                                                    '({').replace(RIGHTCURLY,'})'))
             querycopy = querycopy.replace(ANDSIGN, '.intersection')
             querycopy = querycopy.replace(VERTLINE, '.union')
             querycopy = querycopy.replace('set()', '({0})')
@@ -6316,11 +6554,14 @@ class Note_Shelf:
                         #assigns metadata
                         if VERTLINE in md_temp and len(md_temp.split(VERTLINE)) >= 2:
                             if md_temp.split(VERTLINE)[1] == 'S':
-                                meta[md_temp.split(VERTLINE)[0]] = str(md_temp.split(VERTLINE)[2]).replace('"'+"'","'").replace("'"+'"',"'")
+                                meta[md_temp.split(VERTLINE)[0]] = str(md_temp.split(VERTLINE)[2])\
+                                                                   .replace('"'+"'","'")\
+                                                                   .replace("'"+'"',"'")
                             if md_temp.split(VERTLINE)[1] == 'I':
                                 meta[md_temp.split(VERTLINE)[0]] = int(md_temp.split(VERTLINE)[2])
                             if md_temp.split(VERTLINE)[1] == 'L':
-                                meta[md_temp.split(VERTLINE)[0]] = [x_temp.replace('"'+"'","'").replace("'"+'"',"'") for x_temp in
+                                meta[md_temp.split(VERTLINE)[0]] = [x_temp.replace('"'+"'","'")\
+                                                                    .replace("'"+'"',"'") for x_temp in
                                                                     md_temp.split(VERTLINE)[2][1:-1].split(COMMA)]
                 phrase = nformat.remove_between(phrase, '^:', ':^')
                 newindex = self.enter(ks_temp,
@@ -6348,7 +6589,8 @@ class Note_Shelf:
         """
         if keys is None:
             keys = set()
-        if LEFTNOTE not in analysetext or extract.embedded_extract(analysetext)[2] == 0:
+        if LEFTNOTE not in analysetext \
+           or extract.embedded_extract(analysetext)[2] == 0:
             return
                 #test if it contains embedded text
 
@@ -6368,7 +6610,9 @@ class Note_Shelf:
 
         for a_temp, phrase in enumerate(embeddedlist):
             print(PERIOD,end=EMPTYCHAR)
-            if a_temp<10 or (a_temp>9 and a_temp<100 and a_temp%10 == 0) or (a_temp>99 and a_temp%100==0):
+            if a_temp<10 or (a_temp>9 and a_temp<100
+                             and a_temp%10 == 0) or (a_temp>99
+                                                     and a_temp%100==0):
                 print()
                 print(str(a_temp)+'/'+emb_len)
 
@@ -6558,8 +6802,9 @@ class Note_Shelf:
         if not keyset:
             return []
         freq_list = self.order_keys(keyset)
-        freq_list = [a_temp[0]+ self.show_key_freq*add_number*(a_temp[1]>0)*(' ('+str(a_temp[1])+')') for a_temp
-                     in freq_list][0 : numberof]
+        freq_list = [a_temp[0]+self.show_key_freq*add_number
+                     *(a_temp[1]>0)*(' ('+str(a_temp[1])+')')
+                     for a_temp in freq_list][0 : numberof]
         if no_allcaps and len(freq_list) > 3:
             freq_list = [a_temp for a_temp
                          in freq_list
@@ -6653,7 +6898,12 @@ class Note_Shelf:
                 self.dd_changed = True
             
             self.softdelete(str(i_temp))
-            self.addnew(keyset=keyset,text=text,metadata=metadata,show=True,right_at=True,ind=i_temp)
+            self.addnew(keyset=keyset,
+                        text=text,
+                        metadata=metadata,
+                        show=True,
+                        right_at=True,
+                        ind=i_temp)
 
     def text_by_paragraph(self,
                           filename,
@@ -6787,8 +7037,14 @@ class Note_Shelf:
         if not from_indexes:
             from_indexes = self.indexes()
         if as_index:
-            return [Index(x_temp) for x_temp in from_indexes if (Index(x_temp)==Index(ind) or Index(x_temp).is_descendent(Index(ind))) and Index(x_temp)>Index(0)]
-        return [x_temp for x_temp in from_indexes if (Index(x_temp)==Index(ind) or Index(x_temp).is_descendent(Index(ind))) and Index(x_temp)>Index(0)]
+            return [Index(x_temp) for x_temp in from_indexes \
+                    if (Index(x_temp)==Index(ind)\
+                        or Index(x_temp).is_descendent(Index(ind)))\
+                    and Index(x_temp)>Index(0)]
+        return [x_temp for x_temp in from_indexes
+                if (Index(x_temp)==Index(ind)
+                    or Index(x_temp).is_descendent(Index(ind)))
+                and Index(x_temp)>Index(0)]
 
     def group_into_descendents (self,from_indexes=None):
         if not from_indexes:
@@ -6847,11 +7103,15 @@ class Note_Shelf:
         showtext = []
         for counter,index_temp in enumerate(index_list):
             if index_temp in self.indexes():
-                showtext.append(str(counter+1)+' '+str(index_temp)+' : '+abridge(nformat.format_keys(self.note_dict[str(index_temp)].keyset)))
+                showtext.append(str(counter+1)\
+                                +' '+str(index_temp)+' : '\
+                                +abridge(nformat\
+                                         .format_keys(self.note_dict[str(index_temp)].keyset)))
         display.noteprint(('/C/NOTES',EOL.join(showtext)))
 
         choice_temp = input('?')
-        if choice_temp.isnumeric() and 1 <= int(choice_temp) <= len(index_list):
+        if choice_temp.isnumeric() \
+           and 1 <= int(choice_temp) <= len(index_list):
             return index_list[int(choice_temp)-1]
         return index_list[-1]
         
@@ -6872,7 +7132,9 @@ class Note_Shelf:
             else:
                 return index
             if key_temp in self.key_dict:
-                indexlist_temp = [x_temp for x_temp in self.key_dict[key_temp] if Index(x_temp) >= Index(0)]
+                indexlist_temp = [x_temp for x_temp
+                                  in self.key_dict[key_temp]
+                                  if Index(x_temp) >= Index(0)]
                 if str(index) in indexlist_temp:
                     indexlist_temp.remove(str(index))
                 if not indexlist_temp:
@@ -6898,7 +7160,9 @@ class Note_Shelf:
 
             keylist_temp = list(self.note_dict[str(index)].keyset)
             keylist_temp = transpose_keys(check_hyperlinks(keylist_temp,purge=True))
-            keylist_temp = [x_temp.replace('<',EMPTYCHAR).replace('>',EMPTYCHAR) for x_temp in keylist_temp]
+            keylist_temp = [x_temp
+                            .replace('<',EMPTYCHAR)
+                            .replace('>',EMPTYCHAR) for x_temp in keylist_temp]
             if not keylist_temp:
                 if isinstance(index,(int,str)):
                     index = Index(index)
@@ -6923,7 +7187,8 @@ class Note_Shelf:
                 projectobject[temp_key]['indexes'] = OrderedList()
             else:
                 if isinstance(projectobject[temp_key]['indexes'],list):
-                    projectobject[temp_key]['indexes'] = OrderedList(sorted(projectobject[temp_key]['indexes'],key=lambda x_temp:Index(x_temp)))
+                    projectobject[temp_key]['indexes'] = OrderedList(sorted(projectobject[temp_key]['indexes'],
+                                                                            key=lambda x_temp:Index(x_temp)))
             if 'status' not in projectobject[temp_key]:
                 projectobject[temp_key]['status'] = {'started':str(datetime.datetime.now()),
                                                                              'open':True,
@@ -6935,11 +7200,14 @@ class Note_Shelf:
             keys_formated = keys_formated[0:fl_temp]
             line_temp = str(counter+1)+(5-len(str(counter+1)))*BLANK + VERTLINE
             line_temp += abridge(temp_key,trim1)+(trim1-len(abridge(temp_key,trim1)))*BLANK + VERTLINE
-            line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)+(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
-            line_temp += VERTLINE + '[' + abridge(keys_formated, trim2) + (trim2 + 6 -  len(abridge(keys_formated, trim2))) * BLANK + ']/'
+            line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)\
+                         +(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
+            line_temp += VERTLINE + '[' + abridge(keys_formated, trim2) \
+                         + (trim2 + 6 -  len(abridge(keys_formated, trim2))) * BLANK + ']/'
             if len(projectobject[temp_key]['indexes']) > 1:
                    line_temp += str(transpose_keys(projectobject[temp_key]['indexes'].list,
-                                                   surround=False)[0]) +':'+str(transpose_keys(projectobject[temp_key]['indexes'].list,
+                                                   surround=False)[0])\
+                                                   +':'+str(transpose_keys(projectobject[temp_key]['indexes'].list,
                                                                                             surround=False)[-1])
             elif len(projectobject[temp_key]['indexes'].list) == 1:
                 line_temp += str(projectobject[temp_key]['indexes'].list[0])
@@ -6950,7 +7218,9 @@ class Note_Shelf:
                              
             text_temp.append(line_temp)
             
-        nformat.columns(EOL.join(text_temp),listobject=notelist,columnwidth=(4,10,15,50,15))
+        nformat.columns(EOL.join(text_temp),
+                        listobject=notelist,
+                        columnwidth=(4,10,15,50,15))
         notelist.present() 
         
 """histogram"""
@@ -7409,7 +7679,15 @@ class Console (Note_Shelf):
         if 'seqform2' not in self.default_dict:
             self.default_dict['seqform2'] = EMPTYCHAR
         if 'main_sequences' not in self.default_dict:
-            self.default_dict['main_sequences'] = ['title','author','date','datefrom','dateto','book','page','chapter','section']
+            self.default_dict['main_sequences'] = ['title',
+                                                   'author',
+                                                   'date',
+                                                   'datefrom',
+                                                   'dateto',
+                                                   'book',
+                                                   'page',
+                                                   'chapter',
+                                                   'section']
         if 'sequences_in_text' not in self.default_dict:
             self.default_dict['sequences_in_text'] = False 
         if 'texttrim' not in self.default_dict:
@@ -7547,7 +7825,9 @@ class Console (Note_Shelf):
 ##            self.default_dict['indexlist'] = OrderedList(self.indexes(),indexstrings=True)
 ##            
         if 'indexlist_indexes' not in self.default_dict:
-            self.default_dict['indexlist_indexes'] = OrderedList([Index(x_temp) for x_temp in self.indexes()]) 
+            self.default_dict['indexlist_indexes'] = OrderedList([Index(x_temp)
+                                                                  for x_temp
+                                                                  in self.indexes()]) 
         
         if 'sequences' not in self.default_dict:
             self.default_dict['sequences'] = {'#TYPE#':{}}
@@ -7847,7 +8127,8 @@ class Console (Note_Shelf):
             key_to_add = s_input(queries.KEY, otherterms[0])
             if key_to_add:
                 if key_to_add[0] == DOLLAR:
-                    self.default_dict['defaultkeys'].extend(self.default_dict['keymacros'].get_definition(key_to_add[1:]))
+                    self.default_dict['defaultkeys'].extend(self.default_dict['keymacros']
+                                                            .get_definition(key_to_add[1:]))
                     self.dd_changed=True
                 else:
                     self.default_dict['defaultkeys'].extend(check_hyperlinks([key_to_add]))
@@ -7857,7 +8138,8 @@ class Console (Note_Shelf):
                 
                 	
 
-        elif mainterm in ['deleteautokey', 'deletekey', 'dk'] and self.default_dict['defaultkeys']:
+        elif mainterm in ['deleteautokey', 'deletekey', 'dk'] \
+             and self.default_dict['defaultkeys']:
             self.default_dict['defaultkeys'] = self.default_dict['defaultkeys'][:-1]
             self.dd_changed=True
 
@@ -7919,7 +8201,8 @@ class Console (Note_Shelf):
             display_stream = s_input(queries.DISPLAY_STREAM,
                                      otherterms[0],
                                      typeflag='str',
-                                     must_be_in=[x_temp for x_temp in multi_dict[notebookname].keys()
+                                     must_be_in=[x_temp for x_temp
+                                                 in multi_dict[notebookname].keys()
                                                  if x_temp not in self.indexes()])
             if (display_stream in [notebookname]
                     and (predicate[0]
@@ -10443,8 +10726,13 @@ class Console (Note_Shelf):
 
                 
             if self.key_results: # replace with key results
-                biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK+QUESTIONMARK,self.key_results.replace('<',EMPTYCHAR).replace('>',EMPTYCHAR).replace('|',', '))
-                biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK,self.key_results)
+                biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK+QUESTIONMARK,
+                                                    self.key_results\
+                                                    .replace('<',EMPTYCHAR)\
+                                                    .replace('>',EMPTYCHAR)\
+                                                    .replace('|',', '))
+                biginputterm = biginputterm.replace(QUESTIONMARK+QUESTIONMARK,
+                                                    self.key_results)
 
 
             if self.last_results: # replace with index results
@@ -10503,10 +10791,14 @@ class Console (Note_Shelf):
         #if a childnote, and BigInT begins with PERIOD, then replace with the parent index
             if biginputterm[0] == PERIOD:
                 biginputterm = self.parent + biginputterm
-            biginputterm = biginputterm.replace(COLON+PERIOD,COLON+self.parent+PERIOD).\
-                           replace(SEMICOLON+PERIOD,SEMICOLON+self.parent+PERIOD).\
-                           replace(COMMA+PERIOD,COMMA+self.parent+PERIOD).\
-                           replace(DASH+PERIOD,DASH+self.parent+PERIOD)
+            biginputterm = biginputterm.replace(COLON+PERIOD,
+                                                COLON+self.parent+PERIOD).\
+                           replace(SEMICOLON+PERIOD,
+                                   SEMICOLON+self.parent+PERIOD).\
+                           replace(COMMA+PERIOD,
+                                   COMMA+self.parent+PERIOD).\
+                           replace(DASH+PERIOD,
+                                   DASH+self.parent+PERIOD)
             print(biginputterm)
         
 
@@ -10566,7 +10858,8 @@ class Console (Note_Shelf):
                 totalterms += 1
         else:
             # if a list of keywords 
-            if biginputterm and len(biginputterm)>4 and not series_enter and ((COMMA in biginputterm
+            if biginputterm and len(biginputterm)>4 \
+               and not series_enter and ((COMMA in biginputterm
                  and SEMICOLON not in biginputterm
                  and biginputterm.replace(COMMA, EMPTYCHAR)) or
                 (COLON not in biginputterm and biginputterm in self.keys())):
@@ -10579,11 +10872,11 @@ class Console (Note_Shelf):
 
         
         # to assign a variable       
-        if len(mainterm) > 2 and mainterm.isupper() and mainterm.isalpha() and COLON not in mainterm:
+        if len(mainterm) > 2 and mainterm.isupper()\
+           and mainterm.isalpha() and COLON not in mainterm:
             if mainterm not in self.variables:
                 if self.last_results_used:
                     if self.last_results:
-##                        self.variables[mainterm] = self.get_range_from_results(self.last_results,listobject=None,indexobject=self.indexes())
                         self.variables[mainterm] = self.last_results
                         display.noteprint(('/C/'+mainterm,self.variables[mainterm]))
                 elif self.key_results:
@@ -10618,9 +10911,12 @@ class Console (Note_Shelf):
                                           commandscript.HELP_DICTIONARY\
                                           [mainterm.replace(QUESTIONMARK,EMPTYCHAR)][0]\
                                           +labels.NONE*(not commandscript.HELP_DICTIONARY\
-                                                        [mainterm.replace(QUESTIONMARK,EMPTYCHAR)][0].strip()),
+                                                        [mainterm.replace(QUESTIONMARK,
+                                                                          EMPTYCHAR)][0].strip()),
                                          commandscript.HELP_DICTIONARY\
-                                          [mainterm.replace(QUESTIONMARK,EMPTYCHAR)][1]),widths=[20,60,30])))
+                                          [mainterm.replace(QUESTIONMARK,
+                                                            EMPTYCHAR)][1]),
+                                         widths=[20,60,30])))
         mainterm = mainterm.strip()
         if mainterm == EMPTYCHAR and str(uptohere) in self.indexes():
             # to display the next note
@@ -10696,16 +10992,19 @@ class Console (Note_Shelf):
                         if found_temp:
                             is_temp.add(tag)
                 if not predicate[0]:
-                    display.noteprint((labels.TAGS, formkeys(sorted(list(is_temp)))))
+                    display.noteprint((labels.TAGS,
+                                       formkeys(sorted(list(is_temp)))))
                 if predicate[0]:
                     mainterm = 'keysfortags'
                             
             else: 
                 if not predicate[0]:
-                    display.noteprint((labels.TAGS, formkeys(sorted(list(self.tags())))))
+                    display.noteprint((labels.TAGS,
+                                       formkeys(sorted(list(self.tags())))))
                 if predicate[0]:
                     mainterm = 'keysfortags'
-            self.key_results = VERTLINE.join(['<'+POUND+x_temp.strip()+'>' for x_temp in is_temp])
+            self.key_results = VERTLINE.join(['<'+POUND+x_temp.strip()+'>'
+                                              for x_temp in is_temp])
                 
         elif mainterm in simple_commands:
 
@@ -10715,7 +11014,9 @@ class Console (Note_Shelf):
                                                          'toggle',
                                                          'allsettings',
                                                          'showsetting']:
-            self.setting_com (mainterm=mainterm,otherterms=otherterms,predicate=predicate)  
+            self.setting_com (mainterm=mainterm,
+                              otherterms=otherterms,
+                              predicate=predicate)  
 
         elif mainterm in ['startlooping']:
             self.looping = True
@@ -10861,8 +11162,10 @@ class Console (Note_Shelf):
 
             if project_name in self.default_dict['projects']:
                 self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
-                self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
-                self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
+                self.default_dict['projects'][project_name]['position'] = (lastup,
+                                                                           uptohere)
+                self.default_dict['projects'][project_name]['going'] = (mainterm,
+                                                                        series_enter)
                 self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
 
                 self.default_dict['projects'][project_name]['status']['open'] = False
@@ -10909,8 +11212,10 @@ class Console (Note_Shelf):
 
                 # To load different project
                 self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-                lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),Index(str(self.default_dict['projects'][project_name]['position'][1]))
-                mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],self.default_dict['projects'][project_name]['going'][1]
+                lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
+                                  Index(str(self.default_dict['projects'][project_name]['position'][1]))
+                mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],\
+                                        self.default_dict['projects'][project_name]['going'][1]
                 self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
     ##            if temp_uptohere in self.indexes():
     ##                command_stack.add('skip:'+temp_uptohere)
@@ -10961,7 +11266,8 @@ class Console (Note_Shelf):
                 self.default_dict['archivedprojects'][project_name] = copy.deepcopy(self.default_dict['projects'][project_name])
                 if self.default_dict['archivedprojects'][project_name] == self.default_dict['projects'][project_name]:
                     del self.default_dict['projects'][project_name]
-                display.noteprint((alerts.ATTENTION,project_name + ' has been archived'))
+                display.noteprint((alerts.ATTENTION,
+                                   project_name + ' has been archived'))
 
         elif mainterm in ['renameproject']:
             while True:
@@ -10976,7 +11282,8 @@ class Console (Note_Shelf):
                 self.default_dict['projects'][new_name] = copy.deepcopy(self.default_dict['projects'][old_name])
                 if self.default_dict['projects'][old_name] == self.default_dict['projects'][new_name]:
                     del self.default_dict['projects'][old_name]
-                display.noteprint((alerts.ATTENTION,old_name+' changed to '+new_name))
+                display.noteprint((alerts.ATTENTION,
+                                   old_name+' changed to '+new_name))
 
         elif mainterm in ['deletearchivedproject']:
             while True:
@@ -11016,8 +11323,10 @@ class Console (Note_Shelf):
 
         elif mainterm in ['flipproject']:
             if self.project:
-                self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project[-1]]['indexes'].list,surround=False)
-                self.set_iterator(self.default_dict['flipbook'],flag=self.default_dict['setitflag'])
+                self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project[-1]]['indexes'].list,
+                                                               surround=False)
+                self.set_iterator(self.default_dict['flipbook'],
+                                  flag=self.default_dict['setitflag'])
                 self.dd_changed=True
 
         elif mainterm in ['currentproject']:
@@ -11043,7 +11352,8 @@ class Console (Note_Shelf):
                 text_temp += 'DATES:' + ', '.join(self.default_dict['projects'][name_temp]['date']) + EOL + EOL
                 if len(self.default_dict['projects'][name_temp]['status']['lastmodified'])>0:
                     text_temp += 'LAST MODIDFIED: ' + self.default_dict['projects'][name_temp]['status']['lastmodified'][-1] + EOL + EOL
-                text_temp += 'INDEXES: ' + ', '.join(transpose_keys(self.default_dict['projects'][name_temp]['indexes'].list,surround=False))
+                text_temp += 'INDEXES: ' + ', '.join(transpose_keys(self.default_dict['projects'][name_temp]['indexes'].list,
+                                                                    surround=False))
                 display.noteprint(('/C/ PROJECT',text_temp))
         
         elif mainterm in ['showprojectdates']:
@@ -11126,7 +11436,9 @@ class Console (Note_Shelf):
             self.default_save(suffix='d',extra='BACK')
             self.dd_changed = False
 
-        return continuelooping, skipped, lastup, next_up, uptohere, close_notebook, series_enter
+        return continuelooping, \
+               skipped, lastup, next_up, \
+               uptohere, close_notebook, series_enter
 
 INTROSCRIPT = INTROSCRIPT.replace(PERCENTAGE, BLANK*int((OPENING_WIDTH-150)/2))
 
@@ -11299,7 +11611,7 @@ while bigloop:
                         if not notebook.read_only:
                             register.start(notebookname)
                         if register.exists(notebookname):
-                            if input(queries.RESUME_FROM_WHERE) in YESTERMS:
+                            if input(queries.RESUME_FROM_WHERE) not in NOTERMS:
                                 dict_temp = register.fetch(notebookname)
                                 
                             

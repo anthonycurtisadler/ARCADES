@@ -324,6 +324,7 @@ eliminateblanks|						|eliminate blank keys
 eliminatekeys|keys						|globally removes keys
 correctkeys|indexrange..  /$ keys+tags |corrects keys
 refresh|						|reconstitute word.. concordance used for searching
+reconstitutesequences| |reconstitute sequences
 reform|range|applying reformating to range of notes!
 
 saveconfigurations| |save configurations
