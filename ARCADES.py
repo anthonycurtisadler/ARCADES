@@ -4373,8 +4373,7 @@ class Note_Shelf:
                                 break
 
                     else:
-                        keyset.add(k_temp.discard(QUESTIONMARK,x_temp))
-                        keyset.remove(k_temp)
+                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
                         break
                     
                     
@@ -4747,15 +4746,125 @@ class Note_Shelf:
             print(PERIOD,end=EMPTYCHAR)
         print()
                         
+    def find_projects (self,query=True):
 
-                                                           
-                            
-                            
-                        
+        found_projects = set()
 
+        for identifier in self.default_dict['sequences']['#TYPE#']:
+            is_project = False
+            if self.default_dict['sequences']['#TYPE#'][identifier] == float:
+                if 'page' not in identifier:
+                    if identifier in self.default_dict['sequences']:
+                        lowest = self.default_dict['sequences'][identifier].list[0]
+                        highest = self.default_dict['sequences'][identifier].list[-1]
+                        try:
+                            lowest = float(lowest)
+                            highest = float(highest)
+                        except:
+                            pass
+                        if isinstance(lowest,float) and isinstance(highest,float):
+                                
+                            length = len(self.default_dict['sequences'][identifier])
+
+                            if highest-lowest + 1 == length:
+                                is_project = True
+                            else:
+                                if abs(((highest-lowest + 1) / length - 1)) < .1:
+                                    is_project = True
+                                elif abs(((highest-lowest + 1) / length - 1)) < .3:
+                                        nprint(identifier)
+                                        nprint(', '.join([str(x_temp) for x_temp in self.default_dict['sequences'][identifier].list]))
+                                        if not query or input('Is this a project?') in YESTERMS:
+                                            is_project = True
+                                else:
+                                    pass
+                        else:
+                            pass
+                    if is_project:
+                        found_projects.add(identifier)
+
+        return found_projects
+
+    def get_project (self,identifier):
+        
+        if identifier in self.default_dict['sequences']:
+
+            found_indexes = set()
+            for x_temp in self.default_dict['sequences'][identifier].list:
+                key_temp = identifier+ATSIGN+str(x_temp)
+                if key_temp in self.key_dict:
+                    found_indexes.update(self.key_dict[key_temp])
+            found_indexes = list(found_indexes)
+            found_indexes.sort(key=lambda x_temp:Index(x_temp))
+            return_dict = {}
+
+            if found_indexes:
+                return_dict['indexes'] = OrderedList(found_indexes)
+                return_dict['position'] = (Index(found_indexes[-1]),Index(found_indexes[-1]))
+                return_dict['going'] = (EMPTYCHAR,EMPTYCHAR)
+                return_dict['status'] = {}
+                return_dict['status']['started'] = datetime.datetime.now()
+                return_dict['status']['open'] = False
+                return_dict['status']['lastmodified'] = []
+                
+                found_dates = set()
+                for x_temp in found_indexes:
+
+                    if x_temp in self.note_dict:
+                        found_dates.update(set(self.note_dict[x_temp].meta['date']))
+                dates_temp = sorted([str(y_temp) for y_temp in found_dates])
+                if dates_temp:
+                    return_dict['date']= [dates_temp[0],dates_temp[-1]]
+                else:
+                    return_dict['date'] = []
+                found_keys = set()
+                first = True
+                for x_temp in found_indexes:
+                    if first:
+                        found_keys = {y_temp for y_temp
+                                      in self.note_dict[x_temp].keyset
+                                      if ATSIGN not in y_temp}\
+                                     .union({y_temp.split(ATSIGN)[0]+ATSIGN+QUESTIONMARK
+                                             for y_temp in self.note_dict[x_temp].keyset
+                                             if ATSIGN in y_temp and y_temp.split(ATSIGN)[0] != identifier})
+                        first = False
+                    else:
+                        found_keys_new = {y_temp for y_temp
+                                          in self.note_dict[x_temp].keyset
+                                          if ATSIGN not in y_temp}\
+                                         .union({y_temp.split(ATSIGN)[0]+ATSIGN+QUESTIONMARK
+                                                 for y_temp in self.note_dict[x_temp].keyset
+                                                 if ATSIGN in y_temp and y_temp.split(ATSIGN)[0] != identifier})
+                        found_keys = found_keys.intersection(found_keys_new)
+                return_dict['defaultkeys'] = list(found_keys)
+                
+                    
+                    
+                    
+
+                
+        return return_dict
+
+
+    def restore_project(self,project,query=True):
         
 
-        
+        if project in self.default_dict['projects']:
+            if not query or input('Delete '+project+ '?') in YESTERMS :                    
+                del self.default_dict['projects'][project]
+            self.default_dict['projects'][project] = self.get_project(project)
+            nprint(project,' ERASED AND RESTORED!')
+            
+        else:
+            self.default_dict['projects'][project] = self.get_project(project)
+            nprint(project,' RESTORED!')
+
+    def restore_projects(self,query=True):
+            
+
+        for fp_temp in self.find_projects(query=query):
+            self.restore_project(fp_temp,query=query)
+       
     def show_date_dictionary (self,
                               dictionaryobject=None,
                               determinant='ym',
@@ -7193,6 +7302,11 @@ class Note_Shelf:
                 projectobject[temp_key]['status'] = {'started':str(datetime.datetime.now()),
                                                                              'open':True,
                                                                              'lastmodified':[str(datetime.datetime.now())]}
+            if 'defaultkeys' not in projectobject[temp_key]:
+                projectobject[temp_key]['defaultkeys'] = []
+            if 'position' not in projectobject[temp_key]:
+                projectobject[temp_key]['position'] = (Index(0),Index(0))
+                
                 
             
             keys_formated = formkeys (projectobject[temp_key]['defaultkeys'])
@@ -8648,6 +8762,12 @@ class Console (Note_Shelf):
                                                     replace(EOL,'EOL').
                                                     replace(COMMA,'COMMA').
                                                     replace(COLON,'COLON')))
+        if mainterm in ['restoreallprojects']:
+            self.restore_projects(query=not predicate[0])
+
+        if mainterm in ['restoreproject']:
+            self.restore_project(project=s_input('Name of project?',otherterms[0]),query=not predicate[0])
+
                 
         if mainterm in ['newconvertmode']:
             ex_temp = s_input('New convert mode?',otherterms[0])
@@ -11127,7 +11247,8 @@ class Console (Note_Shelf):
                 self.default_dict['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
                 
                     
-                        
+                uptohere = self.iterator.last()
+                nprint('ITERATOR SET TO ',str(uptohere))
                 self.default_dict['projects'][project_name] = {}
                 self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                 self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
@@ -11161,7 +11282,8 @@ class Console (Note_Shelf):
                     break
 
             if project_name in self.default_dict['projects']:
-                self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                 self.default_dict['projects'][project_name]['position'] = (lastup,
                                                                            uptohere)
                 self.default_dict['projects'][project_name]['going'] = (mainterm,
@@ -11176,10 +11298,11 @@ class Console (Note_Shelf):
             project_name = EMPTYCHAR
             
             if self.project and not predicate[0]:   # Save the existing project status
-                project_name = self.project[-1]
+                project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
-
-                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                    
+                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11195,7 +11318,7 @@ class Console (Note_Shelf):
                         self.default_dict['projects'][project_name]['status'] = {'started':str(datetime.datetime.now()),
                                                                                  'open':True,
                                                                                  'lastmodified':[str(datetime.datetime.now())]}
-  
+ 
             if otherterms[0]:  #Get the project title if entered
                 project_name = otherterms[0]
         
@@ -11211,13 +11334,17 @@ class Console (Note_Shelf):
             if project_name:
 
                 # To load different project
-                self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-                lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
-                                  Index(str(self.default_dict['projects'][project_name]['position'][1]))
-                mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],\
-                                        self.default_dict['projects'][project_name]['going'][1]
+                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
+                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
+                else:
+                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
+                if not predicate[1]:
+                    lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
+                                      Index(str(self.default_dict['projects'][project_name]['position'][1]))
+                    mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],\
+                                            self.default_dict['projects'][project_name]['going'][1]
                 self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
-    ##            if temp_uptohere in self.indexes():
+    ##            if temp_uptohere in self.indexes(): 
     ##                command_stack.add('skip:'+temp_uptohere)
                 
                 self.project.append(project_name)
@@ -11230,7 +11357,8 @@ class Console (Note_Shelf):
             if self.project and not predicate[0]:
                 project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
-                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11243,7 +11371,8 @@ class Console (Note_Shelf):
                 while self.project:
                     project_name = self.project[-1]
                     if project_name in self.default_dict['projects']:
-                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                            self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11280,8 +11409,7 @@ class Console (Note_Shelf):
                     break
             if old_name and new_name:
                 self.default_dict['projects'][new_name] = copy.deepcopy(self.default_dict['projects'][old_name])
-                if self.default_dict['projects'][old_name] == self.default_dict['projects'][new_name]:
-                    del self.default_dict['projects'][old_name]
+                del self.default_dict['projects'][old_name]                
                 display.noteprint((alerts.ATTENTION,
                                    old_name+' changed to '+new_name))
 
@@ -11393,7 +11521,8 @@ class Console (Note_Shelf):
             if self.project:
                 project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
-                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11408,7 +11537,8 @@ class Console (Note_Shelf):
                 while self.project:
                     project_name = self.project[-1]
                     if project_name in self.default_dict['projects']:
-                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                            self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11764,7 +11894,7 @@ while bigloop:
                                                                      indexstrings=True)
                     uptohere = Index(notebook.indexes()[-1])
                     lastup = uptohere
-                    nprint(uptohere)
+                    nprint(str(uptohere))
                 except AttributeError:
                     nprint('ATTRIBUTE ERROR')
                 except FileNotFoundError:
