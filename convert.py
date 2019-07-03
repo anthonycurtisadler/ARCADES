@@ -28,9 +28,13 @@ class Convert:
 
           if self.dividor == EOL:
                return entry.split(EOL)
-          elif UNDERLINE in self.dividor:
-               l_mark = self.dividor.split(UNDERLINE)[0]
-               r_mark = self.dividor.split(UNDERLINE)[1]
+          elif UNDERLINE in self.dividor or len(self.dividor) == 2:
+               if UNDERLINE in self.dividor:
+                    l_mark = self.dividor.split(UNDERLINE)[0]
+                    r_mark = self.dividor.split(UNDERLINE)[1]
+               else:
+                    l_mark = self.dividor[0]
+                    r_mark = self.dividor[1]
 
                return [x_temp.split(r_mark)[0]  for x_temp in entry.split(l_mark)[1:]]
 
