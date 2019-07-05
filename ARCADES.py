@@ -11313,8 +11313,9 @@ class Console (Note_Shelf):
                     break
 
             if project_name in self.default_dict['projects']:
-                if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
                     self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
+                    self.default_dict['defaultkeys'] = []
                 self.default_dict['projects'][project_name]['position'] = (lastup,
                                                                            uptohere)
                 self.default_dict['projects'][project_name]['going'] = (mainterm,
@@ -11332,8 +11333,9 @@ class Console (Note_Shelf):
                 project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
                     
-                    if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
                         self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
+                        self.default_dict['defaultkeys'] = []
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11388,8 +11390,9 @@ class Console (Note_Shelf):
             if self.project and not predicate[0]:
                 project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
-                    if len(self.project) < 2  and ('UPDATE KEYS for '+project_name+' ?') in YESTERMS :
+                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS :
                         self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
+                        self.default_dict['defaultkeys'] = []
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11402,8 +11405,9 @@ class Console (Note_Shelf):
                 while self.project:
                     project_name = self.project.pop()
                     if project_name in self.default_dict['projects']:
-                        if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        if  input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
                             self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
+                            self.default_dict['defaultkeys'] = []
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11568,8 +11572,9 @@ class Console (Note_Shelf):
                 while self.project:
                     project_name = self.project[-1]
                     if project_name in self.default_dict['projects']:
-                        if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
                             self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
+                            self.default_dict['defaultkeys'] = []
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
