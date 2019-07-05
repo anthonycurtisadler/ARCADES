@@ -30,7 +30,7 @@ class Index:
             self.self = tuple([data])
         if isinstance(data, str):
             if '^' in data:
-                data = expand(data)
+                data = index_expand(data)
 
             self.self = tuple([int(a_temp) for a_temp in data.split(PERIOD)])
         if isinstance(data, (tuple, list)):

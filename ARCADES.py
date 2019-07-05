@@ -4024,6 +4024,15 @@ class Note_Shelf:
         -- returns the Note, rathing then calling addnote.
         """
 
+        def get_keys_from_projects():
+            returnkeys = set()
+            for project in self.project:
+                if project in self.default_dict['projects']:
+                    if 'defaultkeys' in self.default_dict['projects'][project]:
+                        returnkeys = returnkeys.union(set(self.default_dict['projects'][project]['defaultkeys']))
+            return returnkeys 
+                
+
         from_keys = True
         keyset = set()
         if ek is None:
@@ -4052,7 +4061,7 @@ class Note_Shelf:
                 self.last_keys = set()
 
         if not from_keys:
-            print('<<'+nformat.format_keys(self.default_dict['defaultkeys'])+'>>')
+            print('<<'+nformat.format_keys(self.default_dict['defaultkeys']+list(get_keys_from_projects()))+'>>')
 
 
                         
@@ -4348,7 +4357,7 @@ class Note_Shelf:
                         
                 keyset.add(p_temp + ATSIGN + str(next_temp))
    
-        for k_temp in self.default_dict['defaultkeys']:
+        for k_temp in self.default_dict['defaultkeys'] + list(get_keys_from_projects()):
             if ATSIGN in k_temp and QUESTIONMARK in k_temp:
                 while True:
                      
@@ -8211,9 +8220,14 @@ class Console (Note_Shelf):
         # called from command line
         
         if mainterm in ['clearautokeys','clearkeys']:
+            
             self.default_dict['defaultkeys'] = []
             self.dd_changed = True
-            
+            display.noteprint((labels.DEFAULT_KEYS,
+                               formkeys(self.default_dict['defaultkeys'])))
+
+
+                    
         elif mainterm in ['addkeys','addautokeys','ak','changekeys']:
 
             if mainterm == 'changekeys':
@@ -8236,6 +8250,9 @@ class Console (Note_Shelf):
                     
                 self.default_dict['keymacros'].add(key_macro_name,keys_to_add)
             self.dd_changed=True
+            display.noteprint((labels.DEFAULT_KEYS,
+                               formkeys(self.default_dict['defaultkeys'])))
+
 
         elif mainterm in ['addkey']:
             key_to_add = s_input(queries.KEY, otherterms[0])
@@ -8247,20 +8264,33 @@ class Console (Note_Shelf):
                 else:
                     self.default_dict['defaultkeys'].extend(check_hyperlinks([key_to_add]))
                     self.dd_changed=True
-                    
-                
-                
-                	
+            display.noteprint((labels.DEFAULT_KEYS,
+                   formkeys(self.default_dict['defaultkeys'])))
+
 
         elif mainterm in ['deleteautokey', 'deletekey', 'dk'] \
              and self.default_dict['defaultkeys']:
             self.default_dict['defaultkeys'] = self.default_dict['defaultkeys'][:-1]
             self.dd_changed=True
 
-        elif mainterm in ['deletedefaultkeys','deleteautokeys']:
-            self.default_dict['defaultkeys'] = edit_keys(keyobject=self.default_dict['defaultkeys'],
-                                                         displayobject=display)
-            self.dd_changed=True
+        elif mainterm in ['deletedefaultkeys','deleteautokeys','editdefaultkeys']:
+            if not otherterms[0]:
+                self.default_dict['defaultkeys'] = edit_keys(keyobject=self.default_dict['defaultkeys'],
+                                                             displayobject=display,
+                                                             addkeys=True)
+                self.dd_changed=True
+                display.noteprint((labels.DEFAULT_KEYS,
+                   formkeys(self.default_dict['defaultkeys'])))
+
+            else:
+                if otherterms[0] in self.default_dict['projects']:
+                    self.default_dict['projects'][otherterms[0]]['defaultkeys'] =edit_keys(keyobject
+                                                                                            =self.default_dict['projects']
+                                                                                           [otherterms[0]]['defaultkeys'],
+                                                                                           displayobject=display,
+                                                                                           addkeys=predicate[0] or mainterm=='editdefaultkeys')
+                    display.noteprint((labels.DEFAULT_KEYS,
+                                       formkeys(self.default_dict['projects'][otherterms[0]]['defaultkeys'])))
 
         display.noteprint((labels.DEFAULT_KEYS,
                            formkeys(self.default_dict['defaultkeys'])))
@@ -11244,13 +11274,14 @@ class Console (Note_Shelf):
                 if input(queries.CLEAR_DEFAULT_KEYS) in YESTERMS:
                     self.default_dict['defaultkeys'] = []
                     self.dd_changed=True
-                self.default_dict['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
+
                 
                     
                 uptohere = self.iterator.last()
                 nprint('ITERATOR SET TO ',str(uptohere))
                 self.default_dict['projects'][project_name] = {}
-                self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+##                self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                self.default_dict['projects'][project_name]['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
                 self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                 self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                 self.default_dict['projects'][project_name]['date'] = [str(datetime.datetime.now())]
@@ -11282,8 +11313,8 @@ class Console (Note_Shelf):
                     break
 
             if project_name in self.default_dict['projects']:
-                if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                    self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                    self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
                 self.default_dict['projects'][project_name]['position'] = (lastup,
                                                                            uptohere)
                 self.default_dict['projects'][project_name]['going'] = (mainterm,
@@ -11301,8 +11332,8 @@ class Console (Note_Shelf):
                 project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
                     
-                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                    if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                        self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11334,10 +11365,10 @@ class Console (Note_Shelf):
             if project_name:
 
                 # To load different project
-                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
-                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-                else:
-                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
+##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
+##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
+##                else:
+##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
                 if not predicate[1]:
                     lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
                                       Index(str(self.default_dict['projects'][project_name]['position'][1]))
@@ -11355,31 +11386,31 @@ class Console (Note_Shelf):
         elif mainterm in ['endproject','quitproject']:
 
             if self.project and not predicate[0]:
-                project_name = self.project[-1]
+                project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
-                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                    if len(self.project) < 2  and ('UPDATE KEYS for '+project_name+' ?') in YESTERMS :
+                        self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
                     self.default_dict['projects'][project_name]['status']['open'] = False
                     self.default_dict['projects'][project_name]['status']['lastmodified'].append(str(datetime.datetime.now()))
                     self.dd_changed=True
-                self.project = self.project[0:-1]
+
 
             if self.project and predicate[0]:
                 while self.project:
-                    project_name = self.project[-1]
+                    project_name = self.project.pop()
                     if project_name in self.default_dict['projects']:
-                        if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                            self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                            self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
                         self.default_dict['projects'][project_name]['status']['open'] = False
                         self.default_dict['projects'][project_name]['status']['lastmodified'].append(str(datetime.datetime.now()))
                         self.dd_changed=True
-                    self.project = self.project[0:-1]
+
                 
 
         elif mainterm in ['archiveproject']:
@@ -11451,8 +11482,8 @@ class Console (Note_Shelf):
 
         elif mainterm in ['flipproject']:
             if self.project:
-                self.default_dict['flipbook'] = transpose_keys(self.default_dict['projects'][self.project[-1]]['indexes'].list,
-                                                               surround=False)
+                self.default_dict['flipbook'] = sorted(transpose_keys(self.default_dict['projects'][self.project[-1]]['indexes'].list,
+                                                               surround=False),key=lambda x:Index(x))
                 self.set_iterator(self.default_dict['flipbook'],
                                   flag=self.default_dict['setitflag'])
                 self.dd_changed=True
@@ -11521,8 +11552,8 @@ class Console (Note_Shelf):
             if self.project:
                 project_name = self.project[-1]
                 if project_name in self.default_dict['projects']:
-                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+##                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS and len(self.project<2):
+##                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
                     self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                     self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                     self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11537,8 +11568,8 @@ class Console (Note_Shelf):
                 while self.project:
                     project_name = self.project[-1]
                     if project_name in self.default_dict['projects']:
-                        if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
-                            self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+                        if len(self.project) < 2 and input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:
+                            self.default_dict['projects'][project_name]['defaultkeys'] += self.default_dict['defaultkeys']
                         self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                         self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                         self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
@@ -11772,11 +11803,27 @@ while bigloop:
                             dict_temp = transform(eval(dict_temp))
                             allnotebooks_tracking [notebookname] = copy.deepcopy(dict_temp)
                             if 'projectset' in allnotebooks_tracking[notebookname]:
-                                display.noteprint((labels.PREVIOUS_PROJECTS,
-                                                   ', '.join(sorted(allnotebooks_tracking[notebookname]['projectset']))))
-                            allnotebooks_tracking[notebookname]['projectset'] = set()
-                                
+                                p_temp = sorted(allnotebooks_tracking[notebookname]['projectset'])
+                                t_temp =''
+                                for counter,x_temp in enumerate(p_temp):
+                                    t_temp += str(counter+1)+': ' + x_temp + '\n'
+                                                                    
+                                display.noteprint((labels.PREVIOUS_PROJECTS,t_temp))
 
+                                yes_temp = input('RESUME PROJECTS? (y)es (no) or list of projects to resume!')
+                                if yes_temp in YESTERMS:
+                                    q_temp = p_temp
+                                else:
+                                    q_temp = [p_temp[int(y_temp.strip())-1]
+                                              for y_temp in yes_temp.split(',')
+                                              if y_temp.isnumeric()
+                                              and int(y_temp.strip())>0
+                                              and int(y_temp.strip())<=len(p_temp)]
+                                
+                            allnotebooks_tracking[notebookname]['projectset'] = set(q_temp)
+                            display.noteprint(('RESUMED PROJECTS',
+                                               ', '.join(allnotebooks_tracking[notebookname]['projectset'])))
+                                
                     else:
                         allnotebooks_tracking [notebookname] = {'lastup':1,
                                                                 'uptohere':1,
@@ -11855,12 +11902,15 @@ while bigloop:
         series_enter = EMPTYCHAR
         multi_dict[notebookname] = {}
 
+        allnotebooks[notebookname].project = list(allnotebooks_tracking[notebookname]['projectset'])
+
         while continuelooping:
 
             lastup = allnotebooks_tracking[notebookname]['lastup']
             uptohere = allnotebooks_tracking[notebookname]['uptohere']
             next_up = allnotebooks_tracking[notebookname]['next_up']
             skipped = allnotebooks_tracking[notebookname]['skipped']
+
 
             if prefix == 'beta' or override:
                 continuelooping, skipped, lastup, next_up, uptohere,\
