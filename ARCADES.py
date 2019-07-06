@@ -2220,9 +2220,9 @@ class Note_Shelf:
                 ind = Index(ind)
 
 
-            keyset = {a_temp.strip() for a_temp
-                      in keyset.union(set(self.default_dict['defaultkeys']))
-                      if a_temp not in [EMPTYCHAR, BLANK, BLANK*2, BLANK*3, VOIDTERM]
+            keyset = {a_temp.strip()
+                      for a_temp in keyset.union(set(self.suspend_default_keys*self.default_dict['defaultkeys']))
+                                                     if a_temp not in [EMPTYCHAR, BLANK, BLANK*2, BLANK*3, VOIDTERM]
                       and ATSIGN + QUESTIONMARK not in a_temp
                       and ATSIGN + UNDERLINE + QUESTIONMARK not in a_temp
                       and ATSIGN + POUND + QUESTIONMARK not in a_temp} 
@@ -4010,7 +4010,8 @@ class Note_Shelf:
               ind=Index(0),
               re_entering=False,
               returnnote=False,
-              carrying_keys=True):
+              carrying_keys=True,
+              usedefaultkeys=True):
 
         """ For entering in new notes into the note base.
         If keyset and/or text is not passed into the function,
@@ -4054,14 +4055,14 @@ class Note_Shelf:
         if  (self.last_keys != set()
                 and input(queries.RESUME_ABORTED_NOTE) in YESTERMS):
             #IF last entry was aborted ...
-            oldkeys = self.last_keys
+            oldkeys = set(self.last_keys)
             if self.entry_buffer:
                 oldtext = self.entry_buffer.dump()
                 self.entry_buffer.clear()
                 self.last_keys = set()
 
         if not from_keys:
-            print('<<'+nformat.format_keys(self.default_dict['defaultkeys']+list(get_keys_from_projects()))+'>>')
+            print('<<'+nformat.format_keys(usedefaultkeys*(self.default_dict['defaultkeys']+list(get_keys_from_projects())))+'>>')
 
 
                         
@@ -4080,7 +4081,7 @@ class Note_Shelf:
         elif from_keys:
             keyset = ek
             keyset.update(oldkeys)
-        self.last_keys = keyset
+        self.last_keys = set(keyset)
 
         imp_list = []
         if et != EMPTYCHAR:
@@ -4307,7 +4308,7 @@ class Note_Shelf:
                 
 
         keyset.update(set(newkeylist))
-        print(', '.join(keyset))
+##        print(', '.join(keyset))
         #add new kewords to existing set of keywords
         if not from_keys and self.default_dict['keysafter'] and not self.default_dict['fromtext']:
             for k_temp in input(queries.KEYS).split(COMMA):
@@ -4357,7 +4358,7 @@ class Note_Shelf:
                         
                 keyset.add(p_temp + ATSIGN + str(next_temp))
    
-        for k_temp in self.default_dict['defaultkeys'] + list(get_keys_from_projects()):
+        for k_temp in usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())):
             if ATSIGN in k_temp and QUESTIONMARK in k_temp:
                 while True:
                      
@@ -4384,10 +4385,10 @@ class Note_Shelf:
                     else:
                         keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
                         break
+            else:
+                keyset.add(k_temp)
                     
                     
-                
-            
         if (not from_keys
             and not self.default_dict['keysbefore']
             and not self.default_dict['keysafter']):
@@ -4422,7 +4423,6 @@ class Note_Shelf:
 
         else:
             metatext = em
-
         if self.autobackup:
             self.update(keyset,
                         self.default_dict['abbreviations'].undo(text),
@@ -7722,7 +7722,8 @@ class Console (Note_Shelf):
         self.next_term = EMPTYCHAR
         self.divided = True
         self.divide_no_query = True
-        self.add_diagnostics = True 
+        self.add_diagnostics = True
+        self.suspend_default_keys = False
 
 
         
@@ -10576,7 +10577,8 @@ class Console (Note_Shelf):
                                 right_at=right_at,
                                 as_child=as_child,
                                 ind=lastup,
-                                carrying_keys=not predicate[4])
+                                carrying_keys=not predicate[4],
+                                usedefaultkeys=self.suspend_default_keys)
 
             
             
@@ -10594,7 +10596,8 @@ class Console (Note_Shelf):
                                 right_at=right_at,
                                 as_child=as_child,
                                 ind=lastup,
-                                carrying_keys=not predicate[4])
+                                carrying_keys=not predicate[4],
+                                usedefaultkeys=self.suspend_default_keys)
 
         for i_temp in self.find_within(Index(0),
                                        Index(1)):
@@ -10851,6 +10854,13 @@ class Console (Note_Shelf):
                                alerts.ENTER_DOCUMENTATION))
         self.first_time = False
         biginputterm,continuelooping,close_notebook = self.biginputterm_imp(lastup,command_stack,series_enter=series_enter)
+        
+        if biginputterm[0] == VERTLINE:
+            self.suspend_default_keys = False
+            biginputterm = biginputterm[1:]
+        else:
+            self.suspend_default_keys = True 
+            
         if biginputterm and self.add_diagnostics:
             diagnostics.addline(biginputterm)
         if biginputterm == EMPTYCHAR:
