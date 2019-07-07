@@ -10855,7 +10855,7 @@ class Console (Note_Shelf):
         self.first_time = False
         biginputterm,continuelooping,close_notebook = self.biginputterm_imp(lastup,command_stack,series_enter=series_enter)
         
-        if biginputterm[0] == VERTLINE:
+        if biginputterm and biginputterm[0] == VERTLINE:
             self.suspend_default_keys = False
             biginputterm = biginputterm[1:]
         else:
