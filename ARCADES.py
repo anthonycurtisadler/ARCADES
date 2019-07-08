@@ -11,6 +11,7 @@ import os
 import shelve
 import string
 import json
+import sys
 
 
 
@@ -931,7 +932,7 @@ def textedit_new(text,
                                       +annotation+VERTLINE)
                 else:
                     returnlist.append(l_temp)
-                nprint(returnlist[-1])
+                print(returnlist[-1])
             elif nl_temp == DASH:
                 # DASH to delete the line. 
                 pass
@@ -11263,7 +11264,7 @@ class Console (Note_Shelf):
                 if not project_name or project_name.isalpha():
                     break
                 else:
-                    other_terms = EMPTYCHAR
+                    otherterms[0] = EMPTYCHAR
             while project_name in self.default_dict['projects']:
                 if project_name[-1].isalpha():
                     project_name  += '1'
