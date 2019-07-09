@@ -1358,6 +1358,32 @@ def modify_keys(keyset,
         returnset.add(key)
     return returnset
 
+def verticle_display (enterlist,
+                      leftmargin=7):
+
+    showlist = []
+    display = ''
+    maxlen = max([len(x_temp) for x_temp in enterlist])
+    addition = int(maxlen/len(enterlist))
+
+    for counter, el_temp in enumerate(enterlist):
+        showlist.append(str(counter) + (2-len(str(counter)))*BLANK + BOX_CHAR['h']
+                        + (counter*addition)*BLANK + el_temp)
+
+    maxlen = max([len(x_temp) for x_temp in showlist])
+    showlist = [x_temp + (maxlen - len(x_temp))*BLANK for x_temp in showlist]
+    maxlen = len(showlist[0])
+    
+    for y_temp in range(maxlen):
+        display += leftmargin * BLANK
+        for x_temp in range(len(showlist)):
+  
+                display += showlist[x_temp][y_temp] + VERTLINE
+        display += '\n'
+    return display
+            
+        
+
 
 def edit_keys (keyobject,
                displayobject=None,
@@ -1365,7 +1391,8 @@ def edit_keys (keyobject,
                deletekeys=True,
                addkeys=False,
                ddkeys=False,
-               askabort=False):
+               askabort=False,
+               vertmode=True):
 
     """ Adds to and deletes to the autokeys.
     """
@@ -1376,38 +1403,72 @@ def edit_keys (keyobject,
         listcopy = list(keyobject)
         for counter, key in enumerate(listcopy):
             keylist.append(str(counter)+' : '+key)
-        keylist.show(header=prompt,
-                     centered=True)
-        i_temp = input(queries.AUTOKEYS_KEEP+askabort*queries.ALSO_ABORT)
 
-        if i_temp:
-            if askabort  and i_temp.lower() == 'abort':
-                return {'ABORTNOW'}
-            if i_temp.lower() == 'all':
-                keyobject = []
-            else:
-                if i_temp[0] == DOLLAR:
-                    i_temp = i_temp[1:]
-                    keyobject = [listcopy[int(a_temp)]  for a_temp in range(0, len(listcopy))
-                                                        if Index(a_temp) not in get_range
-                                                        (i_temp, orequal=True,
-                                                         complete=False, many=True, indexes=False)]
-                else:
+        if not vertmode:
+             keylist.show(header=prompt,
+                          centered=True)
 
-                    keyobject = [listcopy[int(a_temp)] for a_temp in get_range(i_temp,
-                                                                                orequal=True,
-                                                                                complete=False,
-                                                                                many=True,
-                                                                                indexes=False)
-                                                        if int(a_temp) < len(listcopy)
-                                                        and int(a_temp) >= 0]
+             
+             i_temp = input(queries.AUTOKEYS_KEEP+askabort*queries.ALSO_ABORT)
+
+             if i_temp:
+                 if askabort  and i_temp.lower() == 'abort':
+                     return {'ABORTNOW'}
+                 if i_temp.lower()[0] == 'a':
+                     keyobject = []
+                 elif i_temp.lower()[0] == 's':
+                      command_stack.add('deletedefaultkeys')
+                      command_stack.add('keyeditmode')
+                      
+                 
+                 else:
+                     if i_temp[0] == DOLLAR:
+                         i_temp = i_temp[1:]
+                         keyobject = [listcopy[int(a_temp)]  for a_temp in range(0, len(listcopy))
+                                                             if Index(a_temp) not in get_range
+                                                             (i_temp, orequal=True,
+                                                              complete=False, many=True, indexes=False)]
+                     else:
+
+                         keyobject = [listcopy[int(a_temp)] for a_temp in get_range(i_temp,
+                                                                                     orequal=True,
+                                                                                     complete=False,
+                                                                                     many=True,
+                                                                                     indexes=False)
+                                                             if int(a_temp) < len(listcopy)
+                                                             and int(a_temp) >= 0]
+        else:
+             nprint('X to delete, O to keep, or SWITCH to change to regular mode')
+             print(verticle_display(listcopy))
+             tokeep = input(7*BLANK)
+             keeplist = []
+             for counter in range(len(tokeep)):
+                  if counter%2 == 0:
+                       if tokeep[counter] != BLANK:
+                            keeplist.append(int(counter/2))
+             if 'O' in tokeep:
+                  keyobject = [listcopy[int(a_temp)]
+                               for a_temp in range(0, len(listcopy))
+                               if Index(a_temp) in keeplist]
+             elif tokeep and tokeep.lower()[0] == 's':
+                  command_stack.add('deletedefaultkeys')
+                  command_stack.add('keyeditmode')
+                  
+             else:
+                  keyobject = [listcopy[int(a_temp)]
+                               for a_temp in range(0, len(listcopy))
+                               if Index(a_temp) not in keeplist]
+                     
 
         display.noteprint((alerts.OLD+prompt,
                            formkeys(keyobject)))
 
     if addkeys:
 
-        keyobject += input(queries.KEYS).split(COMMA)
+        in_temp = input(queries.KEYS)
+        if in_temp:
+                
+            keyobject += in_temp.split(COMMA)
 
         
     return keyobject
@@ -3420,7 +3481,8 @@ class Note_Shelf:
                                       prompt='Keys',
                                       deletekeys=True,
                                       addkeys=True,
-                                      askabort=askabort))
+                                      askabort=askabort,
+                                      vertmode=self.vertmode))
 
             if 'ABORTNOW' in newkeyset:
                 return False
@@ -7725,6 +7787,7 @@ class Console (Note_Shelf):
         self.divide_no_query = True
         self.add_diagnostics = True
         self.suspend_default_keys = False
+        self.vertmode = False
 
 
         
@@ -8279,7 +8342,8 @@ class Console (Note_Shelf):
             if not otherterms[0]:
                 self.default_dict['defaultkeys'] = edit_keys(keyobject=self.default_dict['defaultkeys'],
                                                              displayobject=display,
-                                                             addkeys=True)
+                                                             addkeys=True,
+                                                             vertmode=self.vertmode)
                 self.dd_changed=True
                 display.noteprint((labels.DEFAULT_KEYS,
                    formkeys(self.default_dict['defaultkeys'])))
@@ -8290,7 +8354,8 @@ class Console (Note_Shelf):
                                                                                             =self.default_dict['projects']
                                                                                            [otherterms[0]]['defaultkeys'],
                                                                                            displayobject=display,
-                                                                                           addkeys=predicate[0] or mainterm=='editdefaultkeys')
+                                                                                           addkeys=predicate[0] or mainterm=='editdefaultkeys',
+                                                                                           vertmode=self.vertmode)
                     display.noteprint((labels.DEFAULT_KEYS,
                                        formkeys(self.default_dict['projects'][otherterms[0]]['defaultkeys'])))
 

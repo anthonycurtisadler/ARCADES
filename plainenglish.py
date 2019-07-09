@@ -93,7 +93,7 @@ class Queries:
           self.OPEN_CONFIRM = 'Are you sure you want to open: '
           self.AUTOKEYS_KEEP = 'Numbers of autokeys to keep,'\
                                +'to delete (start list with $)'\
-                               +'or ALL to delete all autokeys ?'                 
+                               +'or ALL to delete all autokeys, or SWITCH?'                 
           self.DELETE_CONF_BEG = 'Are you sure you want to delete? '
           self.DELETE_CONF_END = ' from the entire notebase. This cannot be undone! '
           self.REVISE_DELETE_BEG = 'Revise '
@@ -468,7 +468,8 @@ class DefaultConsoles:
 
 labels = Labels ()
           
-binary_settings =    {'showtags':('self.tagdefault',labels.TAG_DEFAULT),
+binary_settings =    {'keyeditmode':('self.vertmode','KEY EDIT MODE'),
+                      'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'usesequence':('self.usesequence',labels.USE_SEQUENCE),
                       'boxconfigs':('self.box_configs', labels.SHOW_CONFIG_BOX),
                       'autobackup':('self.autobackup', labels.AUTOBACKUP),
