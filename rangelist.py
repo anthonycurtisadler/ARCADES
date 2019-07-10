@@ -5,6 +5,7 @@ pylint rated 9.68/10
 
 from globalconstants import EMPTYCHAR, DASH, COMMA, BLANK, COMMABLANK, SLASH, LONGDASH
 from indexclass import Index
+from indexutilities import index_reduce
 
 def de_range(range_string):
 
@@ -40,10 +41,17 @@ def range_set(entrystring):
         rangeset = rangeset.union(set(de_range(e_temp)))
     return rangeset
 
-def range_find(pageset):
+def range_find(pageset,reduce=False):
 
     """Tranforms a list of pages into a formatted range
     """
+
+    def redux (x):
+        if reduce:
+            return index_reduce(x)
+        else:
+            return x
+        
         
     pagerangelist = []
 
@@ -85,9 +93,9 @@ def range_find(pageset):
     for pagerange in pagerangelist:
 
         if len(pagerange) == 1:
-            pagerangestringlist.append(str(pagerange[0]))
+            pagerangestringlist.append(redux(str(pagerange[0])))
         else:
-            pagerangestringlist.append(str(pagerange[0])
-                                       +LONGDASH+str(pagerange[-1]))
+            pagerangestringlist.append(redux(str(pagerange[0]))
+                                       +LONGDASH+redux(str(pagerange[-1])))
 
     return COMMABLANK.join(pagerangestringlist)

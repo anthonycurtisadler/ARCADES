@@ -3393,7 +3393,7 @@ class Note_Shelf:
         for k_temp in key_list:
             k_temp,il_temp = k_temp[0], k_temp[1]
             display.noteprint((k_temp,rangelist.range_find([Index(x_temp)
-                                                            for x_temp in il_temp])))
+                                                            for x_temp in il_temp],reduce=True)))
             nk_temp = input(queries.REVISE_DELETE_BEG+BLANK+k_temp+BLANK+alerts.REVISE_DELETE_END)
 
             if nk_temp not in ['delete', 'Delete','d','D']:
@@ -3970,11 +3970,11 @@ class Note_Shelf:
 
             if nextiterator:
                 display.noteprint((alerts.ITERATOR_RESET+'| '
-                                   +rangelist.range_find(entrylist),
+                                   +rangelist.range_find(entrylist,reduce=True),
                                    self.default_dict['iterator_names'][count+1]))
             else:
                 display.noteprint((alerts.ITERATOR_RESET,
-                                   rangelist.range_find(entrylist)))
+                                   rangelist.range_find(entrylist,reduce=True)))
 
         else:
 
@@ -5637,7 +5637,7 @@ class Note_Shelf:
             returnstr += (k_temp+' : '
                          +str(rangelist.range_find([Index(a_temp)
                                                      for a_temp
-                                                     in temp_dict[k_temp]])).replace(SLASH,LONGDASH)+EOL)
+                                                     in temp_dict[k_temp]],reduce=True)).replace(SLASH,LONGDASH)+EOL)
         if ef_temp is None:
             
             return returnstr
@@ -5661,7 +5661,7 @@ class Note_Shelf:
 
             if not isinstance(x_temp[1],str):
                 shown_indexes = rangelist.range_find([int(Index(a_temp))
-                                                      for a_temp in x_temp[1]])
+                                                      for a_temp in x_temp[1]],reduce=True)
             else:
                 shown_indexes = x_temp[1]
 
@@ -5705,7 +5705,7 @@ class Note_Shelf:
 
             if not isinstance(x_temp[1],str):
                 shown_indexes = rangelist.range_find([Index(a_temp)
-                                                      for a_temp in x_temp[1]])
+                                                      for a_temp in x_temp[1]],reduce=True)
             else:
                 shown_indexes = x_temp[1]
             if third_term:
@@ -5761,7 +5761,7 @@ class Note_Shelf:
             display.noteprint((labels.RESULT_FOR
                                +formkeys(sorted(list(sr_temp[2]))),
                                rangelist.range_find([Index(a_temp)
-                                                     for a_temp in sr_temp[1]])))
+                                                     for a_temp in sr_temp[1]],reduce=True)))
 
             #formkeys(sorted(list(sr_temp[2])))
             if show:
@@ -7452,9 +7452,9 @@ class histogram:
             """formats output of the list of search results"""
 
             if self.for_indexes:
-                shown_indexes = rangelist.range_find([Index(a_temp) for a_temp in x_temp[1]])
+                shown_indexes = rangelist.range_find([Index(a_temp) for a_temp in x_temp[1]],reduce=True)
             else:
-                shown_indexes = formkeys({abridge(x_temp,maxlength=20) for x_temp in x_temp[1]})
+                shown_indexes = formkeys({abridge(index_reduce(x_temp),maxlength=20) for x_temp in x_temp[1]})
             if len(shown_indexes) < 20:
                 return (abridge(x_temp[0],maxlength=20)
                         +VERTLINE
@@ -8374,7 +8374,7 @@ class Console (Note_Shelf):
             self.set_limit_list('R')
             display.noteprint((labels.LIMIT_LIST_RESET,
                                rangelist.range_find([Index(a_temp)
-                                                     for a_temp in self.limitlist])))
+                                                     for a_temp in self.limitlist],reduce=True)))
 
         elif  mainterm in ['limitlist']:
 
@@ -8383,7 +8383,7 @@ class Console (Note_Shelf):
                                             otherterms[0]))
                 display.noteprint((labels.LIMIT_LIST_CHANGED,
                                    rangelist.range_find([Index(a_temp)
-                                                         for a_temp in self.limitlist])))
+                                                         for a_temp in self.limitlist],reduce=True)))
                 
             else:
                 self.limitlist = []
@@ -8391,12 +8391,12 @@ class Console (Note_Shelf):
                 self.get_range_from_results (self.last_results,self.limitlist,indexobject=self.indexes())
                 display.noteprint((labels.LIMIT_LIST_CHANGED,
                                    rangelist.range_find([Index(x_temp)
-                                                         for x_temp in self.limitlist])))
+                                                         for x_temp in self.limitlist],reduce=True)))
 
                 
         else:
             display.noteprint((labels.LIMIT_LIST,rangelist.range_find([int(Index(a_temp))
-                                                     for a_temp in self.limitlist])))
+                                                     for a_temp in self.limitlist],reduce=True)))
             
     def stream_com (self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
         
@@ -8758,15 +8758,15 @@ class Console (Note_Shelf):
 
             display.noteprint((alerts.FLIP_CHANGED,
                                rangelist.range_find
-                               (self.default_dict['flipbook'])))
+                               (self.default_dict['flipbook'],reduce=True)))
             self.set_iterator(self.default_dict['flipbook'],
                               flag=self.default_dict['setitflag'])
         elif mainterm in ['showflip','showflipbook']:
 
-            self.last_results = rangelist.range_find (self.default_dict['flipbook'])
+            self.last_results = rangelist.range_find(self.default_dict['flipbook'])
             
             display.noteprint(('FLIPBOOK',
-                               self.last_results))
+                               rangelist.range_find(self.default_dict['flipbook'],reduce=True)))
 
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
 
@@ -9763,7 +9763,7 @@ class Console (Note_Shelf):
                                                              for x_temp in self.indexes()
                                                              if x_temp in get_range(s_input('Range from / to',
                                                                                             otherterms[0]),
-                                                                                    many=True)])))
+                                                                                    many=True)],reduce=True)))
             else:
                 if predicate[0]:
                     display.noteprint((labels.INDEXES,
@@ -9771,7 +9771,7 @@ class Console (Note_Shelf):
                 else:
                     display.noteprint((labels.INDEXES,
                                        rangelist.range_find([int(Index(i_temp))
-                                                             for i_temp in self.indexes()])))
+                                                             for i_temp in self.indexes()],reduce=True)))
 
         elif mainterm in ['reform']:
             if longphrase:
@@ -10309,7 +10309,10 @@ class Console (Note_Shelf):
 
             display.noteprint((labels.RESULT_FOR
                                +formkeys(sorted(list(sr_temp[2]))),
-                               self.last_results.replace(SLASH,LONGDASH)))
+                               rangelist.range_find([Index(a_temp)
+                                                     for a_temp in sr_temp[1]
+                                                     if a_temp!=0],
+                                                    reduce=True).replace(LONGDASH,SLASH)))
             #formkeys(sorted(list(sr_temp[2])))
 
             if predicate[0]:
