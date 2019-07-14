@@ -15,9 +15,12 @@ class KeyMacroDefinitions:
     according the words found in them.
     """
 
-    def __init__(self,displayobject,headings=None,terms=None):
+    def __init__(self,displayobject,headings=None,terms=None,presets=None):
 
-        self.key_definitions = {}
+        if presets is None:
+            self.key_definitions = {}
+        else:
+            self.key_definitions = presets
         self.displayobject = displayobject
         if not headings:
             from plainenglish import DefaultConsoles

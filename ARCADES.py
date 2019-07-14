@@ -58,6 +58,7 @@ import pointerclass                                                     #pylint 
 from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      BREAKTERMS, NEWTERMS, QUITALLTERMS, QUITTERMS, YESTERMS, NOTERMS, ADDTERMS,\
      QUITTERMS, SHOWTERMS, DELETETERMS, CLEARTERMS, binary_settings, simple_commands
+import presets
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
 from registry import Registry
@@ -4087,7 +4088,17 @@ class Note_Shelf:
         reentering also passed into addnew function returnnote
         -- returns the Note, rathing then calling addnote.
         """
+        def order_sequence_keys(key):
 
+            if QUESTIONMARK not in key:
+                return 300
+            elif key not in presets.keymacro_order:
+                return 200
+            else:
+                return presets.keymacro_order.index(key)
+            
+            
+        
         def get_keys_from_projects():
             returnkeys = set()
             for project in self.project:
@@ -4421,33 +4432,60 @@ class Note_Shelf:
                         
                 keyset.add(p_temp + ATSIGN + str(next_temp))
    
-        for k_temp in usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())):
+        for k_temp in sorted(usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())) + list(keyset),key=lambda x:order_sequence_keys(x)):
             if ATSIGN in k_temp and QUESTIONMARK in k_temp:
-                while True:
+                satisfied=False
+                while satisfied==False:
                      
-                    x_temp = input(k_temp)
-                    if not x_temp:
-                        break
-                    if x_temp.replace(PERIOD,EMPTYCHAR).isnumeric():
-                        
-                        if ATSIGN + QUESTIONMARK in k_temp:
-                            if x_temp.count(PERIOD) <= 1:
-                                keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                break
-                        elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:
-                            if PERIOD+PERIOD not in x_temp\
-                               and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
-                                keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                break
-                    elif ATSIGN + POUND + QUESTIONMARK in k_temp:
-                            
-                            if is_date(x_temp):
-                                keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                break
+                    xt_temp = input(k_temp)
+                    for x_temp in xt_temp.split(COMMA):
+                    
+                        if not x_temp:
+                            satisfied = True
+                        if ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences 
+                                if  (SLASH not in x_temp and is_date(x_temp)) or (x_temp.count(SLASH)==1 and is_date(x_temp.split(SLASH)[0]) and is_date(x_temp.split(SLASH)[1])):
+                                    if SLASH not in x_temp:
+                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                        satisfied = True
+                                    elif x_temp.count(SLASH) == 1 and x_temp[-1] != SLASH:
+                                        keyset.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'from'+ATSIGN+POUND+x_temp.split(SLASH)[0]))
+                                        keyset.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'to'+ATSIGN+POUND+x_temp.split(SLASH)[1]))
+                                        satisfied = True 
 
-                    else:
-                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                        break
+                        elif x_temp.replace(PERIOD,EMPTYCHAR).replace(DASH,EMPTYCHAR).replace(SLASH,EMPTYCHAR).isnumeric(): #for indexes or floating sequences
+                            
+                            if ATSIGN + QUESTIONMARK in k_temp:   #for floating sequences 
+                                if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1 and x_temp.count(PERIOD) == 2):
+                                    if DASH not in x_temp:
+
+                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                        satisfied = True
+                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                        keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
+                                        keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
+                                        satisfied = True      
+                               
+                            elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
+                                if PERIOD+PERIOD not in x_temp\
+                                   and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
+                                    if DASH not in x_temp:
+                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                        satisfied = True
+                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                        keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
+                                        keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
+                                        satisfied = True 
+                                        
+
+                        else: # for text sequences
+                            if DASH not in x_temp:
+                                keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                satisfied = True
+                            elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
+                                keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
+                                satisfied = True 
+                                
             else:
                 keyset.add(k_temp)
                     
@@ -4456,7 +4494,10 @@ class Note_Shelf:
             and not self.default_dict['keysbefore']
             and not self.default_dict['keysafter']):
             keyset.update(oldkeys)
-        
+
+        keyset = {k_temp for k_temp in keyset if k_temp[-1] not in [QUESTIONMARK, POUND, ATSIGN, UNDERLINE]}
+
+
                 
         
 
@@ -7932,7 +7973,8 @@ class Console (Note_Shelf):
         if 'keymacros' not in self.default_dict:
             self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display,
                                                                  headings=defaultheadings,
-                                                                 terms=defaultterms)  
+                                                                 terms=defaultterms,
+                                                                 presets=presets.keymacro)  
         if 'definitions' not in self.default_dict:
             self.default_dict['definitions'] = KeyDefinitions(displayobject=display,
                                                               headings=defaultheadings,
@@ -8473,7 +8515,11 @@ class Console (Note_Shelf):
             self.default_dict['definitions'] = KeyDefinitions(displayobject=display)
             self.dd_changed=True
         elif mainterm in ['clearkeymacros']:
-            self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display)
+
+            self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display,
+                                                                 headings=defaultheadings,
+                                                                 terms=defaultterms,
+                                                                 presets=presets.keymacro)  
             self.dd_changed=True
         elif mainterm in ['defaultcommandmacros']:
             
