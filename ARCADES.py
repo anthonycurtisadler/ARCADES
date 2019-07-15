@@ -7982,7 +7982,8 @@ class Console (Note_Shelf):
         if 'abbreviations' not in self.default_dict:
             self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                             headings=defaultheadings,
-                                                            terms=defaultterms)
+                                                            terms=defaultterms,
+                                                            presets=presets.codes)
         if 'showdate' not in self.default_dict:
             self.default_dict['showdate'] = False
         if 'marked' not in self.default_dict:
@@ -8020,7 +8021,8 @@ class Console (Note_Shelf):
                                                               terms=defaultterms)
             self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                             headings=defaultheadings,
-                                                            terms=defaultterms)
+                                                            terms=defaultterms,
+                                                            presets=presets.codes)
             nprint('updated')
             self.default_dict['updated data'] = True
 
@@ -8503,7 +8505,8 @@ class Console (Note_Shelf):
         elif mainterm in ['clearcodes']:
             self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                             headings=defaultheadings,
-                                                            terms=defaultterms)
+                                                            terms=defaultterms,
+                                                            presets=presets.codes)
             self.dd_changed=True
         elif mainterm in ['clearmacros']:
             self.default_dict['macros'] = Abbreviate(displayobject=display,
@@ -8573,7 +8576,8 @@ class Console (Note_Shelf):
             except AttributeError:
                 self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                                 headings=defaultheadings,
-                                                                terms=defaultterms)
+                                                                terms=defaultterms,
+                                                                presets=presets.codes)
                 self.default_dict['abbreviations'].console()
                 self.dd_changed=True
         elif mainterm in ['changemacros']:

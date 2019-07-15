@@ -8,6 +8,8 @@ from globalconstants import YESTERMS, ADDTERMS, DELETETERMS, CLEARTERMS, \
      LEFTNOTE, RIGHTNOTE, LEFTCURLY, RIGHTCURLY, BLANK, COLON, QUESTIONMARK, UNDERLINE,\
      EMPTYCHAR, SHOWTERMS, QUITTERMS, EQUAL,EOL, TILDA
 
+import presets 
+
 class Abbreviate:
 
 
@@ -23,18 +25,16 @@ class Abbreviate:
                  use_presets=True,
                  displayobject=None,
                  headings=None,
-                 terms=None):
+                 terms=None,
+                 presets=None):
         #displayobject must be passed in
 
         self.displayobject = displayobject
         if newdefaults is None:
             newdefaults = {}
 
-        if use_presets:
-            self.default_debreviations = {LEFTNOTE:'/060/',
-                                          RIGHTNOTE:'/062/',
-                                          LEFTCURLY:'/123/',
-                                          RIGHTCURLY:'/125/'}
+        if use_presets or presets:
+            self.default_debreviations = presets
         else:
             self.default_debreviations = {}
 
