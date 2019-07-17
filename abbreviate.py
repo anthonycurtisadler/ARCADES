@@ -162,7 +162,7 @@ class Abbreviate:
             show_debreviations.append(countermark+spacer+key+EQUAL+deb_temp)
         if returntext:
             return EOL.join(show_debreviations)
-        show_debreviations.show()
+        show_debreviations.present()
 
     def load(self,
              entrylist):

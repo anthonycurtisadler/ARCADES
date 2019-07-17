@@ -1393,10 +1393,14 @@ def edit_keys (keyobject,
                addkeys=False,
                ddkeys=False,
                askabort=False,
-               vertmode=True):
+               vertmode=True,
+               notebookobject=None):
 
     """ Adds to and deletes to the autokeys.
     """
+
+    if notebookobject is None:
+        notebookobject=notebook
 
     if deletekeys:
 
@@ -1466,7 +1470,7 @@ def edit_keys (keyobject,
 
     if addkeys:
 
-        in_temp = input(queries.KEYS)
+        in_temp = notebookobject.default_dict['abbreviations'].undo(input(queries.KEYS))
         if in_temp:
                 
             keyobject += in_temp.split(COMMA)
@@ -3483,7 +3487,8 @@ class Note_Shelf:
                                       deletekeys=True,
                                       addkeys=True,
                                       askabort=askabort,
-                                      vertmode=self.vertmode))
+                                      vertmode=self.vertmode,
+                                      notebookobject=self))
 
             if 'ABORTNOW' in newkeyset:
                 return False
@@ -4145,7 +4150,7 @@ class Note_Shelf:
         if not from_keys and self.default_dict['keysbefore']\
            and not self.default_dict['fromtext']:
 
-            for k_temp in check_hyperlinks(input(queries.KEYS).split(COMMA)):
+            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
                 if k_temp != EMPTYCHAR:
                     if k_temp[0] == DOLLAR:
                         keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
@@ -7829,6 +7834,7 @@ class Console (Note_Shelf):
         self.add_diagnostics = True
         self.suspend_default_keys = False
         self.vertmode = False
+        self.apply_abr_inp = True
 
 
         
@@ -8344,7 +8350,7 @@ class Console (Note_Shelf):
                 self.dd_changed = True
                 
                 
-            keys_to_add = s_input(queries.KEYS, otherterms[0]).split(COMMA)
+            keys_to_add = self.default_dict['abbreviations'].undo(s_input(queries.KEYS, otherterms[0])).split(COMMA)
             keys_to_add = get_keys_to_add(keys_to_add)
 
             
@@ -8352,6 +8358,7 @@ class Console (Note_Shelf):
                                                  +keys_to_add)
 
             if predicate[0]:
+                
                 if not otherterms[1]:
                     key_macro_name = input(queries.KEY_MACRO_NAME)
                 else:
@@ -8364,7 +8371,7 @@ class Console (Note_Shelf):
 
 
         elif mainterm in ['addkey']:
-            key_to_add = s_input(queries.KEY, otherterms[0])
+            key_to_add = self.default_dict['abbreviations'].undo(s_input(queries.KEY, otherterms[0]))
             if key_to_add:
                 if key_to_add[0] == DOLLAR:
                     self.default_dict['defaultkeys'].extend(self.default_dict['keymacros']
@@ -8387,7 +8394,8 @@ class Console (Note_Shelf):
                 self.default_dict['defaultkeys'] = edit_keys(keyobject=self.default_dict['defaultkeys'],
                                                              displayobject=display,
                                                              addkeys=True,
-                                                             vertmode=self.vertmode)
+                                                             vertmode=self.vertmode,
+                                                             notebookobject=self)
                 self.dd_changed=True
                 display.noteprint((labels.DEFAULT_KEYS,
                    formkeys(self.default_dict['defaultkeys'])))
@@ -8399,7 +8407,8 @@ class Console (Note_Shelf):
                                                                                            [otherterms[0]]['defaultkeys'],
                                                                                            displayobject=display,
                                                                                            addkeys=predicate[0] or mainterm=='editdefaultkeys',
-                                                                                           vertmode=self.vertmode)
+                                                                                           vertmode=self.vertmode,
+                                                                                           notebookobject=self)
                     display.noteprint((labels.DEFAULT_KEYS,
                                        formkeys(self.default_dict['projects'][otherterms[0]]['defaultkeys'])))
 
@@ -10345,8 +10354,8 @@ class Console (Note_Shelf):
                                    withchildren=withchildren,
                                    copy=copy_temp)
         elif mainterm in ['search', QUESTIONMARK]:
-            sr_temp = self.new_search(s_input(queries.SEARCH_PHRASE,
-                                              otherterms[0]))
+            sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
+                                              otherterms[0])))
             if self.flipout:
                 self.default_dict['flipbook'] = [Index(a_temp)
                                                      for a_temp in sr_temp[1] if a_temp!=0]
@@ -10756,6 +10765,8 @@ class Console (Note_Shelf):
                                       +BLANK+{EMPTYCHAR:EMPTYCHAR,
                                               PLUS+PLUS:'[++]',
                                               PLUS+PLUS+PLUS:'[+++]'}[series_enter]+BLANK)
+                if self.apply_abr_inp:
+                    manyinputterm = self.default_dict['abbreviations'].undo(manyinputterm)
                 manyinputterm = self.default_dict['commands'].do(manyinputterm, lchar=EMPTYCHAR)
                 print('<'+manyinputterm+'>')
                 if STAR + STAR in manyinputterm and manyinputterm.split(STAR+STAR)[1].isnumeric():
@@ -11410,7 +11421,7 @@ class Console (Note_Shelf):
                 nprint('ITERATOR SET TO ',str(uptohere))
                 self.default_dict['projects'][project_name] = {}
 ##                self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
-                self.default_dict['projects'][project_name]['defaultkeys'] = get_keys_to_add(input(queries.KEYS).split(COMMA))
+                self.default_dict['projects'][project_name]['defaultkeys'] = get_keys_to_add(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA))
                 self.default_dict['projects'][project_name]['position'] = (lastup,uptohere)
                 self.default_dict['projects'][project_name]['going'] = (mainterm,series_enter)
                 self.default_dict['projects'][project_name]['date'] = [str(datetime.datetime.now())]

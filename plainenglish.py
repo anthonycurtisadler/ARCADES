@@ -406,7 +406,8 @@ class Labels:
           self.PREVIOUS_PROJECTS = '/C/ PREVIOUS PROJECTS!'
           self.OPEN_FILES = '/C/ OPEN FILES'
           self.OPENING = 'opening '
-
+          self.APPLY_ABR_INP = '/C/ APPLY INPUT ABBREVIATIONS'
+          self.KEY_INPUT_MODE = '/C/ KEY EDIT MODE'
           
 class Spelling:
      def __init__(self):
@@ -468,7 +469,8 @@ class DefaultConsoles:
 
 labels = Labels ()
           
-binary_settings =    {'keyeditmode':('self.vertmode','KEY EDIT MODE'),
+binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_INP),
+                      'keyeditmode':('self.vertmode',labels.KEY_INPUT_MODE),
                       'showtags':('self.tagdefault',labels.TAG_DEFAULT),
                       'usesequence':('self.usesequence',labels.USE_SEQUENCE),
                       'boxconfigs':('self.box_configs', labels.SHOW_CONFIG_BOX),
