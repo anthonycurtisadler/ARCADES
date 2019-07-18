@@ -62,15 +62,23 @@ import presets
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
 from registry import Registry
-from spellcheck import SpellCheck                                       #pylint 8.83/10
+try:
+    from spellcheck import SpellCheck                                       #pylint 8.83/10
+    spellcheck_on = True
+except:
+    spellcheck_on = False
 import stack                                                            #pylint 10.0/10     
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
 import random
 ##client = False
-from PIL import Image
-
+try:
+    from PIL import Image
+except:
+    pass
+if not os.altsep:
+    os.altsep = '/'
 
 
 #Instantiate objects standard messages for main program and modules
@@ -7822,8 +7830,9 @@ class Console (Note_Shelf):
         self.note_dict = shelve.open(self.directoryname
                                      +SLASH+self.filename
                                      +'ND', flag=flagvalue)
-        self.speller = SpellCheck(display, headings=spellingheadings)
-        self.check_spelling = True
+        if spellcheck_on:
+            self.speller = SpellCheck(display, headings=spellingheadings)
+        self.check_spelling = spellcheck_on
         self.tempobject = tempobject
         self.last_term = EMPTYCHAR
 
@@ -8079,8 +8088,9 @@ class Console (Note_Shelf):
           #Non-persistent attributes
         
         self.variables = {}
-        self.speller = SpellCheck(display,added_words=self.default_dict['spelling'])
-        self.speller.set_language()
+        if spellcheck_on:
+            self.speller = SpellCheck(display,added_words=self.default_dict['spelling'])
+            self.speller.set_language() 
         self.iterator = []
             #iterator for flipping through the notecards
         self.done = stack.Stack()
