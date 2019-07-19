@@ -408,6 +408,7 @@ class Labels:
           self.OPENING = 'opening '
           self.APPLY_ABR_INP = '/C/ APPLY INPUT ABBREVIATIONS'
           self.KEY_INPUT_MODE = '/C/ KEY EDIT MODE'
+          self.CARRY_KEYS = '/C/ CARRY KEYS'
           
 class Spelling:
      def __init__(self):
@@ -509,7 +510,8 @@ binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_I
                       'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT),
                       'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT),
                       'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE),
-                      'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS)}
+                      'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS),
+                      'carrykeys':("self.carry_keys",labels.CARRY_KEYS)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'

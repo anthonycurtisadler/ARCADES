@@ -2374,7 +2374,7 @@ class Note_Shelf:
                     index = ind.next()
                 else:
 
-                    index = index.next()
+                    index = Index(int(index)).next()
 
             if str(index) in notebook.indexes():
                 index = self.find_space(index)
@@ -8151,6 +8151,7 @@ class Console (Note_Shelf):
         self.usesequence = True
         self.show_key_freq = True
         self.how_many = 30
+        self.carry_keys = False
 
         self.first_time = True
             #true if entry loop is running for the first time
@@ -10709,13 +10710,14 @@ class Console (Note_Shelf):
                 longphrase = False
 
 
+
         if mainterm == 'autoenter':
             lastup = self.enter(ek=(set(otherterms[0].split(COMMA))),
                                 show=not predicate[2],
                                 right_at=right_at,
                                 as_child=as_child,
                                 ind=lastup,
-                                carrying_keys=not predicate[4],
+                                carrying_keys=(self.carry_keys and not predicate[4]) or predicate[4],
                                 usedefaultkeys=self.suspend_default_keys)
 
             
@@ -10734,7 +10736,7 @@ class Console (Note_Shelf):
                                 right_at=right_at,
                                 as_child=as_child,
                                 ind=lastup,
-                                carrying_keys=not predicate[4],
+                                carrying_keys=(self.carry_keys and not predicate[4]) or predicate[4],
                                 usedefaultkeys=self.suspend_default_keys)
 
         for i_temp in self.find_within(Index(0),
