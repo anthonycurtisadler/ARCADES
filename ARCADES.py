@@ -4101,6 +4101,7 @@ class Note_Shelf:
         reentering also passed into addnew function returnnote
         -- returns the Note, rathing then calling addnote.
         """
+        projects_old = list(self.project)
         def order_sequence_keys(key):
 
             if QUESTIONMARK not in key:
@@ -4162,8 +4163,13 @@ class Note_Shelf:
                 if k_temp != EMPTYCHAR:
                     if k_temp[0] == DOLLAR:
                         keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
+                    elif k_temp[0] == PLUS and k_temp[1:] in self.default_dict['projects']:
+                        self.project.append(k_temp[1:])
+                    elif k_temp[0] == DASH and k_temp[1:] in self.project:
+                        self.project.pop(self.project.index(k_temp[1:]))
                     else:
                         keyset.add(k_temp)
+                    
             keyset.update(oldkeys)
         elif from_keys:
             keyset = ek
@@ -4591,6 +4597,8 @@ class Note_Shelf:
         # restore old settings
         self.default_dict['fromtext'] = old_fromtext 
         self.default_dict['convertmode'] = old_mode
+        if isinstance(projects_old,list):
+            self.project = projects_old
 
         return index
 
@@ -11481,7 +11489,7 @@ class Console (Note_Shelf):
         elif mainterm in ['resumeproject','loadproject']:
             project_name = EMPTYCHAR
             
-            if self.project and not predicate[0]:   # Save the existing project status
+            if self.project and not predicate[0] and COMMA not in otherterms[0]:   # Save the existing project status
                 project_name = self.project.pop()
                 if project_name in self.default_dict['projects']:
                     
@@ -11505,36 +11513,37 @@ class Console (Note_Shelf):
                                                                                  'lastmodified':[str(datetime.datetime.now())]}
  
             if otherterms[0]:  #Get the project title if entered
-                project_name = otherterms[0]
-        
-            while True:  #If not entered
-                
-                if not project_name:
-                    project_name = input(queries.PROJECT_NAME)
-                if not project_name or  project_name in  self.default_dict['projects']:
-                    break
-                else:
-                    project_name = EMPTYCHAR
+                project_names = otherterms[0].split(COMMA)
 
-            if project_name:
+            for project_name in project_names:
+                while True:  #If not entered
+                    
+                    if not project_name:
+                        project_name = input(queries.PROJECT_NAME)
+                    if not project_name or  project_name in  self.default_dict['projects']:
+                        break
+                    else:
+                        project_name = EMPTYCHAR
 
-                # To load different project
-##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
-##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-##                else:
-##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
-                if not predicate[1]:
-                    lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
-                                      Index(str(self.default_dict['projects'][project_name]['position'][1]))
-                    mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],\
-                                            self.default_dict['projects'][project_name]['going'][1]
-                self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
-    ##            if temp_uptohere in self.indexes(): 
-    ##                command_stack.add('skip:'+temp_uptohere)
-                
-                self.project.append(project_name)
-                allnotebooks_tracking[notebookname]['projectset'].add(project_name)
-                self.dd_changed=True
+                if project_name:
+
+                    # To load different project
+    ##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
+    ##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
+    ##                else:
+    ##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
+                    if not predicate[1]:
+                        lastup,uptohere = Index(str(self.default_dict['projects'][project_name]['position'][0])),\
+                                          Index(str(self.default_dict['projects'][project_name]['position'][1]))
+                        mainterm,series_enter = self.default_dict['projects'][project_name]['going'][0],\
+                                                self.default_dict['projects'][project_name]['going'][1]
+                    self.default_dict['projects'][project_name]['date'].append(str(datetime.datetime.now()))
+        ##            if temp_uptohere in self.indexes(): 
+        ##                command_stack.add('skip:'+temp_uptohere)
+                    
+                    self.project.append(project_name)
+                    allnotebooks_tracking[notebookname]['projectset'].add(project_name)
+                    self.dd_changed=True
 
 
         elif mainterm in ['endproject','quitproject']:
