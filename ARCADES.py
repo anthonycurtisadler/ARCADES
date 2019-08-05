@@ -6417,8 +6417,8 @@ class Note_Shelf:
                                               '.union')
                 querycopy = querycopy.replace('.intersection.intersection',
                                               '.intersection')
-            while BLANK in querycopy:
-                querycopy = querycopy.replace(BLANK, EMPTYCHAR)
+            while BLANK+BLANK in querycopy:
+                querycopy = querycopy.replace(BLANK+BLANK, BLANK)
             querycopy = querycopy.replace(')(', ').union(')
 
         if is_regular(querycopy):
@@ -6461,10 +6461,6 @@ class Note_Shelf:
                         nprint(q_temp)
                 except:
                     nprint('too big')
-
-            
-                
-            
 
         display.noteprint((EMPTYCHAR,alerts.NOT_REGULAR))
 
