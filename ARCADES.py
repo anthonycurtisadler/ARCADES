@@ -11060,9 +11060,9 @@ class Console (Note_Shelf):
         if self.flipmode: #if using flashcards, then flip the flashcard before going to next index
 
             self.side += 1
-            nprint('side',self.side)
-            nprint('sides',self.sides)
-            nprint('flip_at',self.flip_at)
+##            nprint('side',str(self.side))
+##            nprint('sides',str(self.sides))
+##            nprint('flip_at',str(self.flip_at))
             if self.side % self.sides == self.flip_at % self.sides:
 
                 lastup = uptohere
