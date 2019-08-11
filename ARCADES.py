@@ -11595,15 +11595,18 @@ class Console (Note_Shelf):
                 old_name = s_input('Existing name of project?',otherterms[0])
                 if old_name in self.default_dict['projects'] or not old_name:
                     break
+                otherterms[0] = ''
             while True:
                 new_name = s_input('Change name of '+old_name+' to?',otherterms[1])
                 if new_name not in self.default_dict['projects'] or not new_name:
                     break
+                otherterms[1] = ''
             if old_name and new_name:
                 self.default_dict['projects'][new_name] = copy.deepcopy(self.default_dict['projects'][old_name])
                 del self.default_dict['projects'][old_name]                
                 display.noteprint((alerts.ATTENTION,
                                    old_name+' changed to '+new_name))
+                
 
         elif mainterm in ['deletearchivedproject']:
             while True:
@@ -11613,7 +11616,8 @@ class Console (Note_Shelf):
                         del self.default_dict['archivedprojects'][project_name]
                         break
                 if not project_name:
-                    break 
+                    break
+                otherterms[0] = ''
                         
                 
 
