@@ -779,11 +779,10 @@ def get_text_file(filename,folder=os.altsep+'textfiles',suffix='.txt'):
         nprint(directoryname)
         
     
-    textfile = open(directoryname+os.altsep+filename+suffix,'r',
-                    encoding='utf-8')
-    returntext = textfile.read().replace('\ufeff',
+    with open(directoryname+os.altsep+filename+suffix,'r',
+                    encoding='utf-8') as textfile:
+        returntext = textfile.read().replace('\ufeff',
                                          EMPTYCHAR)
-    textfile.close()
     return returntext
 
 def get_words(text):
@@ -1216,12 +1215,11 @@ def save_file(returntext=EMPTYCHAR,
               
     directoryname = os.getcwd()+folder
     nprint(directoryname)
-    textfile = open(directoryname+os.altsep
+    with open(directoryname+os.altsep
                     +filename+'.txt',
                     'x',
-                    encoding='utf-8')
-    textfile.write(returntext.replace('\ufeff', EMPTYCHAR))
-    textfile.close()
+                    encoding='utf-8') as textfile:
+        textfile.write(returntext.replace('\ufeff', EMPTYCHAR))
 
     return 'Saved to ' + directoryname+SLASH+filename+'.txt' 
 
@@ -1587,42 +1585,40 @@ class Note_Shelf:
             q_temp = input(queries.DIVIDE_PICKLE)
             if self.divided or q_temp in YESTERMS:
                 for suffix in ('d','k','w','t'):
-                    tempfile = open(self.directoryname
+                    with open(self.directoryname
                                     +SLASH+self.filename
-                                    +suffix.upper()+'.pkl','wb')
-                    pickle.dump(self.pickle_dictionary[suffix],
-                                tempfile)
-                    #globaldirectoryname+SLASH+self.filename+'PIC'
-                    nprint(suffix,'saved')
-                    tempfile.close()
+                                    +suffix.upper()+'.pkl','wb') as tempfile:
+                        pickle.dump(self.pickle_dictionary[suffix],
+                                    tempfile)
+                        #globaldirectoryname+SLASH+self.filename+'PIC'
+                        nprint(suffix,'saved')
             if q_temp in ['R','r']:
                 self.divide_no_query = True
                 
         else:
             
-            tempfile = open(self.directoryname
+            with open(self.directoryname
                             +SLASH+self.filename
                             +'.pkl',
-                            'wb')
-            pickle.dump(self.pickle_dictionary,
-                        tempfile)
-            #globaldirectoryname+SLASH+self.filename+'PIC'
-            tempfile.close()
+                            'wb') as tempfile:
+                pickle.dump(self.pickle_dictionary,
+                            tempfile)
+                #globaldirectoryname+SLASH+self.filename+'PIC'
+
                 
     def default_save(self,suffix=EMPTYCHAR,extra=EMPTYCHAR):
         """saves default dictionary etc."""
-        tempfile = open(self.directoryname
+        with open(self.directoryname
                         +SLASH+self.filename+extra
                         +'.pkl',
-                        'wb')
-        if not suffix:
-            pickle.dump(self.pickle_dictionary,
-                        tempfile)
-        else:
-            pickle.dump(self.pickle_dictionary[suffix],tempfile)
-            
-        #globaldirectoryname+SLASH+self.filename+'PIC'
-        tempfile.close()
+                        'wb') as tempfile:
+            if not suffix:
+                pickle.dump(self.pickle_dictionary,
+                            tempfile)
+            else:
+                pickle.dump(self.pickle_dictionary[suffix],tempfile)
+                
+            #globaldirectoryname+SLASH+self.filename+'PIC'
 
     
 
@@ -2469,7 +2465,7 @@ class Note_Shelf:
 
 
         if str(index) in self.indexes():
-            self.display_buffer.append(str(index)+alerts.WAS_DELETED)
+            self.display_buffer.append(index_reduce(str(index))+alerts.WAS_DELETED)
             self.delete_search_words(index,
                                      self.note_dict[str(index)].text)
             self.delete_keys_tags(index,
@@ -2571,14 +2567,14 @@ class Note_Shelf:
 
         if not copy:
             self.display_buffer.append(alerts.NOTE
-                                       +str(indexfrom)
+                                       +index_reduce(str(indexfrom))
                                        +alerts.MOVED_TO
-                                       +str(indexto))
+                                       +index_reduce(str(indexto)))
         else:
             self.display_buffer.append(alerts.NOTE
-                                       +str(indexfrom)
+                                       +index_reduce(str(indexfrom))
                                        +alerts.COPIED_TO
-                                       +str(indexto))
+                                       +index_reduce(str(indexto)))
 
         if (withchildren or flatten) and indexfrom.is_top():
             for a_temp in self.find_within(str(indexfrom),
@@ -3095,7 +3091,7 @@ class Note_Shelf:
 
         tempobject.load(index,
                         self.note_dict[str(index)])
-        self.display_buffer.append(str(index)+alerts.COPIED_TO_TEMP)
+        self.display_buffer.append(index_reduce(str(index))+alerts.COPIED_TO_TEMP)
 
     def copy_from_temp(self,
                        tempobject):
@@ -3887,7 +3883,7 @@ class Note_Shelf:
 
             if indexfrom != StopIteration:
                 self.display_buffer.append(alerts.MOVING_FROM
-                                           +str(indexfrom)
+                                           +index_reduce(str(indexfrom))
                                            +queries.TOTO+str(indexto))
                 self.move(indexfrom, indexto)
             else:
@@ -5673,11 +5669,8 @@ class Note_Shelf:
                                           if Index(a_temp).is_top()])
 
 
-        for tup in reduce_tupples(sorted([Index(n)
-                                          for n in self.indexes()
-                                          if Index(n) > Index(str(0))
-                                          and str(Index(n)) in noterange])):
-            self.move(tup[0], tup[1], withchildren=True)
+        for tup in reduce_tupples([Index(x_temp) for x_temp in self.find_within(indexfrom=Index(0),orequal=True,withinrange=noterange)]):
+            self.move(tup[0], tup[1], withchildren=True)  
 
     def show_fields(self,
                     ef_temp=None):
@@ -6632,7 +6625,7 @@ class Note_Shelf:
         else:
             for i_temp in selection:
 
-                self.display_buffer.append(alerts.SAVING+str(i_temp))
+                self.display_buffer.append(alerts.SAVING+index_reduce(str(i_temp)))
                 returntext += (add_form(transpose_keys(self.note_dict[str(i_temp)].keyset,surround=False),
                                         self.note_dict[str(i_temp)].text,
                                         right_at=right_at, index=i_temp))
