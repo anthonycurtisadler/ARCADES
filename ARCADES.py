@@ -62,6 +62,7 @@ import presets
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
 from registry import Registry
+from sequencedefaultdictionary import SequenceDefaultDictionary
 try:
     from spellcheck import SpellCheck                                       #pylint 8.83/10
     spellcheck_on = True
@@ -4349,6 +4350,10 @@ class Note_Shelf:
         if len(text) > 1 and text[-2:] == VERTLINE + VERTLINE:
             text = text[0:-2]
 
+        if self.abridgedformat:
+            text = text.replace('///','/NEW/')
+            text = text.replace('//','/BREAK/')
+
         text = text.replace('/BREAK/',VERTLINE+'/BREAK/'+VERTLINE)
         text = text.replace('/NEW/',VERTLINE+'/NEW/'+VERTLINE)
         
@@ -4448,11 +4453,12 @@ class Note_Shelf:
                 keyset.add(p_temp + ATSIGN + str(next_temp))
    
         for k_temp in sorted(usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())) + list(keyset),key=lambda x:order_sequence_keys(x)):
-            if ATSIGN in k_temp and QUESTIONMARK in k_temp:
+            if ATSIGN in k_temp and QUESTIONMARK in k_temp:  #for sequence keywords with a question mark 
                 satisfied=False
                 while satisfied==False:
-                     
-                    xt_temp = input(k_temp)
+
+                    
+                    xt_temp = self.lastsequencevalue.change(k_temp,input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK))
                     for x_temp in xt_temp.split(COMMA):
                     
                         if not x_temp:
@@ -4471,11 +4477,11 @@ class Note_Shelf:
                             
                             if ATSIGN + QUESTIONMARK in k_temp:   #for floating sequences 
                                 if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1 and x_temp.count(PERIOD) == 2):
-                                    if DASH not in x_temp:
+                                    if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
 
                                         keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
                                         satisfied = True
-                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
                                         keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
                                         keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
                                         satisfied = True      
@@ -4483,10 +4489,10 @@ class Note_Shelf:
                             elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
                                 if PERIOD+PERIOD not in x_temp\
                                    and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
-                                    if DASH not in x_temp:
+                                    if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
                                         keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
                                         satisfied = True
-                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
                                         keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
                                         keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
                                         satisfied = True 
@@ -7841,6 +7847,7 @@ class Console (Note_Shelf):
         self.suspend_default_keys = False
         self.vertmode = False
         self.apply_abr_inp = True
+        self.abridgedformat = True 
 
 
         
@@ -8153,6 +8160,8 @@ class Console (Note_Shelf):
         self.first_time = True
             #true if entry loop is running for the first time
         self.counter = 0
+        self.lastsequencevalue = SequenceDefaultDictionary()
+        
 
 
     ## functions called from within command line ##
