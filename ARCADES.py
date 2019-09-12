@@ -50,6 +50,7 @@ from keymacrodefinitions import KeyMacroDefinitions
 import nformat                                                          #pylint 9.61/10
 from ninput import q_input, s_input                                     #pylint 10.0/10
 from indexclass import Index                                            #pylint 10.0/10
+from keyauto import KeyAuto
 from knowledgebase_ns import KnowledgeBase                              #pylint  8.62/10
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
@@ -4161,11 +4162,17 @@ class Note_Shelf:
                     if k_temp[0] == DOLLAR:
                         keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
                     elif k_temp[0] == PLUS and k_temp[1:] in self.default_dict['projects']:
+                        # to add a project
                         self.project.append(k_temp[1:])
                     elif k_temp[0] == DASH and k_temp[1:] in self.project:
+                        # to remove a project 
                         self.project.pop(self.project.index(k_temp[1:]))
+                    
                     else:
+                        if k_temp.endswith('.'):
+                            k_temp = self.keyauto.complete(k_temp.rstrip('.'))
                         keyset.add(k_temp)
+                        self.keyauto.add(k_temp)
                     
             keyset.update(oldkeys)
         elif from_keys:
@@ -8161,6 +8168,7 @@ class Console (Note_Shelf):
             #true if entry loop is running for the first time
         self.counter = 0
         self.lastsequencevalue = SequenceDefaultDictionary()
+        self.keyauto = KeyAuto()
         
 
 
@@ -11988,7 +11996,7 @@ while bigloop:
                                               and int(y_temp.strip())>0
                                               and int(y_temp.strip())<=len(p_temp)]
                                 
-                            allnotebooks_tracking[notebookname]['projectset'] = set(q_temp)
+                            allnotebooks_tracking[notebookname]['projectset'] = q_temp
                             display.noteprint(('RESUMED PROJECTS',
                                                ', '.join(allnotebooks_tracking[notebookname]['projectset'])))
                                 
@@ -11998,7 +12006,7 @@ while bigloop:
                                                                 'next_up':True,
                                                                 'skipped':False,
                                                                 'readonly':notebook.read_only,
-                                                                'projectset':set()}
+                                                                'projectset':[]}
                     diagnostics = DiagnosticTracking(filename=notebookname)
                     diagnostics.start()
 
