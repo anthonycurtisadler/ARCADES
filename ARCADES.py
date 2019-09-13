@@ -4117,8 +4117,27 @@ class Note_Shelf:
                 if project in self.default_dict['projects']:
                     if 'defaultkeys' in self.default_dict['projects'][project]:
                         returnkeys = returnkeys.union(set(self.default_dict['projects'][project]['defaultkeys']))
-            return returnkeys 
-                
+            return returnkeys
+
+        def query_keys(keysetobject=None):
+
+            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
+                if k_temp != EMPTYCHAR:
+                    if k_temp[0] == DOLLAR:
+                        keysetobject.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
+                    elif k_temp[0] == PLUS and k_temp[1:] in self.default_dict['projects']:
+                        # to add a project
+                        self.project.append(k_temp[1:])
+                    elif k_temp[0] == DASH and k_temp[1:] in self.project:
+                        # to remove a project 
+                        self.project.pop(self.project.index(k_temp[1:]))
+                    
+                    else:
+                        if k_temp.endswith('.'):
+                            k_temp = self.keyauto.complete(k_temp.rstrip('.'))
+                        keysetobject.add(k_temp)
+                        self.keyauto.add(k_temp)
+
 
         from_keys = True
         keyset = set()
@@ -4156,28 +4175,13 @@ class Note_Shelf:
 
         if not from_keys and self.default_dict['keysbefore']\
            and not self.default_dict['fromtext']:
+                query_keys(keyset)
 
-            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
-                if k_temp != EMPTYCHAR:
-                    if k_temp[0] == DOLLAR:
-                        keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
-                    elif k_temp[0] == PLUS and k_temp[1:] in self.default_dict['projects']:
-                        # to add a project
-                        self.project.append(k_temp[1:])
-                    elif k_temp[0] == DASH and k_temp[1:] in self.project:
-                        # to remove a project 
-                        self.project.pop(self.project.index(k_temp[1:]))
-                    
-                    else:
-                        if k_temp.endswith('.'):
-                            k_temp = self.keyauto.complete(k_temp.rstrip('.'))
-                        keyset.add(k_temp)
-                        self.keyauto.add(k_temp)
-                    
-            keyset.update(oldkeys)
+
         elif from_keys:
             keyset = ek
-            keyset.update(oldkeys)
+
+        keyset.update(oldkeys)
         self.last_keys = set(keyset)
 
         imp_list = []
@@ -4411,15 +4415,15 @@ class Note_Shelf:
         keyset.update(set(newkeylist))
 ##        print(', '.join(keyset))
         #add new kewords to existing set of keywords
+
+
+
+
+
+        
         if not from_keys and self.default_dict['keysafter'] and not self.default_dict['fromtext']:
-            for k_temp in input(queries.KEYS).split(COMMA):
-                if k_temp != EMPTYCHAR:
-                    if k_temp[0] == DOLLAR:
-                        keyset.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
-                    else:
-                        keyset.add(k_temp)
-            if not self.default_dict['keysbefore']:
-                keyset.update(oldkeys)
+             query_keys(keyset)
+
 
         old_fromtext = self.default_dict['fromtext']  # Save old settings
         old_mode = self.default_dict['convertmode']
@@ -4470,7 +4474,7 @@ class Note_Shelf:
                     
                         if not x_temp:
                             satisfied = True
-                        if ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences 
+                        elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences 
                                 if  (SLASH not in x_temp and is_date(x_temp)) or (x_temp.count(SLASH)==1 and is_date(x_temp.split(SLASH)[0]) and is_date(x_temp.split(SLASH)[1])):
                                     if SLASH not in x_temp:
                                         keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
@@ -4524,6 +4528,7 @@ class Note_Shelf:
             keyset.update(oldkeys)
 
         keyset = {k_temp for k_temp in keyset if k_temp[-1] not in [QUESTIONMARK, POUND, ATSIGN, UNDERLINE]}
+        print(keyset)
 
 
                 
@@ -11459,7 +11464,7 @@ class Console (Note_Shelf):
                 
 
                 self.project.append(project_name)
-                allnotebooks_tracking[notebookname]['projectset'].add(project_name)
+                allnotebooks_tracking[notebookname]['projectset'].append(project_name)
 
 
         elif mainterm in ['saveproject']:
@@ -11548,7 +11553,7 @@ class Console (Note_Shelf):
         ##                command_stack.add('skip:'+temp_uptohere)
                     
                     self.project.append(project_name)
-                    allnotebooks_tracking[notebookname]['projectset'].add(project_name)
+                    allnotebooks_tracking[notebookname]['projectset'].append(project_name)
                     self.dd_changed=True
 
 
