@@ -4100,7 +4100,20 @@ class Note_Shelf:
         -- returns the Note, rathing then calling addnote.
         """
         projects_old = list(self.project)
+
+
+        def no_arrows(x_temp):
+
+            """replaces arrow with equal sign---
+            used for keys with ontological information
+            """
+            return x_temp.replace(RIGHTNOTE, EQUAL)
+        
         def order_sequence_keys(key):
+            
+            """ arranges the sequence keys in the order that they should
+            be queried.
+            """
 
             if QUESTIONMARK not in key:
                 return 300
@@ -4112,6 +4125,10 @@ class Note_Shelf:
             
         
         def get_keys_from_projects():
+
+            """ fetches sequence keys from existing projects
+            """
+            
             returnkeys = set()
             for project in self.project:
                 if project in self.default_dict['projects']:
@@ -4120,6 +4137,7 @@ class Note_Shelf:
             return returnkeys
 
         def query_keys(keysetobject=None):
+
 
             for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
                 if k_temp != EMPTYCHAR:
@@ -4137,7 +4155,93 @@ class Note_Shelf:
                             k_temp = self.keyauto.complete(k_temp.rstrip('.'))
                         keysetobject.add(k_temp)
                         self.keyauto.add(k_temp)
+                        
+        def sequence_keys(keysetobject=None):
 
+            """ Queries the sequence keys with question marks in them
+            """
+
+            for k_temp in sorted(usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())) + list(keysetobject),key=lambda x:order_sequence_keys(x)):
+                if ATSIGN in k_temp and QUESTIONMARK in k_temp:  #for sequence keywords with a question mark 
+                    satisfied=False
+                    while satisfied==False:
+
+                        
+                        xt_temp = self.lastsequencevalue.change(k_temp,input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK))
+                        for x_temp in xt_temp.split(COMMA):
+                        
+                            if not x_temp:
+                                satisfied = True
+                            elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences 
+                                    if  (SLASH not in x_temp and is_date(x_temp)) or (x_temp.count(SLASH)==1 and is_date(x_temp.split(SLASH)[0]) and is_date(x_temp.split(SLASH)[1])):
+                                        if SLASH not in x_temp:
+                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                            satisfied = True
+                                        elif x_temp.count(SLASH) == 1 and x_temp[-1] != SLASH:
+                                            keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'from'+ATSIGN+POUND+x_temp.split(SLASH)[0]))
+                                            keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'to'+ATSIGN+POUND+x_temp.split(SLASH)[1]))
+                                            satisfied = True 
+
+                            elif x_temp.replace(PERIOD,EMPTYCHAR).replace(DASH,EMPTYCHAR).replace(SLASH,EMPTYCHAR).isnumeric(): #for indexes or floating sequences
+                                
+                                if ATSIGN + QUESTIONMARK in k_temp:   #for floating sequences 
+                                    if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1 and x_temp.count(PERIOD) == 2):
+                                        if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
+
+                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                            satisfied = True
+                                        elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
+                                            keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
+                                            keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
+                                            satisfied = True      
+                                   
+                                elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
+                                    if PERIOD+PERIOD not in x_temp\
+                                       and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
+                                        if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
+                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                            satisfied = True
+                                        elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
+                                            keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
+                                            keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
+                                            satisfied = True 
+                                            
+
+                            else: # for text sequences
+                                if DASH not in x_temp:
+                                    keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                    satisfied = True
+                                elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
+                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
+                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
+                                    satisfied = True 
+                                    
+                else:
+                    keysetobject.add(k_temp)
+                        
+        def auto_sequence_keys(keysetobject=None):
+
+            """adds to the number for the automatic sequence keys
+            """
+            
+            if self.project:
+                for p_temp in self.project:
+                    found_temp = False
+                    for x_temp in range(1,1000):
+                        if p_temp + ATSIGN + str(x_temp)+'.0' in self.keys():
+                            found_temp = True
+                            break
+                    if not found_temp:
+
+                        self.default_dict['sequences']['#TYPE#'][p_temp] = float
+                        self.default_dict['sequences'][p_temp] =  OrderedList()
+                        next_temp = float(input('start from?'))
+                    else:
+                        next_temp = self.default_dict['sequences'][p_temp].next()
+                        
+                        
+                            
+                    keysetobject.add(p_temp + ATSIGN + str(next_temp))
 
         from_keys = True
         keyset = set()
@@ -4201,7 +4305,11 @@ class Note_Shelf:
         
         if et == EMPTYCHAR:
             print(POUND*7+self.default_dict['size']*UNDERLINE+VERTLINE)
-            
+
+    
+        # The following block of code enters 
+        # in new text for a note line by line
+        
         while not lastline:
 ##                try:
             if imp_list:
@@ -4444,103 +4552,17 @@ class Note_Shelf:
             keyset.update(conv_keys)
 
 
-        if self.project:
-            for p_temp in self.project:
-                found_temp = False
-                for x_temp in range(1,1000):
-                    if p_temp + ATSIGN + str(x_temp)+'.0' in self.keys():
-                        found_temp = True
-                        break
-                if not found_temp:
 
-                    self.default_dict['sequences']['#TYPE#'][p_temp] = float
-                    self.default_dict['sequences'][p_temp] =  OrderedList()
-                    next_temp = float(input('start from?'))
-                else:
-                    next_temp = self.default_dict['sequences'][p_temp].next()
-                    
-                    
-                        
-                keyset.add(p_temp + ATSIGN + str(next_temp))
    
-        for k_temp in sorted(usedefaultkeys*(self.default_dict['defaultkeys'] + list(get_keys_from_projects())) + list(keyset),key=lambda x:order_sequence_keys(x)):
-            if ATSIGN in k_temp and QUESTIONMARK in k_temp:  #for sequence keywords with a question mark 
-                satisfied=False
-                while satisfied==False:
-
-                    
-                    xt_temp = self.lastsequencevalue.change(k_temp,input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK))
-                    for x_temp in xt_temp.split(COMMA):
-                    
-                        if not x_temp:
-                            satisfied = True
-                        elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences 
-                                if  (SLASH not in x_temp and is_date(x_temp)) or (x_temp.count(SLASH)==1 and is_date(x_temp.split(SLASH)[0]) and is_date(x_temp.split(SLASH)[1])):
-                                    if SLASH not in x_temp:
-                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                        satisfied = True
-                                    elif x_temp.count(SLASH) == 1 and x_temp[-1] != SLASH:
-                                        keyset.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'from'+ATSIGN+POUND+x_temp.split(SLASH)[0]))
-                                        keyset.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,'to'+ATSIGN+POUND+x_temp.split(SLASH)[1]))
-                                        satisfied = True 
-
-                        elif x_temp.replace(PERIOD,EMPTYCHAR).replace(DASH,EMPTYCHAR).replace(SLASH,EMPTYCHAR).isnumeric(): #for indexes or floating sequences
-                            
-                            if ATSIGN + QUESTIONMARK in k_temp:   #for floating sequences 
-                                if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1 and x_temp.count(PERIOD) == 2):
-                                    if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
-
-                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                        satisfied = True
-                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
-                                        keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
-                                        keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
-                                        satisfied = True      
-                               
-                            elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
-                                if PERIOD+PERIOD not in x_temp\
-                                   and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
-                                    if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
-                                        keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                        satisfied = True
-                                    elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
-                                        keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
-                                        keyset.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
-                                        satisfied = True 
-                                        
-
-                        else: # for text sequences
-                            if DASH not in x_temp:
-                                keyset.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                satisfied = True
-                            elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
-                                keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
-                                keyset.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
-                                satisfied = True 
-                                
-            else:
-                keyset.add(k_temp)
-                    
-                    
-        if (not from_keys
+        auto_sequence_keys(keysetobject=keyset) # calls function to add autonomatically numbered sequence keys 
+        sequence_keys(keysetobject=keyset)# calls function to evaluate sequence keys if they exist
+        
+        if (not from_keys    # use old keys if new keys are not to be queried or taken from the text
             and not self.default_dict['keysbefore']
             and not self.default_dict['keysafter']):
             keyset.update(oldkeys)
 
         keyset = {k_temp for k_temp in keyset if k_temp[-1] not in [QUESTIONMARK, POUND, ATSIGN, UNDERLINE]}
-        print(keyset)
-
-
-                
-        
-
-        def no_arrows(x_temp):
-
-            """replaces arrow with equal sign---
-            used for keys with ontological information
-            """
-            return x_temp.replace(RIGHTNOTE, EQUAL)
-
         keyset = modify_keys(keyset, no_arrows, strip=True)
         keyset = modify_keys(keyset, self.default_dict['macros'].do)
 
