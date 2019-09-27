@@ -45,6 +45,7 @@ from displaylist import DisplayList                                     #pylint 
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
+from generalknowledge import GeneralizedKnowledge 
 from keydefinitions import KeyDefinitions                               #pylint 10.0/10
 from keymacrodefinitions import KeyMacroDefinitions
 import nformat                                                          #pylint 9.61/10
@@ -1682,7 +1683,6 @@ class Note_Shelf:
             return seq_mark, seq_value, seq_type
         
 
-
     def add_keys_tags(self,
                       index=None,
                       keyset=None,
@@ -1690,13 +1690,49 @@ class Note_Shelf:
                       sequences=True):
 
         """adds keys to the dictionary of keys,
-        and tags to the dictionary of tags"""
+        and tags to the dictionary of tags
+        And also captures knowledge and
+        sends it to the knowledge base
+
+        ?KEY?RELATION?CONTENT/TAG.TAG.TAG
+
+        """
 
 
         newkeyset = set()
 ##        is_sequence = False
         for key in keyset:
             key = key.strip()
+
+            if key.startswith(QUESTIONMARK):
+
+                key = key[1:]
+                after_slash = EMPTYCHAR
+                if SLASH in key:
+                    after_slash = key.split(SLASH)[1]
+                    key = key.split(SLASH)[0]
+
+                key += '??' # TO prevent index error!
+                    
+                node,relation,other_node = key.split(QUESTIONMARK)[0], key.split(QUESTIONMARK)[1], key.split(QUESTIONMARK)[2]
+                if node and not relation and not other_node:
+                    if not self.default_dict['generalknowledge'].node_exists(node):
+                        display.noteprint(self.default_dict['generalknowledge'].text_interpret(node))
+                elif node and relation and other_node:
+                    if self.default_dict['generalknowledge'].relation_exists(relation):
+                        if not self.default_dict['generalknowledge'].node_exists(node):
+                            display.noteprint(self.default_dict['generalknowledge'].text_interpret(node))
+                        if not self.default_dict['generalknowledge'].node_exists(other_node):
+                            display.noteprint(self.default_dict['generalknowledge'].text_interpret(other_node))
+                        display.noteprint(self.default_dict['generalknowledge'].text_interpret(node+':'+relation+';'+other_node))
+                    else:
+                        display.noteprint(('ATTENTION!','RELATION not defined'))
+                else:
+                    display.noteprint(('ATTENTION','Incomplete knowledge phrase!'))
+
+                key = node
+                if after_slash:
+                    key = node + '/' + after_slash
 
 
             if SLASH in key:
@@ -1762,7 +1798,6 @@ class Note_Shelf:
 ##                        is_sequence = True
 
                     seq_mark, seq_value, seq_type = self.parse_sequence_key(seq_value)
-
                 
                     if identifier not in self.default_dict['sequences']:
                         if identifier not in self.default_dict['sequences']['#TYPE#']:
@@ -1776,13 +1811,9 @@ class Note_Shelf:
                         self.default_dict['sequences'][identifier] = OrderedList()
                         self.default_dict['sequences'][identifier].add(seq_value)
 
-                                            
-
                     else:
                         if seq_type == self.default_dict['sequences']['#TYPE#'][identifier]:
                             self.default_dict['sequences'][identifier].add(seq_value)
-
-
                  
         return newkeyset
     
@@ -1944,11 +1975,6 @@ class Note_Shelf:
             temp_words = temp_words[0:number]
         else:
             temp_words = temp_words[len(temp_words)-number:len(temp_words)]
-            
-
-        
-
-        
 
         return [x_temp[0] for x_temp in temp_words]
 
@@ -2028,8 +2054,6 @@ class Note_Shelf:
             else:
                 index = index.next()
         return index
-
-
 
     def find_within(self,
                     indexfrom=None,
@@ -4169,6 +4193,8 @@ class Note_Shelf:
                         
                         xt_temp = self.lastsequencevalue.change(k_temp,input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK))
                         for x_temp in xt_temp.split(COMMA):
+                            x_temp = self.default_dict['abbreviations'].undo(x_temp)
+                            
                         
                             if not x_temp:
                                 satisfied = True
@@ -4208,13 +4234,14 @@ class Note_Shelf:
                                             
 
                             else: # for text sequences
-                                if DASH not in x_temp:
+                                
+                                if x_temp.count(DASH) == 2 and DASH+DASH in x_temp and x_temp[-1] != DASH:
+                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH+DASH)[0]))
+                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH+DASH)[1]))
+                                    satisfied = True
+                                else:
                                     keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
                                     satisfied = True
-                                elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH:
-                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'from'+ATSIGN+x_temp.split(DASH)[0]))
-                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,'to'+ATSIGN+x_temp.split(DASH)[1]))
-                                    satisfied = True 
                                     
                 else:
                     keysetobject.add(k_temp)
@@ -4495,7 +4522,29 @@ class Note_Shelf:
 ##        else:
 ##            text = et
 
-        newkeylist = extract.extract(text, LEFTCURLY, RIGHTCURLY)
+        knowledgephrases = [self.default_dict['abbreviations'].undo(x_temp) for x_temp in extract.extract(text, LEFTCURLY + LEFTCURLY, RIGHTCURLY + RIGHTCURLY)]
+
+        # extract knowledge phrases embedded within text
+
+        if query:
+
+            for kp_temp in knowledgephrases:
+
+                interpreted = self.default_dict['generalknowledge'].text_interpret(kp_temp)
+
+                display.noteprint((interpreted[0],interpreted[1]))
+                
+                text = text.replace(LEFTCURLY+LEFTCURLY+kp_temp+RIGHTCURLY+RIGHTCURLY,LEFTCURLY+LEFTCURLY+interpreted[1].replace('\n','; ').rstrip(';')+RIGHTCURLY+RIGHTCURLY)
+                
+                                    
+        text = text.replace(LEFTCURLY + LEFTCURLY, '@@DCL@@')
+        text = text.replace(RIGHTCURLY + RIGHTCURLY, '@@DCR@@')
+
+        newkeylist = [self.default_dict['abbreviations'].undo(x_temp) for x_temp in extract.extract(text, LEFTCURLY, RIGHTCURLY)]
+        text = text.replace('@@DCL@@',LEFTCURLY + LEFTCURLY)
+        text = text.replace('@@DCR@@',RIGHTCURLY + RIGHTCURLY)
+
+        
         #extract keywords embedded within text
 
         if query:
@@ -6264,9 +6313,59 @@ class Note_Shelf:
 
 
         termlist.reverse()
-        termlista = [a_temp for a_temp in termlist if LEFTNOTE in a_temp]
+
+        def knowledge_from_word (word):
+            originalword = word
+            nonlocal querycopy
+
+            def rebracket (word,brackets=False):
+
+                if brackets:
+                    return '<'+word+'>'
+                else:
+                    return word
+
+            if word.startswith('<') and word.endswith('>'):
+                word = word[1:-1]
+                is_bracketed = True
+            else:
+                is_bracketed = False
+
+            node = relation = EMPTYCHAR
+
+            if word.startswith(QUESTIONMARK):
+                word = word[1:]
+                if QUESTIONMARK  in word:
+                    node,relation = word.split(QUESTIONMARK)
+                    
+
+            ## to convert word based on general knowledge
+            
+            if  node and relation and self.default_dict['generalknowledge'].node_exists(node) and self.default_dict['generalknowledge'].relation_exists(relation):
+                newwords = [rebracket(x, is_bracketed) for x in self.default_dict['generalknowledge'].text_interpret(DOLLAR+DOLLAR+node+COLON+relation)[1].split('//')[0].split(',')]
+                querycopy = querycopy.replace(originalword,'|'.join(newwords))
+            else:
+                newwords = [rebracket(word, is_bracketed)]
+            return newwords
+        
+        def transform_list (wordlist):
+
+            returnlist = []
+            for x in wordlist:
+                if QUESTIONMARK in x:
+                    newwords = knowledge_from_word(x)
+                else:
+                    newwords = [x]
+                returnlist += newwords
+            return returnlist 
+                
+            
+        
+        
+        termlista = transform_list([a_temp for a_temp in termlist if LEFTNOTE in a_temp])
+        
             #termlist a = list of keywords
-        termlistb = [a_temp for a_temp in termlist if LEFTNOTE not in a_temp]
+        termlistb = transform_list([a_temp for a_temp in termlist if LEFTNOTE not in a_temp])
             #termlist b = list of words in text
         upto = len(termlista)
         result_temp = set()
@@ -6441,6 +6540,7 @@ class Note_Shelf:
                 querycopy = querycopy.replace(termcopy,
                                               str(temp_set).replace(LEFTCURLY,
                                                                     '({').replace(RIGHTCURLY,'})'))
+            
             querycopy = querycopy.replace(ANDSIGN, '.intersection')
             querycopy = querycopy.replace(VERTLINE, '.union')
             querycopy = querycopy.replace('set()', '({0})')
@@ -6453,6 +6553,7 @@ class Note_Shelf:
             while BLANK+BLANK in querycopy:
                 querycopy = querycopy.replace(BLANK+BLANK, BLANK)
             querycopy = querycopy.replace(')(', ').union(')
+
 
         if is_regular(querycopy):
 
@@ -7998,6 +8099,22 @@ class Console (Note_Shelf):
             self.default_dict['variablesize'] = True
         if 'size' not in self.default_dict:
             self.default_dict['size'] = 60
+        if 'generalknowledge' not in self.default_dict:
+            while True:
+                i_temp = input('(1) GENERAL KNOWLEDGE IN COMMON SHELF (2) GENERAL KNOWLEDGE IN UNIQUE SHELF (3) NO SHELF')
+                if i_temp in ('1','2','3'):
+                    break
+            if i_temp in ('1','2'):
+                self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
+                                                                                     filename={2:self.filename,
+                                                                                               1:'GENERALKNOWLEDGE'}[int(i_temp)])
+                print('SHELF')
+            else:
+                self.default_dict['generalknowledge'] = GeneralizedKnowledge()
+                print('LOCAL')
+                
+        else:
+            self.default_dict['generalknowledge'].restart(directoryname=None,filename=None)
         if 'iterators' not in self.default_dict:
             self.default_dict['iterators'] = []
         if 'iterator_names' not in self.default_dict:
@@ -8909,7 +9026,37 @@ class Console (Note_Shelf):
                       filename='PROJ'+notebookname+datesuffix,
                       folder='/textfiles')
 
+        if mainterm in ['dumpknowledge','dumpgeneralknowledge']:
+
+
+            datesuffix=str(datetime.datetime.now()).split(' ')[0]
+            knowledge_text = self.default_dict['generalknowledge'].dump()
+            if knowledge_text:
+                save_file(knowledge_text,
+                          filename='GK'+notebookname+datesuffix,
+                          folder='/textfiles')
+
+        if mainterm in ['showknowledge']:
+
+            self.result_text = knowledge_text = self.default_dict['generalknowledge'].dump()
+            display.noteprint(('GENERAL KNOWLEDGE',knowledge_text))
+          
             
+        if mainterm in ['loadknowledge','loadgeneralknowledge']:
+
+            filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                                          file_suffix='.txt',
+                                          file_prefix=EMPTYCHAR,
+                                          get_filename=otherterms[0])[0].rstrip()
+            display.noteprint((alerts.LOADING_FILE,filename_temp))
+            knowledge_text = get_text_file(filename_temp)
+
+            for l_temp in knowledge_text.split('\n'):
+
+                if '{{' in l_temp and '}}' in l_temp:
+                    l_temp = l_temp.replace('{{','').replace('}}','')
+                    self.default_dict['generalknowledge'].text_interpret(l_temp)
+                
 
         if mainterm in ['loadprojects']:
 
@@ -8949,6 +9096,33 @@ class Console (Note_Shelf):
                         totalterms=0):
 
         global override
+
+        if mainterm in ['cleargeneralknowledge']:
+
+            result = self.default_dict['generalknowledge'].clear()
+
+        if mainterm in ['general','generalknowledge','gk']:
+
+            query = s_input('??',otherterms[0])
+            result = self.default_dict['generalknowledge'].text_interpret(query)
+            
+            display.noteprint((result[0],result[1]))
+
+        if mainterm in ['switchgeneralknowledge']:
+            
+            while True:
+                i_temp = input('(1) GENERAL KNOWLEDGE IN COMMON SHELF (2) GENERAL KNOWLEDGE IN UNIQUE SHELF (3) NO SHELF')
+                if i_temp in ('1','2','3'):
+                    break
+            if i_temp in ('1','2'):
+                self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
+                                                                                     filename={2:self.filename,
+                                                                                               1:'GENERALKNOWLEDGE'}[int(i_temp)])
+                print('SHELF')
+            else:
+                self.default_dict['generalknowledge'] = GeneralizedKnowledge()
+                print('LOCAL')
+    
 
         if mainterm in ['convertdefinitions']:
             for x_temp in ['d','s','e']:
@@ -9271,6 +9445,7 @@ class Console (Note_Shelf):
                           changekeys=True,
                           annotate=predicate[0],
                           update_table=True)
+
         elif mainterm in ['editnotekeys',
                           'enk']:
             for i_temp in [a_temp for a_temp
@@ -11966,28 +12141,28 @@ while bigloop:
                             readonly = True
 
                 if bigloop and add_new_notebook:
-                    try:
-                        nprint(notebookname, alerts.OPENING, {'c':'new file',
-                                                            'r':'read only',
-                                                                'w':'read and write'}[flagvalue])
-                        nprint('FLAG=',flagvalue)
-                        notebook = Console(notebookname, flagvalue)
-                        if not notebook.read_only:
-                            register.start(notebookname)
-                        if register.exists(notebookname):
+##                    try:
+                    nprint(notebookname, alerts.OPENING, {'c':'new file',
+                                                        'r':'read only',
+                                                            'w':'read and write'}[flagvalue])
+                    nprint('FLAG=',flagvalue)
+                    notebook = Console(notebookname, flagvalue)
+                    if not notebook.read_only:
+                        register.start(notebookname)
+                    if register.exists(notebookname):
                             if input(queries.RESUME_FROM_WHERE) not in NOTERMS:
                                 dict_temp = register.fetch(notebookname)
                                 
                             
-                    except:
-                        if input(queries.OPEN_AS_NEW):
-                            flagvalue = 'c'
-                            nprint(notebookname, alerts.OPENING, {'c':'new file',
-                                                'r':'read only',
-                                                'w':'read and write'}[flagvalue])
-    ##                        print('FLAG=',flagvalue)
-##                            notebook = Console(notebookname, flagvalue)
-##                            if not notebook.read_only:
+##                    except:
+##                        if input(queries.OPEN_AS_NEW):
+##                            flagvalue = 'c'
+##                            nprint(notebookname, alerts.OPENING, {'c':'new file',
+##                                                'r':'read only',
+##                                                'w':'read and write'}[flagvalue])
+##                    print('FLAG=',flagvalue)
+####                            notebook = Console(notebookname, flagvalue)
+####                            if not notebook.read_only:
 
                     register.start(notebookname)
                                 
