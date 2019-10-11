@@ -53,6 +53,7 @@ from ninput import q_input, s_input                                     #pylint 
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
 from knowledgebase_ns import KnowledgeBase                              #pylint  8.62/10
+import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
 from orderedlist import OrderedList
@@ -131,6 +132,16 @@ temporary = TemporaryHolder()
 
 
 # other utilities
+
+def repeat_function_on_set(enterset,function=None):
+
+    if function is None:
+        function = dummy
+
+    returnset = set()
+    for x_temp in enterset:
+        returnset.update(function(x_temp))
+    return returnset 
 
 def nprint(*entries):
     text = ''
@@ -5734,6 +5745,20 @@ class Note_Shelf:
 
         return sorted(list(self.tag_dict[tag]))
 
+    def tagkeyindex(self,tag):
+
+        """find the indexes the keys with the tag"""
+
+        returnset = set()
+        if tag in self.tag_dict:
+
+            for x_temp in self.tag_dict[tag]:
+                if x_temp+'/'+tag in self.key_dict:
+                    for y_temp in self.key_dict[x_temp+'/'+tag]:
+                        returnset.add(y_temp)
+        return returnset 
+
+
     def show_variables(self):
 
         """ show all the variables """
@@ -9082,12 +9107,6 @@ class Console (Note_Shelf):
 
 
 
-        
-            
-            
-            
-
-
     def resize_etc_com (self,
                         longphrase=False,
                         mainterm=EMPTYCHAR,
@@ -9098,15 +9117,38 @@ class Console (Note_Shelf):
         global override
 
         if mainterm in ['cleargeneralknowledge']:
+        
 
             result = self.default_dict['generalknowledge'].clear()
 
+        if mainterm in ['reconstitutegeneralknowledge']:
+
+            if input('DO YOU WANT TO CREATE A NEW GENERAL KNOWLEDGE SHELF??') in ['yes']:
+
+                while True:
+                    i_temp = input('(1) GENERAL KNOWLEDGE IN COMMON SHELF (2) GENERAL KNOWLEDGE IN UNIQUE SHELF (3) NO SHELF')
+                    if i_temp in ('1','2','3'):
+                        break
+                if i_temp in ('1','2'):
+                    self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
+                                                                                         filename={2:self.filename,
+                                                                                                   1:'GENERALKNOWLEDGE'}[int(i_temp)])
+                    print('SHELF')
+                else:
+                    self.default_dict['generalknowledge'] = GeneralizedKnowledge()
+                    print('LOCAL')
+                
+
         if mainterm in ['general','generalknowledge','gk']:
 
-            query = s_input('??',otherterms[0])
-            result = self.default_dict['generalknowledge'].text_interpret(query)
-            
-            display.noteprint((result[0],result[1]))
+            while True:
+
+                query = s_input('??',otherterms[0])
+                result = self.default_dict['generalknowledge'].text_interpret(query)
+                
+                display.noteprint((result[0],result[1]))
+                if not query:
+                    break
 
         if mainterm in ['switchgeneralknowledge']:
             
@@ -10106,16 +10148,15 @@ class Console (Note_Shelf):
               # otherterms[2] WIDTH
          
 
-            
+                    
             t_size = 180
-
             if totalterms >2 and (otherterms[2] == EMPTYCHAR or otherterms[2] or predicate[0]):
                 t_size = int(s_input(queries.WIDTH,
                                      otherterms[2],
                                      typeflag='int',
                                      conditions=(40,450),
                                      returnvalue=180))
-            if t_size < 40 or t_size > (450):
+            if  t_size < 40 or t_size > (450):
                 t_size = 180
             display.noteprint((labels.SIZE,str(t_size)))
             if totalterms == 1 or not otherterms[1]:
@@ -10148,6 +10189,58 @@ class Console (Note_Shelf):
                                                  show=not predicate[4],
                                                  save=predicate[4],
                                                  filename=save_stream)
+
+
+        elif mainterm in ['sheet']:
+            t_size = 2000
+##            if totalterms >2 and (otherterms[2] == EMPTYCHAR or otherterms[2] or predicate[0]):
+##                t_size = int(s_input(queries.WIDTH,
+##                                     otherterms[2],
+##                                     typeflag='int',
+##                                     conditions=(40,450),
+##                                     returnvalue=180))
+##            if  t_size < 40 or t_size > (450):
+##                t_size = 180
+            display.noteprint((labels.SIZE,str(t_size)))
+            if totalterms == 1 or not otherterms[1]:
+                display_stream = 'sheet'
+               
+                multi_dict[notebookname][display_stream] = Note_Display(t_size)
+            else:
+                display_stream = s_input(queries.DISPLAY_STREAM,
+                                         otherterms[1])
+                if display_stream not in multi_dict[notebookname].keys():
+                    if not otherterms[2]:
+                        otherterms[2] = '0'
+                    multi_dict[notebookname][display_stream] = Note_Display(t_size)
+            self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
+                                                     otherterms[0]),
+                                             True,
+                                             False,
+                                             sort=True,
+                                             many=True),
+                         multi=True,
+                         output=multi_dict[notebookname][display_stream],
+                         vary=predicate[2],
+                         show_date=self.default_dict['showdate'],
+                         curtail={True:self.default_dict['smallsize'],
+                                  False:0}[predicate[0]])
+            save_stream = display_stream
+            if otherterms[3]:
+                save_stream = otherterms[3]
+            self.text_result = multi_dict[notebookname][display_stream].print_all(pause=predicate[3],
+                                                 show=False,
+                                                 save=True,
+                                                 filename=save_stream)
+            
+
+            textlist = self.text_result.split(EOL)
+
+
+            window = movingwindow.MovingWindow(self.text_result.split(EOL))
+            window.activate()
+
+
 
         elif mainterm in ['showstream']:
             if not longphrase:
@@ -10662,15 +10755,33 @@ class Console (Note_Shelf):
             if not predicate[0] and not predicate[1] \
                and not predicate[2] and not predicate[3]:
                 if longphrase:
-                    temp_range = {str(x_temp) for x_temp in get_range(s_input(queries.RANGE_FROM,
-                                                                                      otherterms[0]),
-                                                                              orequal=True,
-                                                                              complete=False,
-                                                                              sort=True,
-                                                                              many=True)}                    
-                    temp_keys = {str(x_temp)
-                                 for x_temp in self.keys()
-                                 if self.key_dict[x_temp].intersection(temp_range)}
+                        if otherterms[0].replace(DASH,EMPTYCHAR).replace(PERIOD,EMPTYCHAR).replace(SLASH,EMPTYCHAR).isnumeric():
+
+                            temp_rance = set()
+
+                            temp_range = {str(x_temp) for x_temp in get_range(s_input(queries.RANGE_FROM,
+                                                                                              otherterms[0]),
+                                                                                      orequal=True,
+                                                                                      complete=False,
+                                                                                      sort=True,
+                                                                                      many=True)}
+                        else:
+
+                            enter_keys = {x_temp.strip() for x_temp in otherterms[0].split(',')}
+                            temp_range = repeat_function_on_set(enter_keys,self.tagkeyindex)
+                            
+                        if otherterms[1]:
+                            if temp_range:
+                                enter_keys = {x_temp.strip() for x_temp in otherterms[1].split(',')}
+                                temp_range = temp_range.intersection(repeat_function_on_set(enter_keys,self.tagkeyindex))
+                            else:
+                                enter_keys = {x_temp.strip() for x_temp in otherterms[0].split(',')}
+                                temp_range = repeat_function_on_set(enter_keys,self.tagkeyindex)
+                                
+                            
+                        temp_keys = {str(x_temp)
+                                     for x_temp in self.keys()
+                                     if self.key_dict[x_temp].intersection(temp_range)}
                 else:
                     temp_keys = self.keys()
 
