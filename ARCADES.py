@@ -38,10 +38,12 @@ from complexobjecttransformindexes import transform
 import consolidate                                                      #Stack Overflow
 from convert import Convert
 import copy
+import curses 
 from defaultscripts import COMMANDMACROSCRIPT
 from diagnostics import DiagnosticTracking
 from display import Display                                             #pylint 9.2/10
 from displaylist import DisplayList                                     #pylint 9.6/10
+import emptymovingwindow
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
@@ -8007,8 +8009,15 @@ class Console (Note_Shelf):
         self.suspend_default_keys = False
         self.vertmode = False
         self.apply_abr_inp = True
-        self.abridgedformat = True 
-
+        self.abridgedformat = True
+        self.sheet_buffer = ''
+        self.y_pos = 0
+        self.x_pos = 0
+        self.y_max = 130
+        self.x_max = 130
+        self.window = None
+        self.pad_dict = {}
+        self.currentpad = 'default'
 
         
         self.pickle_dictionary = {}
@@ -10193,14 +10202,14 @@ class Console (Note_Shelf):
 
         elif mainterm in ['sheet']:
             t_size = 2000
-##            if totalterms >2 and (otherterms[2] == EMPTYCHAR or otherterms[2] or predicate[0]):
-##                t_size = int(s_input(queries.WIDTH,
-##                                     otherterms[2],
-##                                     typeflag='int',
-##                                     conditions=(40,450),
-##                                     returnvalue=180))
-##            if  t_size < 40 or t_size > (450):
-##                t_size = 180
+            if totalterms >2 and (otherterms[2] == EMPTYCHAR or otherterms[2] or predicate[0]):
+                t_size = int(s_input(queries.WIDTH,
+                                     otherterms[2],
+                                     typeflag='int',
+                                     conditions=(500,10000),
+                                     returnvalue=2000))
+            if  t_size < 500 or t_size > (10000):
+                t_size = 2000
             display.noteprint((labels.SIZE,str(t_size)))
             if totalterms == 1 or not otherterms[1]:
                 display_stream = 'sheet'
@@ -10213,35 +10222,103 @@ class Console (Note_Shelf):
                     if not otherterms[2]:
                         otherterms[2] = '0'
                     multi_dict[notebookname][display_stream] = Note_Display(t_size)
-            self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
-                                                     otherterms[0]),
-                                             True,
-                                             False,
-                                             sort=True,
-                                             many=True),
-                         multi=True,
-                         output=multi_dict[notebookname][display_stream],
-                         vary=predicate[2],
-                         show_date=self.default_dict['showdate'],
-                         curtail={True:self.default_dict['smallsize'],
-                                  False:0}[predicate[0]])
+ 
             save_stream = display_stream
             if otherterms[3]:
                 save_stream = otherterms[3]
-            self.text_result = multi_dict[notebookname][display_stream].print_all(pause=predicate[3],
-                                                 show=False,
-                                                 save=True,
-                                                 filename=save_stream)
+
+
+            if predicate[2] and self.sheet_buffer:
+                textlist = self.sheet_buffer.split(EOL)
+                display.noteprint(('ATTENTION!','RESUMING SHEET'))
+            else:
+                self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
+                                                 otherterms[0]),
+                                         True,
+                                         False,
+                                         sort=True,
+                                         many=True),
+                     multi=True,
+                     output=multi_dict[notebookname][display_stream],
+                     vary=predicate[2],
+                     show_date=self.default_dict['showdate'],
+                     curtail={True:self.default_dict['smallsize'],
+                              False:0}[predicate[0]])
+                self.text_result = multi_dict[notebookname][display_stream].print_all(pause=predicate[3],
+                                     show=False,
+                                     save=True,
+                                     filename=save_stream)
+                self.sheet_buffer = self.text_result
+                textlist = self.text_result.split(EOL)
+
+            y_max = self.x_max
+            x_max = self.y_max
+            if otherterms[4] and '*' in otherterms[4]:
+                display.noteprint(('SHEET SIZE',otherterms[4]))
+                y_max = otherterms[4].split('*')[0]
+                x_max = otherterms[4].split('*')[1]
+                try:
+                    x_max = int(x_max)
+                    y_max = int(y_max)
+                    display.noteprint(('','SHEET SIZE = '+str(y_max)+'/'+str(x_max)))
+                except:
+                    pass
+            display.noteprint(('STARTING LOCATION', str(self.y_pos)+'/'+str(self.x_pos)))
             
+            self.window = movingwindow.MovingWindow(self.text_result.split(EOL))
+            self.y_pos,self.x_pos = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
 
-            textlist = self.text_result.split(EOL)
+        elif mainterm in ['rsheet','resumesheet']:
+            if self.window:
+                self.y_pos,self.x_pos = self.window.activate()
+        
+        elif mainterm in ['createworkpad']:
+            if otherterms[0] and otherterms[0] not in self.pad_dict:
+                padname = otherterms[0]
+            else:
+                padname = 'default'
+                c_temp = 1
+                suffix = ''
+                while True:
+                    if padname+suffix not in self.pad_dict:
+                        break
+                    suffix = str(c_temp)
+                    c_temp += 1
+                self.pad_dict[padname+suffix] = emptymovingwindow.EmptyMovingWindow()
+                display.noteprint(('NEW PAD CREATED!',padname+suffix))
+                display.noteprint(('ALL PADS',', '.join(self.pad_dict.keys())))
+                self.currentpad = padname+suffix
+        
+        elif mainterm in ['addtopad','a']:
+            bufferpad = self.currentpad
+            if otherterms[1] and otherterms[1] in self.pad_dict.keys():
+                self.currentpad = otherterms[1]
+                
+            if otherterms[0]:
 
-
-            window = movingwindow.MovingWindow(self.text_result.split(EOL))
-            window.activate()
-
-
-
+                for i_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True):
+                    
+                    note_temp = display.noteprint(self.show(i_temp),
+                                                  np_temp=True)
+                    self.pad_dict[self.currentpad].import_note(i_temp,note_temp.split(EOL))
+                display.noteprint(('Objects in Stack!',str(self.pad_dict[self.currentpad].objects_in_stack())))
+            self.currentpad = bufferpad
+                
+        elif mainterm in ['showpad']:
+            bufferpad = self.currentpad
+            if otherterms[1] in self.pad_dict.keys():
+                self.currentpad = otherterms[1]
+            
+            
+            if self.pad_dict[self.currentpad]:
+                try:
+                    display.noteprint(('ACTIVATING',self.currentpad))
+                    self.pad_dict[self.currentpad].activate()
+                except:
+                    self.pad_dict[self.currentpad].restore()
+                     
+            self.currentpad = bufferpad
+            display.noteprint(('',self.pad_dict[self.currentpad].show_notes()))
         elif mainterm in ['showstream']:
             if not longphrase:
                 display_stream = 'standard'

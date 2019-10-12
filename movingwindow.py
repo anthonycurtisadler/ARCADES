@@ -34,8 +34,9 @@ class MovingWindow:
 
      
 
-     def moving_screen (self,screen):
+     def moving_screen (self,screen,y_coord=0,x_coord=0):
 
+     
           def put(y_pos,x_pos):
 
                
@@ -72,9 +73,6 @@ class MovingWindow:
           multiplier = 1
 
 
-
-
-          y_coord,x_coord = 0,0
           y_inc,x_inc = 0,0
 
           go_on = True
@@ -126,25 +124,37 @@ class MovingWindow:
 
 
                put(y_coord,x_coord)
+          return y_coord,x_coord
 
-     def activate (self):
+     def activate (self,y_max=130,x_max=130,y_pos=0,x_pos=0):
 
-          screen = curses.initscr()
-          curses.resize_term(150,200)
-          screen.box()
+          self.screen = curses.initscr()
+          curses.resize_term(y_max,x_max)
+          self.screen.box()
           
           curses.cbreak()
-          screen.clear()
+          self.screen.clear()
           curses.noecho()
-          screen.keypad(True)
+          self.screen.keypad(True)
 
 
-          self.moving_screen(screen)
+          y_pos,x_pos = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos)
 
           curses.nocbreak()
-          screen.keypad(False)
+          self.screen.keypad(False)
           curses.echo()
           curses.endwin()
+          return y_pos,x_pos
+
+     def restore (self):
+
+          curses.nocbreak()
+          self.screen.keypad(False)
+          curses.echo()
+          curses.endwin()
+          print('RESTORED')
+          return y_coord,x_coord
+
 
 if __name__ == '__main__':
 
