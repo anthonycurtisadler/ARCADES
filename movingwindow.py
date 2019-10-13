@@ -1,6 +1,6 @@
-
 import curses
 import time
+from globalconstants import BOX_CHAR
 
 
 
@@ -34,7 +34,7 @@ class MovingWindow:
 
      
 
-     def moving_screen (self,screen,y_coord=0,x_coord=0):
+     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1):
 
      
           def put(y_pos,x_pos):
@@ -44,10 +44,10 @@ class MovingWindow:
 
                     x_pos = x_total - x_max
                
-               for y in range(y_max-1):
+               for y in range(y_max-1-b_margin-t_margin):
 
                     if y_pos+y <= y_total:
-                         screen.addstr(y,0,self.textlist[y_pos+y][x_pos:x_pos+x_max])
+                         screen.addstr(y+b_margin,l_margin,self.textlist[y_pos+y][x_pos:x_pos+x_max-l_margin-r_margin])
                screen.refresh()
 
                          
@@ -61,7 +61,7 @@ class MovingWindow:
                x_dim = max([len(l) for l in self.textlist])
                x_dim_min = min([len(l) for l in self.textlist])
                y_dim = len(self.textlist)
-               screen.addstr(str(x_dim)+':'+str(y_dim)+':'+str(x_dim_min)+'\n')
+##               screen.addstr(str(x_dim)+':'+str(y_dim)+':'+str(x_dim_min)+'\n')
                return x_dim, y_dim
 
 
@@ -104,13 +104,8 @@ class MovingWindow:
                elif key == ord('x'):
                     if multiplier <30:
                          multiplier += 1
-                         
-                         
-                    
-                    
-                    
-
-          
+               self.print_to(screen,str(x_coord)+':'+str(y_coord),y_pos=1,x_pos=2)
+               
 
                if y_coord < 0:
                     y_coord = 0
@@ -126,6 +121,26 @@ class MovingWindow:
                put(y_coord,x_coord)
           return y_coord,x_coord
 
+     def create_frame (self,screen):
+
+          x_max = curses.COLS
+          y_max = curses.LINES
+          screen.addstr(0,0,BOX_CHAR['lu']+BOX_CHAR['h']*(x_max-2)+BOX_CHAR['ru'])
+
+          screen.addstr(y_max-4,0,BOX_CHAR['lm']+BOX_CHAR['h']*(x_max-2)+BOX_CHAR['rm'])
+          screen.addstr(3,0,BOX_CHAR['lm']+BOX_CHAR['h']*(x_max-2)+BOX_CHAR['rm'])
+          screen.addstr(y_max-1,0,BOX_CHAR['ll']+BOX_CHAR['h']*(x_max-3))
+          for y in range(1,y_max-1):
+
+               screen.addstr(y,0,BOX_CHAR['v'])
+               screen.addstr(y,x_max-1,BOX_CHAR['v'])
+
+     def print_to (self,screen,text='',length=30,y_pos=0,x_pos=0):
+
+          text = (text + length*' ')[0:length]
+          screen.addstr(y_pos,x_pos,text)
+
+
      def activate (self,y_max=130,x_max=130,y_pos=0,x_pos=0):
 
           self.screen = curses.initscr()
@@ -137,7 +152,8 @@ class MovingWindow:
           curses.noecho()
           self.screen.keypad(True)
 
-
+          self.create_frame(self.screen)
+          
           y_pos,x_pos = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos)
 
           curses.nocbreak()

@@ -10,11 +10,7 @@ import winsound
 keys = {curses.KEY_LEFT:(0,-1),
         curses.KEY_RIGHT:(0,1),
         curses.KEY_UP:(-1,0),
-        curses.KEY_DOWN:(1,0),
-        ord('i'):(-1,0),
-        ord('m'):(1,0),
-        ord('k'):(0,1),
-        ord('j'):(-1,0)}
+        curses.KEY_DOWN:(1,0)}
 
 
 
@@ -50,6 +46,26 @@ class EmptyMovingWindow (MovingWindow):
           y = len(textlist)
           return textlist,y,x
 
+
+     def find_object_in (self,y_pos,x_pos):
+
+          
+          for obj in self.object_dict:
+
+               if 'p' in self.object_dict[obj]:
+
+                    positions = self.object_dict[obj]['p']
+                    up_bound = positions[0]
+                    left_bound = positions[1]
+                    down_bound = positions[2]
+                    right_bound = positions[3]
+                    if up_bound <= y_pos <= down_bound and \
+                       left_bound <= x_pos <= right_bound:
+                         return obj
+          return ''
+     
+
+                    
      def is_clear (self,y_pos,x_pos,y_dim,x_dim):
 
           if y_pos <=1 or x_pos <=1:
@@ -152,7 +168,6 @@ class EmptyMovingWindow (MovingWindow):
                index,note = popped[0],popped[1]
 
           else:
-
                return False
           note, height, width = self.dimensions(note)
 
@@ -177,9 +192,53 @@ class EmptyMovingWindow (MovingWindow):
                                       + str(coords[2]) + '/' 
                                       + str(coords[3]))
           return '\n'.join(returnlist)
+
+     def move_object (self,index='',vert_inc=0,hor_inc=0):
+
+          if index in self.object_dict and 'p' in self.object_dict[index]:
+               
+               positions = self.object_dict[index]['p']
+               up_bound = positions[0]
+               left_bound = positions[1]
+               down_bound = positions[2]
+               right_bound = positions[3]
+               height = down_bound - up_bound
+               width = right_bound - left_bound
+               up_bound += vert_inc
+               down_bound += vert_inc
+               left_bound += hor_inc
+               right_bound += hor_inc
+          if self.find_clear(height,width,up_bound,left_bound):
+               
+               obj = self.object_dict[index]
+
+               self.delete_object(index)
+               self.add_object (index,obj['o'],up_bound,left_bound)
+               
+
+         
+
+     def delete_object(self,index=''):
+          
+          if index in self.object_dict and 'p' in self.object_dict[index]:
+               positions = self.object_dict[index]['p']
+               up_bound = positions[0]
+               left_bound = positions[1]
+               down_bound = positions[2]
+               right_bound = positions[3]
+               objecttext = []
+
+               for y in range(up_bound,down_bound):
+                    objecttext.append(self.textlist[y][left_bound:right_bound+1])
+                    self.textlist[y] = self.textlist[y][0:left_bound] + ' '*(right_bound-left_bound) + self.textlist[y][right_bound:]
                     
+               del self.object_dict[index]
+               self.import_note(index,objecttext)
+                    
+               
 
      def add_object(self,index='',new_object_list=None,y_pos=0,x_pos=0):
+          index = str(index)
 
           new_object_list, height,width = self.dimensions(new_object_list)
 
@@ -207,7 +266,7 @@ class EmptyMovingWindow (MovingWindow):
           
 
      def import_note (self,index,note):
-          self.note_stack.add((index,note))
+          self.note_stack.add((str(index),note))
           
      def display (self,y_pos=0,x_pos=0):
           if not self.note_state.exists():
@@ -224,9 +283,9 @@ class EmptyMovingWindow (MovingWindow):
           return self.note_stack.size()
           
           
-     def moving_screen (self,screen,y_coord=10,x_coord=10):
+     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1):
 
-     
+
           def put(y_pos,x_pos):
 
                
@@ -234,13 +293,13 @@ class EmptyMovingWindow (MovingWindow):
 
                     x_pos = x_total - x_max
                
-               for y in range(y_max-1):
+               for y in range(y_max-1-b_margin-t_margin):
 
                     if y_pos+y <= y_total:
-                         screen.addstr(y,0,self.textlist[y_pos+y][x_pos:x_pos+x_max])
+                         screen.addstr(y+b_margin,l_margin,self.textlist[y_pos+y][x_pos:x_pos+x_max-l_margin-r_margin])
                screen.refresh()
 
-                         
+                              
           def dimensions ():
 
 
@@ -251,7 +310,6 @@ class EmptyMovingWindow (MovingWindow):
                x_dim = max([len(l) for l in self.textlist])
                x_dim_min = min([len(l) for l in self.textlist])
                y_dim = len(self.textlist)
-               screen.addstr(str(x_dim)+':'+str(y_dim)+':'+str(x_dim_min)+'\n')
                return x_dim, y_dim
 
 
@@ -271,8 +329,11 @@ class EmptyMovingWindow (MovingWindow):
           x_max = curses.COLS
           y_max = curses.LINES
           stack_dump = False
+          moving_object = False
           while go_on :
-
+               self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=20)
+               self.print_to(screen,', '.join(sorted(self.object_dict.keys())),length=30,y_pos=1,x_pos=40)
+               
                if stack_dump:
                     if self.note_stack.exists():
                          self.add_from_stack(y_coord,x_coord)
@@ -288,16 +349,40 @@ class EmptyMovingWindow (MovingWindow):
 
                     if key in keys.keys():
                          y_inc,x_inc = keys[key][0],keys[key][1]
-
-                         y_coord += y_inc * multiplier
-                         x_coord += x_inc * multiplier
+                         if not moving_object:
+                              y_coord += y_inc * multiplier
+                              x_coord += x_inc * multiplier
+                         if moving_object and self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)):
+                              if y_coord < 5 or y_coord > y_max -5:
+                                   y_coord += y_inc * multiplier
+                              if x_coord < 5 or x_coord > x_max -5:
+                                   x_coord += x_inc * multiplier
+                                   
+                              self.move_object(self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),y_inc*multiplier,x_inc*multiplier)
+                                   
                          
+                    elif key == ord('m'):
+                         moving_object = not moving_object
                     elif key in [ord('b'),curses.KEY_BREAK,curses.KEY_EXIT]:
                          go_on = False
-                    elif key in [curses.KEY_NPAGE]:
-                         y_coord += y_total
-                    elif key in [curses.KEY_PPAGE]:
-                         y_coord -= t_total
+                    elif key == ord('d') and self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)):
+                         self.delete_object(self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)))
+                    elif key == ord('['):
+                         if y_coord - y_max >= 0:
+                              
+                              y_coord -= y_max
+                         
+                    elif key == ord(']'):
+                         if y_coord - y_max <= y_total:
+                              
+                              y_coord += y_max
+                    elif key == ord('{'):
+                         if x_coord - x_max >= 0:
+                              x_coord -= x_max
+                    elif key == ord('}'):
+                         if x_coord + x_max <= x_total:
+                              x_coord += x_max
+                         
                     elif key == ord('p'):
                          stack_dump = True 
 ##                          while self.note_stack.exists():
@@ -319,6 +404,8 @@ class EmptyMovingWindow (MovingWindow):
                     elif key == ord('v'):
                          self.size += 1
                     
+               self.print_to(screen,str(x_coord)+':'+str(y_coord),y_pos=1,x_pos=2)
+               
 
                if y_coord < 0:
                     y_coord = 0
