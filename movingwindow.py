@@ -1,6 +1,7 @@
 import curses
 import time
 from globalconstants import BOX_CHAR
+from itertools import cycle
 
 
 
@@ -12,6 +13,8 @@ keys = {curses.KEY_LEFT:(0,-1),
         ord('m'):(1,0),
         ord('k'):(0,1),
         ord('j'):(-1,0)}
+
+curses.KEY_TAB = 9
 
 
 
@@ -32,7 +35,16 @@ class MovingWindow:
           else:
                self.textlist = textlist
 
-     
+          self.coordinate_list = []
+          for y in range(len(self.textlist)):
+
+               for x, char in enumerate(self.textlist[y]):
+
+                    if char == BOX_CHAR['lu']:
+
+                         self.coordinate_list.append((y,x))
+          self.sheet_cycling_through = cycle(self.coordinate_list)
+              
 
      def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1):
 
@@ -77,15 +89,39 @@ class MovingWindow:
 
           go_on = True
 
-                         
+          cycling = False                
           x_max = curses.COLS
           y_max = curses.LINES 
           while go_on :
 
 
                key = screen.getch()
-
-               if key in keys.keys():
+               if cycling:
+                              
+                         if key == curses.KEY_RIGHT:
+                              next_note = next(self.sheet_cycling_through)
+                              
+                              y_coord = next_note[0]
+                              x_coord = next_note[1]
+                         elif key == curses.KEY_LEFT:
+                              for x in range(len(self.coordinate_list)):
+                                   next_note = next(self.sheet_cycling_through)
+                              y_coord = next_note[0]
+                              x_coord = next_note[1]
+                         elif key == curses.KEY_UP:
+                              self.sheet_cycling_through = cycle(self.coordinate_list)
+                              next_note = next(self.sheet_cycling_through)
+                              y_coord = next_note[0]
+                              x_coord = next_note[1]
+                         elif key == curses.KEY_DOWN:
+                              self.cycling_through = cycle(self.coordinate_list)
+                              for x in range(len(self.coordinate_list)):
+                                   next_note = next(self.sheet_cycling_through)
+                              
+                              y_coord = next_note[0]
+                              x_coord = next_note[1]
+                              
+               elif key in keys.keys():
                     y_inc,x_inc = keys[key][0],keys[key][1]
 
                     y_coord += y_inc * multiplier
@@ -104,6 +140,15 @@ class MovingWindow:
                elif key == ord('x'):
                     if multiplier <30:
                          multiplier += 1
+
+               elif key == ord('r'):
+                    cycling = not cycling
+                    
+
+
+
+                                        
+                                                  
                self.print_to(screen,str(x_coord)+':'+str(y_coord),y_pos=1,x_pos=2)
                
 
@@ -119,7 +164,24 @@ class MovingWindow:
 
 
                put(y_coord,x_coord)
-          return y_coord,x_coord
+          return y_coord,x_coord, None
+
+
+               
+               
+                    
+                    
+                    
+               
+          
+
+          
+
+               
+               
+          
+
+          
 
      def create_frame (self,screen):
 
@@ -134,6 +196,8 @@ class MovingWindow:
 
                screen.addstr(y,0,BOX_CHAR['v'])
                screen.addstr(y,x_max-1,BOX_CHAR['v'])
+          window = curses.newwin(3,x_max-2,y_max-3,1)
+          return window 
 
      def print_to (self,screen,text='',length=30,y_pos=0,x_pos=0):
 
@@ -152,15 +216,15 @@ class MovingWindow:
           curses.noecho()
           self.screen.keypad(True)
 
-          self.create_frame(self.screen)
+          self.bottom_window = self.create_frame(self.screen)
           
-          y_pos,x_pos = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos)
+          y_pos,x_pos, returnobject = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos)
 
           curses.nocbreak()
           self.screen.keypad(False)
           curses.echo()
           curses.endwin()
-          return y_pos,x_pos
+          return y_pos,x_pos, returnobject 
 
      def restore (self):
 
@@ -169,7 +233,7 @@ class MovingWindow:
           curses.echo()
           curses.endwin()
           print('RESTORED')
-          return y_coord,x_coord
+          return X
 
 
 if __name__ == '__main__':
