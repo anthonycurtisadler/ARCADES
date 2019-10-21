@@ -8013,6 +8013,8 @@ class Console (Note_Shelf):
         self.sheet_buffer = ''
         self.y_pos = 0
         self.x_pos = 0
+        self.pad_y_pos = 0
+        self.pad_x_pos = 0
         self.y_max = 130
         self.x_max = 130
         self.window = None
@@ -10264,14 +10266,20 @@ class Console (Note_Shelf):
                 except:
                     pass
             display.noteprint(('STARTING LOCATION', str(self.y_pos)+'/'+str(self.x_pos)))
-            
+
             self.window = movingwindow.MovingWindow(self.text_result.split(EOL))
-            self.y_pos,self.x_pos = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
+            try:
+                self.y_pos,self.x_pos = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
+            except:
+                self.window.restore()
+                
 
         elif mainterm in ['rsheet','resumesheet']:
             if self.window:
-                self.y_pos,self.x_pos = self.window.activate()
-        
+                try:
+                    self.y_pos,self.x_pos = self.window.activate()
+                except:
+                    self.window.restore()
         elif mainterm in ['createworkpad']:
             if otherterms[0] and otherterms[0] not in self.pad_dict:
                 padname = otherterms[0]
@@ -10313,12 +10321,30 @@ class Console (Note_Shelf):
             if self.pad_dict[self.currentpad]:
                 try:
                     display.noteprint(('ACTIVATING',self.currentpad))
-                    self.pad_dict[self.currentpad].activate()
+                    self.pad_y_pos, self.pad_x_pos,returnedobjects = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,x_pos=self.pad_x_pos)
                 except:
                     self.pad_dict[self.currentpad].restore()
-                     
+
+            for obj_identifier in sorted(returnedobjects.keys()):
+
+                if obj_identifier.startswith('$') and obj_identifier.count('$') == 1:
+                    if 'oo' in returnedobjects[obj_identifier]:
+                        newobject_text = '\n'.join(returnedobjects[obj_identifier]['oo'])
+                        print(newobject_text)
+                        if 'l' in returnedobjects[obj_identifier]:
+                            newobject_keyset = returnedobjects[obj_identifier]['l']
+                        obj_identifier = obj_identifier.lstrip('$')
+                        self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
+            if input('Do you want to reclassify uploaded objects?') in YESTERMS:
+                self.pad_dict[self.currentpad].transform_dictionary()
+
+                    
+                
+                    
+                    
             self.currentpad = bufferpad
             display.noteprint(('',self.pad_dict[self.currentpad].show_notes()))
+            
         elif mainterm in ['showstream']:
             if not longphrase:
                 display_stream = 'standard'

@@ -64,10 +64,11 @@ class ScrollPad:
           self.l_margin = l_margin
 
 
-          self.textlist = [' '*self.width]*self.height
+          self.textlist = [' ']*self.height
           self.window = screen
           self.y_pos = y_pos
           self.x_pos = x_pos
+
 
      
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
@@ -90,13 +91,14 @@ class ScrollPad:
          
 
      def scroll_down (self):
-          if self.top_line <= len(self.textlist)-1:
+          if self.top_line + self.height < len(self.textlist):
           
                self.top_line +=1
- 
+
      def scroll_up (self):
           if self.top_line > 0:
                self.top_line -=1
+
 
 
      def move_up (self): 
@@ -106,36 +108,55 @@ class ScrollPad:
           if self.cursor_y < self.top_line:
                self.top_line -= 1
 
-     def move_down (self):
+     def move_down (self,add_to_line=None):
 
           
           self.cursor_y += 1
-          if self.cursor_y >= self.height - 1:
+          if add_to_line:
+               self.textlist[self.top_line+self.cursor_y] = add_to_line
+               self.cursor_x = len(add_to_line)
+          if self.cursor_y >= self.height:
      
                self.top_line += 1
                self.cursor_y -=1
 
-               if self.top_line + self.height > len(self.textlist) -1:
+               if self.top_line + self.height > len(self.textlist):
                     self.add_line()
 
                self.put_all()
 
-     def move_right (self):
-
+     def move_right (self,char=None):
+          add_to_line = ''
           if self.cursor_x < self.width-1:
                self.cursor_x += 1
-          elif self.cursor_x == self.width-1:
-               if self.cursor_y < len(self.textlist)-1:
-                    self.cursor_x = 0
-                    self.move_down()
-                    return 'EOL'
+               return 'EOL'
+          elif self.cursor_x >=self.width-1:
+               
+##               if self.cursor_y < len(self.textlist)-1:
+
+               if char != ' ':
+                    if ' ' in self.textlist[self.cursor_y]:
+                         add_to_line = self.textlist[self.top_line+self.cursor_y].split(' ')[-1]
+               
+                    
+               self.cursor_x = 0
+               if ' ' in self.textlist[self.top_line + self.cursor_y]:
+                    self.textlist[self.top_line + self.cursor_y] = ' '.join(self.textlist[self.top_line + self.cursor_y].split(' ')[0:-1])+'\n'
+                    self.move_down(add_to_line=add_to_line)
+               else:
+                    self.textlist[self.top_line + self.cursor_y] = self.textlist[self.top_line + self.cursor_y][0:self.width]
+                    add_to_line = self.textlist[self.top_line + self.cursor_y][self.width:]
+                    self.move_down(add_to_line)
+               
                return 'EOT'
+
 
                
           
 
      def hard_return (self):
 
+          self.put_char ('\n')
           self.cursor_x = 0
           self.move_down()
           
@@ -151,44 +172,128 @@ class ScrollPad:
                     return 'BACK'
                return 'START'
 
-     def put_char (self,char,y=None,x=None):
+
+     def put_char (self,char,y=None,x=None,insert=True):
           if y is None:
                y = self.cursor_y
           if x is None:
                x = self.cursor_x
 
+
           self.textlist[self.cursor_y+self.top_line] = self.textlist[self.cursor_y+self.top_line][0:self.cursor_x]\
-                                                      +char+self.textlist[self.cursor_y+self.top_line][self.cursor_x+1:]
+                                                      +char+self.textlist[self.cursor_y+self.top_line][self.cursor_x+(not insert):]
           self.window.refresh()
+
+     def finalize (self):
+
+          def force_length (line='',length=0):
+
+               line = line.rstrip(' ').replace('\n','')
+               if len(line) == length:
+                    return line
+               elif len(line) > length:
+                    return line[0:length]
+               return line + ' '*(length-len(line))
+          for y in range(0,len(self.textlist)):
+               self.textlist[y] = force_length(line=self.textlist[y],length=self.width)
+
+          for y in reversed(range(self.height+1,len(self.textlist))):
+               if not self.textlist[y].rstrip():
+                    self.textlist = self.textlist[0:-1]
+               else:
+                    break
+                                             
+          
+
+               
+     
+     def cascade (self,line_from=0):
+
+          for y in range(line_from,len(self.textlist)-1):
+
+               if len(self.textlist[y])>self.width:
+                    if ' ' in self.textlist[y]:
+                         add_to_text = self.textlist[y].split(' ')[-1]
+                         self.textlist[y] = ' '.join(self.textlist[y].split(' ')[0:-1])
+                    else:
+                         add_to_text = ''
+
+                    self.textlist[y+1] = add_to_text + ' ' + self.textlist[y+1]
+          while len(self.textlist[-1]) > self.width:
+               if ' ' in self.textlist[-1][0:self.width]:
+                    add_to_line = self.textlist[-1][0:self.width].split(' ')[-1]+self.textlist[-1][self.width:]
+                    self.textlist[-1] = ' '.join(self.textlist[-1][0:self.width].split(' ')[0:-1])
+                    self.textlist += [add_to_line+' ']
+               else:
+                    self.textlist[-1] = self.textlist[-1][0:self.width]
+                    self.textlist += self.textlist[-1][self.width:]
+     
+                    
+##     def reverse_cascade (self,line_to=0):
+##
+##          for y in range(line_to,len(self.textlist)-1):
+##               while True:
+##                    if y < len(self.textlist)-1:
+##                         remaining  = self.width - len(self.textlist[y].rstrip())
+##                         word = ''
+##                         if ' ' in self.textlist[y+1]:
+##                              word = self.textlist[y+1].split(' ')[0]
+##                         if word.strip() and len(word) < remaining:
+##                              self.textlist[y] = self.textlist[y].rstrip() + ' ' + word
+##                              self.textlist[y+1] = ' '.join(self.textlist[y+1].split(' ')[1:])
+##                         else:
+##                              break
+##                    else:
+##                         break
+
+     def reverse_cascade (self,line_to=0):
+
+
+          for y in range(line_to,len(self.textlist)-1):
+               if y < len(self.textlist)-1:
+                    remaining  = self.width - len(self.textlist[y].rstrip())
+                    word = ''
+                    if ' ' in self.textlist[y+1]:
+                         word = self.textlist[y+1].split(' ')[0]
+                    if word.strip() and len(word) < remaining:
+                         self.textlist[y] = self.textlist[y].rstrip() + ' ' + word
+                         self.textlist[y+1] = ' '.join(self.textlist[y+1].split(' ')[1:])
 
 
      def put_all (self):
 
 
-          text_line = 0
+          text_line = self.top_line
           y = 0
           
           
           while text_line < len(self.textlist):
 
                if self.top_line <= text_line < self.top_line+self.height:
-##                    self.window.addstr(2,2,'['+str(self.height)+']'+str(self.top_line)+'/'+str(len(self.textlist))+' :'+str(self.cursor_y)+'/'+str(self.cursor_x))
                     
                     for x in range (0,self.width):
+                         try:
+                              add_char = self.textlist[text_line][x]
+                              add_char = add_char.replace('\n',' ')
+                         except:
+                              add_char = ' '
+                         
                          if y==self.cursor_y and x==self.cursor_x:
-                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,self.textlist[text_line][x],curses.A_REVERSE)
+                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_REVERSE)
                               
                          else:
                               
-                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,self.textlist[text_line][x])
+                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char)
                     self.window.refresh()
                     y += 1
                text_line += 1
                
                     
 
-     def type (self,framelist=None):
+     def type (self,framelist=None,y_offset=0):
           go_on = True
+          inserting = False
+          lastkey = 0
 
 
           while go_on:
@@ -206,24 +311,44 @@ class ScrollPad:
                               if self.cursor_y < self.height-1:
                                    self.cursor_y += 1
                                    if self.cursor_y == self.height - 1:
-                                        self.move_down()   
+                                        self.move_up()
+                    
                          
-                    if self.cursor_y < self.height-1:
+                    if self.cursor_y < self.height:
                          self.cursor_y += keys[key][0]
-                         if self.cursor_y == self.height - 1:
-                              self.move_down()
+                         if self.cursor_y == self.height:
+                              self.move_up()
+                    else:
+                         if key == curses.KEY_UP:
+                              self.move_up
+                         
+                              
+
+               elif key == curses.KEY_INSERT:
+                    inserting = not inserting
+                    
+               elif key == 19: ## ctr a 
+                    self.scroll_down()
+               elif key == 1: ##ctr s
+                    self.scroll_up()
+               elif 0 <= key < 255:
+                    self.put_char(str(chr(key)),insert=inserting)
+
+                    self.move_right(str(chr(key)))
+                    
+                    if len(self.textlist[self.top_line + self.cursor_y].rstrip()) > self.width:
+                         self.cascade(self.top_line + self.cursor_y)
+               elif key in [curses.KEY_DELETE, curses.KEY_BACKSPACE]:
+                    if len(self.textlist[self.top_line + self.cursor_y]) >= self.cursor_x and self.cursor_x > 0:
+                         self.textlist[self.top_line + self.cursor_y] = self.textlist[self.top_line + self.cursor_y][0:self.cursor_x-1] + \
+                                                                        self.textlist[self.top_line + self.cursor_y][self.cursor_x:]
+                         self.move_left()
+                    if len(self.textlist[self.top_line + self.cursor_y].replace('\n','').rstrip()) == 0 and len(self.textlist) > self.top_line + self.cursor_y:
+                         self.textlist = self.textlist[0:self.top_line+self.cursor_y] + self.textlist[self.top_line+self.cursor_y+1:]
+                         self.textlist += ['']
                               
 
                          
-                    
-               elif key == 1: ## ctr a 
-                    self.scroll_down()
-               elif key == 19: ##ctr s
-                    self.scroll_up()
-               elif 0 <= key < 255:
-                    self.put_char(str(chr(key)))
-
-                    self.move_right()
                elif key == 493:
 
                     self.cursor_y = 0
@@ -242,10 +367,14 @@ class ScrollPad:
                     
 
                self.window.addstr(3,3,'   '+str(key)+'   ')
-          self.newtextlist = self.textlist
+               self.reverse_cascade(self.top_line + self.cursor_y)
+               lastkey = key
+          self.cascade()
+          self.finalize()
+          self.newtextlist = list(self.textlist)
           if framelist:
                
-               self.newtextlist = self.put_in(1,1,self.textlist[self.top_line:self.top_line+self.height-1],framelist) 
+               self.newtextlist = self.put_in(1+y_offset,1,self.textlist[self.top_line:self.top_line+self.height-1],framelist) 
           return self.newtextlist,self.textlist
                     
      
@@ -299,13 +428,15 @@ class EmptyMovingWindow (MovingWindow):
                     del dictionaryobject[oldkey] 
                
      
-     def make_rectangle (self,height,width,blank=False):
+     def make_rectangle (self,height,width,blank=False,divider=0):
           textlist = []
           if not blank:
                for y in range(0,height):
 
                     if y == 0:
                          textlist.append(BOX_CHAR['lu']+BOX_CHAR['h']*(width-2)+BOX_CHAR['ru'])
+                    elif y == divider:
+                         textlist.append(BOX_CHAR['lm']+BOX_CHAR['h']*(width-2)+BOX_CHAR['rm'])
                     elif 0 < y < width-1:
                          textlist.append(BOX_CHAR['v']+' '*(width-2)+BOX_CHAR['v'])
                     else:
@@ -315,7 +446,7 @@ class EmptyMovingWindow (MovingWindow):
                     
           return textlist
 
-     def new_note (self,y_coord,x_coord,height=30,width=30,totextlist=None,blank=False):
+     def new_note (self,y_coord,x_coord,height=30,width=30,totextlist=None,blank=False,divider=0):
           skip = [' ']
           if blank:
                skip = []
@@ -323,7 +454,7 @@ class EmptyMovingWindow (MovingWindow):
                
           if totextlist is None:
                totextlist = self.textlist
-          frame = self.make_rectangle(height,width,blank=blank)
+          frame = self.make_rectangle(height,width,blank=blank,divider=divider)
           self.put_in(y_coord,x_coord,fromtextlist=frame,totextlist=totextlist,skip=skip)
           return frame 
 
@@ -446,10 +577,7 @@ class EmptyMovingWindow (MovingWindow):
           else:
                return 0,0
           
-                    
-                    
-                         
-          
+        
           
      def dimensions (self,textlist):
 
@@ -575,10 +703,11 @@ class EmptyMovingWindow (MovingWindow):
           if not self.note_stack.exists():
 
                return False
-          popped =  self.note_stack.pop()
+          popped = self.note_stack.pop()
           if isinstance(popped,(list,tuple)):
+               popped = tuple(popped) + (None,None)
 
-               index,note1,note2 = popped[0],popped[1],popped[2]
+               index,note1,note2,keywords = popped[0],popped[1],popped[2],popped[3]
 
           else:
                return False
@@ -590,10 +719,11 @@ class EmptyMovingWindow (MovingWindow):
                return False
           if isinstance(y_pos,int):
                if not note2:
+                    
 
-                    self.add_object(index,new_object_list=note1,y_pos=y_pos,x_pos=x_pos)
+                    self.add_object(index,new_object_list=note1,y_pos=y_pos,x_pos=x_pos,l_prop=keywords)
                else:
-                    self.add_object(index,new_object_list=note1,new_object_list2=note2,y_pos=y_pos,x_pos=x_pos)
+                    self.add_object(index,new_object_list=note1,new_object_list2=note2,y_pos=y_pos,x_pos=x_pos,l_prop=keywords)
                     
           return False
                     
@@ -668,6 +798,7 @@ class EmptyMovingWindow (MovingWindow):
                     new_object_list2=None,
                     l_prop=None,
                     x_prop=None,
+                    
                     y_pos=0,
                     x_pos=0):
           
@@ -684,6 +815,8 @@ class EmptyMovingWindow (MovingWindow):
           if index not in self.object_dict:
 
                for y in range(height):
+
+                    
 
                     self.textlist[y_pos+y] = self.textlist[y_pos+y][0:x_pos]\
                                              + new_object_list[y]\
@@ -702,8 +835,8 @@ class EmptyMovingWindow (MovingWindow):
                return False
           
 
-     def import_note (self,index,show_note=None,full_note=None):
-          self.note_stack.add((str(index),show_note,full_note))
+     def import_note (self,index,show_note=None,full_note=None,keyset=None):
+          self.note_stack.add((str(index),show_note,full_note,keyset))
           
      def display (self,y_pos=0,x_pos=0):
           if not self.note_state.exists():
@@ -889,8 +1022,9 @@ class EmptyMovingWindow (MovingWindow):
                          note_y_dim = 10
                          note_x_dim = 10
                          if self.is_clear(y_coord+3,x_coord+3,note_y_dim,note_x_dim):
-                              frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim)
+                              frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=3)
                               put(y_coord,x_coord)
+                              divider = 3
                               while True:
 
 
@@ -898,7 +1032,7 @@ class EmptyMovingWindow (MovingWindow):
                                    if frame_key in keys:
 
                                         
-                                        frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True)
+                                        frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=divider)
                                         fy_inc, fx_inc = keys[frame_key]
                                         
                                         y_temp = note_y_dim
@@ -918,27 +1052,49 @@ class EmptyMovingWindow (MovingWindow):
                                              note_x_dim = x_max
                                         if self.is_clear(y_coord+3,x_coord+3,note_y_dim,note_x_dim):
                                              
-                                             frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim)
+                                             frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
                                              put(y_coord,x_coord)
                                         else:
-                                             self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim)
+                                             self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
                                              put(y_coord,x_coord)
                                              
                                         
                                    if frame_key == ord('x'):
                                         break
-                                        
 
-
-                              newpad = ScrollPad(note_y_dim-2,note_x_dim-2,5,2,u_margin=3,l_margin=1,screen=screen)
-                              newnote1,newnote2 = fill(newpad.type(frame)[0]), fill(newpad.type(frame)[1])
                               
-                              newindex = max(self.added_notes)+1
+
+                              section = False
+                              sizing = {False:(divider-1,5,3),
+                                        True:(note_y_dim-2-divider,5+divider,3)}
+
+                              count = 0
+      
+                                  
+                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],2,sizing[section][2],l_margin=1,screen=screen)
+                              newkeys1,newkeys2 = fill(newpad.type(frame)[0]), fill(newpad.type(frame)[1])
+                              section = True
+                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],2,sizing[section][2],l_margin=1,screen=screen)
+                              newnote1,newnote2 = fill(newpad.type(newkeys1,y_offset=3)[0]), fill(newpad.type(newkeys1)[1])
+                              if '|' in ''.join(newkeys2):
+                                   newindex = ''.join(newkeys2).split('|')[0].strip()
+                                   newkeys2 = ''.join(newkeys2).split('|')[1]
+                                   if not newindex.isnumeric():
+                                        newindex = max(self.added_notes)+1
+                                        
+                              else:
+                                   newindex = max(self.added_notes)+1                              
                               self.added_notes.add(newindex)
                               newindex = '$'+str(newindex)
-                              self.import_note(newindex,newnote1,newnote2)
-                              self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True)
-                              
+                              keyset = {k_temp.strip() for k_temp in ''.join(newkeys2).split(',')}
+                              self.import_note(newindex,newnote1,newnote2,keyset)
+                              self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=3)
+                               # deletes the note frame and text
+
+                              section = not section
+
+                                   
+                                        
                          
 
                     elif key == curses.KEY_TAB:
@@ -986,8 +1142,7 @@ class EmptyMovingWindow (MovingWindow):
                          
                     elif key == ord('p'):
                          stack_dump = True 
-##                          while self.note_stack.exists():
-##                               self.add_from_stack(y_coord,x_coord)
+
                               
                               
                     elif key == ord('z'):
