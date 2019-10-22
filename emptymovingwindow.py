@@ -8,6 +8,32 @@ import winsound
 from globalconstants import BOX_CHAR
 import copy
 from itertools import cycle
+from indexclass import Index
+from indexutilities import index_expand
+
+
+help_script = ['F2 = to enter a note']+['F3 = to extend dimensions']+\
+               ['F4 = to contract dimensions']+\
+               ['TAB = to toggle through notes']+\
+               ['F5 = to move selected objects']+\
+               ['F6 = to move screen while moving selected objects']+\
+               ['F7 = to select an object to move']+\
+               ['F8 = to delect an object to move']+\
+               ['F9 = to toggle cycling mode']+\
+               ['F10 = to exit']+\
+               ['F11 = to dump stack']+\
+               ['[ = page up']+\
+               ['] = page down']+\
+               ['{ = page left']+\
+               ['} = page right']+\
+               ['z = decrease speed']+\
+               ['x = increase speed']+\
+               ['c = decrease size']+\
+               ['v = increase size']+\
+               ['insert = to add note from stack']+\
+               ['delete = to return note from stack']
+
+
 
 curses.KEY_RETURN = 10
 curses.KEY_TAB = 9
@@ -15,6 +41,13 @@ curses.KEY_F1 = 265
 curses.KEY_F2 = 266
 curses.KEY_F3 = 267
 curses.KEY_F4 = 268
+curses.KEY_F5 = 269
+curses.KEY_F6 = 270
+curses.KEY_F7 = 271
+curses.KEY_F8 = 272
+curses.KEY_F9 = 273
+curses.KEY_F10 = 274
+curses.KEY_F11 = 275
 
 curses.KEY_PAGEUP = 339
 curses.KEY_PAGEDOWN = 338
@@ -50,7 +83,10 @@ def fill (textlist):
      returnlist = []
      for line in textlist:
           returnlist.append(line+(width-len(line))*' ')
-     return returnlist 
+     return returnlist
+
+
+     
 
 class ScrollPad:
 
@@ -384,7 +420,7 @@ class EmptyMovingWindow (MovingWindow):
 
 
 
-     def __init__ (self,textlist=None,y_dim=300,x_dim=300):
+     def __init__ (self,textlist=None,object_dict=None,y_dim=300,x_dim=300):
 
  
 
@@ -392,9 +428,11 @@ class EmptyMovingWindow (MovingWindow):
 
                self.textlist = [' '*x_dim]*y_dim
           else:
-               self.textlist = textlist
-
-          self.object_dict = {}
+               self.textlist = list(textlist)
+          if object_dict is None:
+               self.object_dict = {}
+          else:
+               self.object_dict = copy.deepcopy(object_dict)
           self.y_dim = y_dim
           self.x_dim = x_dim
           self.index = 0
@@ -437,7 +475,7 @@ class EmptyMovingWindow (MovingWindow):
                          textlist.append(BOX_CHAR['lu']+BOX_CHAR['h']*(width-2)+BOX_CHAR['ru'])
                     elif y == divider:
                          textlist.append(BOX_CHAR['lm']+BOX_CHAR['h']*(width-2)+BOX_CHAR['rm'])
-                    elif 0 < y < width-1:
+                    elif 0 < y < height-1:
                          textlist.append(BOX_CHAR['v']+' '*(width-2)+BOX_CHAR['v'])
                     else:
                          textlist.append(BOX_CHAR['ll'] + BOX_CHAR['h']*(width-2) + BOX_CHAR['rl'])
@@ -853,7 +891,7 @@ class EmptyMovingWindow (MovingWindow):
           return self.note_stack.size()
           
           
-     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1):
+     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1,entering=False):
 
           
           def put(y_pos,x_pos):
@@ -918,12 +956,13 @@ class EmptyMovingWindow (MovingWindow):
           extending = False
           contracting = False
           cursor_move = False
-          cycling = False 
-          while go_on :
+          cycling = False
+          once_through = False
+          while go_on and not once_through:
                self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=20)
                self.print_to(screen,', '.join(sorted(self.object_dict.keys())),length=30,y_pos=1,x_pos=62)
                self.print_to(screen,', '.join(objects_to_move),length=30,y_pos=1,x_pos=31)
-               self.print_to(screen,'MOVING OBJECTS'*moving_object+' '+'MOVING SCREEN'*moving_screen_too+' '+'EXTENDING'*extending+' '+'CONTRACTING'*contracting+'CUR'*cursor_move,
+               self.print_to(screen,'CYCLING'*cycling+' '+'MOVING OBJECTS'*moving_object+' '+'MOVING SCREEN'*moving_screen_too+' '+'EXTENDING'*extending+' '+'CONTRACTING'*contracting+'CUR'*cursor_move,
                              length=90,y_pos=y_max-3,x_pos=1)
                
                
@@ -937,7 +976,10 @@ class EmptyMovingWindow (MovingWindow):
                               stack_dump = False
                     
                else:
-                    key = screen.getch()
+                    if not entering:
+                         key = screen.getch()
+                    else:
+                         key = ''
                          
 
                     if key in keys.keys():
@@ -970,8 +1012,7 @@ class EmptyMovingWindow (MovingWindow):
                                    x_coord = positions[1]
                                    
                                         
-                                        
-                              
+                                         
 
                                    
                          elif extending or contracting:
@@ -1004,20 +1045,30 @@ class EmptyMovingWindow (MovingWindow):
                                         x_coord += x_inc * multiplier
                                         y_coord += y_inc * multiplier
                                    
-                    elif key == ord('w'):
+                    elif key == curses.KEY_F3:
                          extending = not extending
                          if contracting and extending:
                               contracting = False
 
                     
 
-                    elif key == ord('t'):
-                         cursor_move = not cursor_move 
-                    elif key == ord('q'):
+##                    elif key == ord('t'):
+##                         cursor_move = not cursor_move
+                    elif key == curses.KEY_F1:
+                         show_note=fill(help_script)
+                         width = len(show_note[0])+2
+                         height = len(show_note)+2
+                         
+                         rectangle = self.make_rectangle (height=height,width=width,divider=0)
+                         rectangle = self.put_in (1,1,fromtextlist=show_note,totextlist=rectangle,skip=[' '])
+                         
+
+                         self.import_note (index='help',show_note=rectangle,full_note=rectangle,keyset={})
+                    elif key == curses.KEY_F4:
                          contracting = not contracting
                          if contracting and extending:
                               extending = False
-                    elif key == ord('e'):
+                    elif entering or key == curses.KEY_F2:
 
                          note_y_dim = 10
                          note_x_dim = 10
@@ -1039,8 +1090,8 @@ class EmptyMovingWindow (MovingWindow):
                                         x_temp = note_x_dim
                                         note_y_dim += fy_inc
                                         note_x_dim += fx_inc
-                                        note_y_dim += fx_inc
-                                        note_x_dim += fy_inc
+                                        note_y_dim += fy_inc
+                                        note_x_dim += fx_inc
                                         
                                         if note_y_dim <10:
                                              note_y_dim = 10
@@ -1059,7 +1110,7 @@ class EmptyMovingWindow (MovingWindow):
                                              put(y_coord,x_coord)
                                              
                                         
-                                   if frame_key == ord('x'):
+                                   if frame_key == curses.KEY_F2:
                                         break
 
                               
@@ -1079,7 +1130,9 @@ class EmptyMovingWindow (MovingWindow):
                               if '|' in ''.join(newkeys2):
                                    newindex = ''.join(newkeys2).split('|')[0].strip()
                                    newkeys2 = ''.join(newkeys2).split('|')[1]
-                                   if not newindex.isnumeric():
+                                   try:
+                                        newindex = str(Index(index_expand(newindex)))
+                                   except:
                                         newindex = max(self.added_notes)+1
                                         
                               else:
@@ -1104,22 +1157,22 @@ class EmptyMovingWindow (MovingWindow):
                          x_coord = positions[1]
 
                          
-                    elif key == ord('t'):
-                         t = ScrollPad(screen=screen)
-                         t.type()
-                    elif key == ord('m'):
+##                    elif key == ord('t'):
+##                         t = ScrollPad(screen=screen)
+##                         t.type()
+                    elif key == curses.KEY_F5:
                          moving_object = not moving_object
-                    elif key == ord('y'):
+                    elif key == curses.KEY_F6:
                          moving_screen_too = not moving_screen_too
-                    elif key == ord('n'):
+                    elif key == curses.KEY_F7:
                          if (self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2))):
                               objects_to_move.add(self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)))
-                    elif key == ord('u'):
+                    elif key == curses.KEY_F8:
                          if (self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2))):  
                               objects_to_move.discard(self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)))
-                    elif key in [ord('b'),curses.KEY_BREAK,curses.KEY_EXIT]:
+                    elif key in [curses.KEY_F10,curses.KEY_BREAK,curses.KEY_EXIT]:
                          go_on = False
-                    elif key == ord('d') and self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)):
+                    elif key == curses.KEY_DELETE and self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)):
                          self.delete_object(self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)))
                     elif key == ord('['):
                          if y_coord - y_max >= 0:
@@ -1136,11 +1189,11 @@ class EmptyMovingWindow (MovingWindow):
                     elif key == ord('}'):
                          if x_coord + x_max <= x_total:
                               x_coord += x_max
-                    elif key == ord('f'):
+                    elif key == curses.KEY_F9:
                          cycling = not cycling
                          
                          
-                    elif key == ord('p'):
+                    elif key == curses.KEY_F11:
                          stack_dump = True 
 
                               
@@ -1153,14 +1206,14 @@ class EmptyMovingWindow (MovingWindow):
                          if multiplier <30:
                               multiplier += 1
      
-                    elif key == ord('s'):
+                    elif key == curses.KEY_INSERT:
                          self.add_from_stack(y_coord,x_coord)
                     elif key == ord('c'):
                          self.size -= 1
                     elif key == ord('v'):
                          self.size += 1
                     
-               self.print_to(screen,str(x_coord)+'/'+str(x_total)+' : '+str(y_coord)+'/'+str(y_total)+' '+str(int(y_max/2))+':'+str(int(x_max/2)),y_pos=1,x_pos=2)
+               self.print_to(screen,str(x_coord)+'/'+str(x_total)+' : '+str(y_coord)+'/'+str(y_total),y_pos=1,x_pos=2)
                 
 
                if y_coord < 0:
@@ -1183,7 +1236,12 @@ class EmptyMovingWindow (MovingWindow):
 
 
                put(y_coord,x_coord)
-          return  y_coord,x_coord,self.object_dict
+
+
+          if entering:
+               self.add_from_stack(y_coord,x_coord)
+               once_through = True
+          return  y_coord,x_coord,self.object_dict,self.textlist
               
 
 if __name__ == '__main__':

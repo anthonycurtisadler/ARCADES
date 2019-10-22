@@ -46,7 +46,7 @@ class MovingWindow:
           self.sheet_cycling_through = cycle(self.coordinate_list)
               
 
-     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1):
+     def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1,entering=False):
 
      
           def put(y_pos,x_pos):
@@ -205,7 +205,7 @@ class MovingWindow:
           screen.addstr(y_pos,x_pos,text)
 
 
-     def activate (self,y_max=130,x_max=130,y_pos=0,x_pos=0):
+     def activate (self,y_max=130,x_max=130,y_pos=0,x_pos=0,entering=False):
 
           self.screen = curses.initscr()
           curses.resize_term(y_max,x_max)
@@ -218,13 +218,14 @@ class MovingWindow:
 
           self.bottom_window = self.create_frame(self.screen)
           
-          y_pos,x_pos, returnobject = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos)
+          y_pos,x_pos, object_dict, textlist = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos,entering=entering)
 
           curses.nocbreak()
           self.screen.keypad(False)
           curses.echo()
           curses.endwin()
-          return y_pos,x_pos, returnobject 
+          del self.screen
+          return y_pos,x_pos, object_dict, textlist 
 
      def restore (self):
 

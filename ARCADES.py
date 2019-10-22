@@ -71,8 +71,10 @@ from sequencedefaultdictionary import SequenceDefaultDictionary
 try:
     from spellcheck import SpellCheck                                       #pylint 8.83/10
     spellcheck_on = True
+
 except:
     spellcheck_on = False
+from sheetshelf import SheetShelf
 import stack                                                            #pylint 10.0/10     
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
 import terminalsize                                                     #Stack Overflow
@@ -8349,6 +8351,8 @@ class Console (Note_Shelf):
         self.counter = 0
         self.lastsequencevalue = SequenceDefaultDictionary()
         self.keyauto = KeyAuto()
+        self.sheetshelf = None
+        self.sheetname = None 
         
 
 
@@ -10311,7 +10315,67 @@ class Console (Note_Shelf):
                     self.pad_dict[self.currentpad].import_note(i_temp,note_temp.split(EOL))
                 display.noteprint(('Objects in Stack!',str(self.pad_dict[self.currentpad].objects_in_stack())))
             self.currentpad = bufferpad
+
+        elif mainterm in ['closesheetshelf']:
+            del self.sheetshelf
+        elif mainterm in ['tosheetshelf']:
+            if not self.sheetshelf:
+                self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
+        
+            from_name = otherterms[0]
+            if not from_name:
+                from_name = self.currentpad
+            to_name = otherterms[1]
+            if not to_name:
+                to_name = self.currentpad
+            if not predicate[0]:
+                l_temp = list(self.pad_dict[from_name].textlist)
+                d_temp = copy.deepcopy(self.pad_dict[from_name].object_dict)
                 
+                
+                
+                self.sheetname = self.sheetshelf.add(notebookname=notebookname,
+                                                     objectname=to_name,
+                                                     textlist = l_temp,
+                                                     object_dict = d_temp)
+                del l_temp
+                del d_temp
+
+        elif mainterm in ['selectsheet']:
+            if not self.sheetshelf:
+                self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
+            to_name = otherterms[0]
+            while True:
+                
+                if not to_name:
+                    to_name = 'default'
+                if to_name in self.pad_dict:
+                    display.noteprint(('ATTENTION!',to_name+' exists'))
+                    if input('OK to overwrite') in YESTERMS:
+                        break
+            temp_obj, self.sheetname = self.sheetshelf.select()
+
+            self.pad_dict[to_name] = emptymovingwindow.EmptyMovingWindow(textlist=temp_obj[0],object_dict=temp_obj[1])
+            display.noteprint(('NEW PAD CREATED!',to_name))
+            display.noteprint(('ALL PADS',', '.join(self.pad_dict.keys())))
+            self.currentpad = to_name
+        elif mainterm in ['keyin']:
+            size_old = self.default_dict['size']
+            temp_pad = emptymovingwindow.EmptyMovingWindow()
+            dummy_y, dummy_x, returned_object, dummy_text = temp_pad.activate(entering=True)
+            for obj_identifier in sorted(returned_object.keys()):
+
+                if obj_identifier.startswith('$') and obj_identifier.count('$') == 1:
+                    if 'oo' in returned_object[obj_identifier]:
+                        newobject_text = '\n'.join(returned_object[obj_identifier]['oo'])
+                        if 'l' in returned_object[obj_identifier]:
+                            newobject_keyset = returned_object[obj_identifier]['l']
+                        obj_identifier = obj_identifier.lstrip('$')
+                        if newobject_text:
+                            self.default_dict['size'] = len(newobject_text[0])
+                        
+                        self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
+            self.default_dict['size'] = size_old
         elif mainterm in ['showpad']:
             bufferpad = self.currentpad
             if otherterms[1] in self.pad_dict.keys():
@@ -10321,7 +10385,7 @@ class Console (Note_Shelf):
             if self.pad_dict[self.currentpad]:
                 try:
                     display.noteprint(('ACTIVATING',self.currentpad))
-                    self.pad_y_pos, self.pad_x_pos,returnedobjects = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,x_pos=self.pad_x_pos)
+                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,x_pos=self.pad_x_pos)
                 except:
                     self.pad_dict[self.currentpad].restore()
 
@@ -10337,10 +10401,21 @@ class Console (Note_Shelf):
                         self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
             if input('Do you want to reclassify uploaded objects?') in YESTERMS:
                 self.pad_dict[self.currentpad].transform_dictionary()
+            if input('Do you want to update sheetshelf?') in YESTERMS:
+                if not self.sheetshelf:
+                    self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
+                    if not self.sheetname:
+                        self.sheetname = notebookname + self.currentpad
+                    
+                print(self.sheetname)
+                self.sheetshelf.add(notebookname='',
+                                    objectname=self.sheetname,
+                                    textlist = returnedtextlist,
+                                    object_dict = returnedobjects,override=True)
 
                     
                 
-                    
+                        
                     
             self.currentpad = bufferpad
             display.noteprint(('',self.pad_dict[self.currentpad].show_notes()))
