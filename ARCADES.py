@@ -10273,7 +10273,7 @@ class Console (Note_Shelf):
 
             self.window = movingwindow.MovingWindow(self.text_result.split(EOL))
             try:
-                self.y_pos,self.x_pos = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
+                self.y_pos,self.x_pos,dummy1,dummy3 = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
             except:
                 self.window.restore()
                 

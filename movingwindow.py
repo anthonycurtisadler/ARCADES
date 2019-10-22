@@ -164,24 +164,8 @@ class MovingWindow:
 
 
                put(y_coord,x_coord)
-          return y_coord,x_coord, None
+          return y_coord,x_coord, None, None
 
-
-               
-               
-                    
-                    
-                    
-               
-          
-
-          
-
-               
-               
-          
-
-          
 
      def create_frame (self,screen):
 
