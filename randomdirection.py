@@ -25,7 +25,7 @@ def find_direction (y_pos=0,x_pos=0,y_dim=0,x_dim=0,already=0,function=random_d)
      while True:
  
 
-          if random.choice(range(400))<already:
+          if random.choice(range(2000))<already:
                     lastdirection = direction
                     direction = random.choice(list({0,1,2,3,4,5,6,7}-{direction}))
                     already = 0 

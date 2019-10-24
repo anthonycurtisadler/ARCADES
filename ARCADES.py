@@ -10300,6 +10300,36 @@ class Console (Note_Shelf):
                 display.noteprint(('NEW PAD CREATED!',padname+suffix))
                 display.noteprint(('ALL PADS',', '.join(self.pad_dict.keys())))
                 self.currentpad = padname+suffix
+
+        elif mainterm in ['emptypadstack']:
+
+            bufferpad = self.currentpad
+            if otherterms[0] and otherterms[0] in self.pad_dict.keys():
+                self.currentpad = otherterms[0]
+                
+            self.pad_dict[self.currentpad].empty_stack()
+
+                
+            self.currentpad = bufferpad
+
+        elif mainterm in ['renewpad']:
+            
+            bufferpad = self.currentpad
+            if otherterms[0] and otherterms[0] in self.pad_dict.keys():
+                self.currentpad = otherterms[0]
+
+            if input('Are you sure? This will delete all data in pad?') in YESTERMS:
+                self.pad_dict[self.currentpad] = emptymovingwindow.EmptyMovingWindow()
+               
+            self.pad_dict[self.currentpad].empty_stack()
+
+                
+            self.currentpad = bufferpad
+
+
+            
+            
+            
         
         elif mainterm in ['addtopad','a']:
             bufferpad = self.currentpad

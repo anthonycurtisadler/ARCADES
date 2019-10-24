@@ -713,29 +713,31 @@ class EmptyMovingWindow (MovingWindow):
           else:
                return True
 
-     def is_clear_quick (self,y_pos,x_pos,y_dim,x_dim,dict_object=None):
-
-          """ A quicker version; Needs to be debugged """
-          
-          if dict_object is None:
-               dict_object = self.object_dict
-
-          
-
-          for key_temp in dict_object:
-
-               positions = dict_object[key_temp]['p']
-               up_bound = positions[0]
-               left_bound = positions[1]
-               down_bound = positions[2]
-               right_bound = positions[3]
-
-               if y_pos >= up_bound or \
-                  y_pos + y_dim <= down_bound or \
-                  x_pos >= left_bound or \
-                  x_pos + x_dim <= right_bound:
-                    return False
-          return True 
+##     def is_clear_quick (self,y_pos,x_pos,y_dim,x_dim,dict_object=None):
+##
+##          """ A quicker version; Needs to be debugged """
+##          
+##          if dict_object is None:
+##               dict_object = self.object_dict
+##
+##          
+##
+##          for key_temp in dict_object:
+##
+##               positions = dict_object[key_temp]['p']
+##               up_bound = positions[0]
+##               left_bound = positions[1]
+##               down_bound = positions[2]
+##               right_bound = positions[3]
+##
+##               if ((y_pos >= up_bound and \
+##                  y_pos<= down_bound) or (y_pos+y_dim >= up_bound
+##                                          and y_pos_y_dim <=down_bound)) and \
+##                  ((x_pos >= left_bound and x_pos<= right_bound) or \
+##                  (x_pos + x_dim >= left_bound and x_pos + x_dim <= right_bound)):
+##                    
+##                    return False
+##          return True 
                
 
      def find_clear (self,height,width,start_y=0,start_x=0,from_corner=True):
@@ -845,27 +847,6 @@ class EmptyMovingWindow (MovingWindow):
 
           """To move an object.  Accepts a list of indexes"""
 
-          def directional_clear (up_bound,left_bound,height,width,vert_inc,hor_inc):
-
-               vert_result = True
-               hor_result = True
-               if vert_inc < 0:
-                    vert_result = self.is_clear(up_bound-(abs(vert_inc)+(2*auto)),left_bound,abs(vert_inc*auto)+(2*auto),width)
-               elif vert_inc > 0:
-                    vert_result = self.is_clear(up_bound+height+abs(vert_inc)+(2*auto),left_bound,abs(vert_inc)+(2*auto),width)
-
-               if hor_inc < 1:
-                    hor_result = self.is_clear(up_bound,left_bound-(abs(hor_inc)-+(2*auto)),height,abs(hor_inc)+(2*auto))
-               elif hor_inc > 1:
-                    hor_result = self.is_clear(up_bound,left_bound+abs(hor_inc),height,abs(hor_inc)++(2*auto))
-
-
-               return vert_result and hor_result
-          
-                    
-
-          
-
 
 
           for index in indexes:
@@ -893,10 +874,6 @@ class EmptyMovingWindow (MovingWindow):
 
                     self.delete_object(index)
                     if self.is_clear(up_bound-(1*auto),left_bound-(1*auto),height+(2*auto),width+(2*auto)):
-##                    if directional_clear(up_bound,left_bound,height,width,vert_inc,hor_inc):
-##
-
-                         
                          
                          
                          self.add_object (index,new_object_list=obj['o'],
@@ -987,6 +964,9 @@ class EmptyMovingWindow (MovingWindow):
           """To import a note into the stack."""
           
           self.note_stack.add((str(index),show_note,full_note,keyset))
+
+     def empty_stack (self):
+          self.note_stack = Stack()
 
           
      def display (self,y_pos=0,x_pos=0):
@@ -1086,7 +1066,7 @@ class EmptyMovingWindow (MovingWindow):
                              +' '+'MOVING SCREEN'*moving_screen_too
                              +' '+'EXTENDING'*extending+' '
                              +'CONTRACTING'*contracting
-                             +'CUR'*cursor_move,
+                             +'CUR'*cursor_move+' SPEED='+str(multiplier),
                              length=90,y_pos=y_max-3,x_pos=1)
                
                
@@ -1133,16 +1113,13 @@ class EmptyMovingWindow (MovingWindow):
                                    positions = self.object_dict[next_note]['p']
                                    y_coord = positions[0]
                                    x_coord = positions[1]
-                                   
-                                        
-                                         
-
-                                   
+                                
                          elif extending or contracting:
-                              up, down, left, right = ec_keys[key][0],\
-                                                      ec_keys[key][1],\
-                                                      ec_keys[key][2],\
-                                                      ec_keys[key][3]
+                              up, down, left, right = ec_keys[key][0]*multiplier,\
+                                                      ec_keys[key][1]*multiplier,\
+                                                      ec_keys[key][2]*multiplier,\
+                                                      ec_keys[key][3]*multiplier
+                              
                               if extending:
                                    x_total, y_total = self.extend(up,down,left,right)
                               if contracting:
@@ -1173,10 +1150,6 @@ class EmptyMovingWindow (MovingWindow):
                          if contracting and extending:
                               contracting = False
 
-                    
-
-##                    elif key == ord('t'):
-##                         cursor_move = not cursor_move
                     elif key == curses.KEY_F1:
                          show_note=fill(help_script)
                          width = len(show_note[0])+2
@@ -1279,10 +1252,6 @@ class EmptyMovingWindow (MovingWindow):
                          y_coord = positions[0]
                          x_coord = positions[1]
 
-                         
-##                    elif key == ord('t'):
-##                         t = ScrollPad(screen=screen)
-##                         t.type()
                     elif key == curses.KEY_F5:
                          moving_object = not moving_object
                     elif key == curses.KEY_F6:
@@ -1366,9 +1335,7 @@ class EmptyMovingWindow (MovingWindow):
                                         temp_tup = temp_dict[counter]
                                         
                                         dummy1,dummy2,y_inc,x_inc,counter = next(temp_tup[1])
-     ##                                   if iteration % 10 == 0:
-     ##                                        self.print_to(screen,str((dummy1,dummy2,y_inc,x_inc,counter))+'   ',y_pos=3,x_pos=1)
-                                        
+                                          
                                    
                                         self.move_object([temp_tup[0]],y_inc,x_inc,auto=True)
                                    put(y_coord,x_coord)
@@ -1417,9 +1384,6 @@ if __name__ == '__main__':
 
 
      a = EmptyMovingWindow()
-##     tl = [' '*50]*100
-##
-##     print('\n'.join(a.new_note(5,5,30,30,tl)))
      a.activate()
 
 
