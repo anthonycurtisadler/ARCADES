@@ -189,7 +189,7 @@ class MovingWindow:
           screen.addstr(y_pos,x_pos,text)
 
 
-     def activate (self,y_max=130,x_max=130,y_pos=0,x_pos=0,entering=False):
+     def activate (self,y_max=55,x_max=180,y_pos=0,x_pos=0,entering=False):
 
           self.screen = curses.initscr()
           curses.resize_term(y_max,x_max)
@@ -202,7 +202,7 @@ class MovingWindow:
 
           self.bottom_window = self.create_frame(self.screen)
           
-          y_pos,x_pos, object_dict, textlist = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos,entering=entering)
+          y_pos,x_pos, object_dict, textlist = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos,entering=entering)                                                       
 
           curses.nocbreak()
           self.screen.keypad(False)

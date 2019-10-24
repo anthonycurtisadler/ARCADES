@@ -11912,19 +11912,21 @@ class Console (Note_Shelf):
                 else:
                     otherterms[0] = EMPTYCHAR
             while project_name in self.default_dict['projects']:
-                if project_name[-1].isalpha():
+
+                if project_name.isalpha():
                     project_name  += '1'
                 else:
-                    temp_name = project_name[::-1]
-                    for x_temp in range(len(temp_name)):
-                        project_number = temp_name[0:x_temp+1]
-                        if not temp_name[0:x_temp+2].isnumeric():
-                            break
-                    project_number = project_number[::-1]
-                    nprint(project_number)
-                    project_number = int(project_number)
-                    project_number += 1
-                    project_name = project_name[0:-(x_temp+1)]+ str(project_number)
+                    suffix = '0'
+                    for counter, a in enumerate(project_name):
+                        if a.isnumeric() and suffix == '0':
+                            suffix = project_name[counter:]
+
+  
+                    suffix = str(int(suffix)+1) 
+                    project_name = project_name[0:counter]+suffix
+
+            
+                        
 
             if project_name:
 
@@ -11968,6 +11970,7 @@ class Console (Note_Shelf):
                     project_name = otherterms[0]
                 if project_name in self.default_dict['projects'] or project_name in quit_terms:
                     break
+                otherterms[0] = EMPTYCHAR
 
             if project_name in self.default_dict['projects']:
                 if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS:

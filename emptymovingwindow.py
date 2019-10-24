@@ -10,6 +10,7 @@ import copy
 from itertools import cycle
 from indexclass import Index
 from indexutilities import index_expand
+from randomdirection import find_direction
 
 
 help_script = ['F2 = to enter a note']+['F3 = to extend dimensions']+\
@@ -79,6 +80,8 @@ def trace (x):
 
 def fill (textlist):
 
+     """ returns a list of strings of equal length"""
+
      width = max ([len(x) for x in textlist])
      returnlist = []
      for line in textlist:
@@ -90,24 +93,28 @@ def fill (textlist):
 
 class ScrollPad:
 
+     """ A simple scroll pad/ text editor"""
+
      def __init__(self,height=10,width=10,y_pos=5,x_pos=5,u_margin=0,l_margin=0,enframe=False,screen=None):
-          self.height = height
-          self.width = width
-          self.top_line = 0
-          self.cursor_y = 0
+          self.height = height  # height of entry box
+          self.width = width    # length of entry text
+          self.top_line = 0     # the topline of displayed text
+          self.cursor_y = 0     # cursor position when inputing
           self.cursor_x = 0
-          self.u_margin = u_margin
-          self.l_margin = l_margin
+          self.u_margin = u_margin  
+          self.l_margin = l_margin 
 
-
-          self.textlist = [' ']*self.height
+          self.textlist = [' ']*self.height   #the total text 
           self.window = screen
-          self.y_pos = y_pos
-          self.x_pos = x_pos
+          self.y_pos = y_pos  # for the relation of the entry
+          self.x_pos = x_pos  # to the screen in which it is place
+
 
 
      
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
+
+          """ places one textlist inside another textlist """
 
           for y in range(len(fromtextlist)):
                newline = totextlist[y_start+y][0:x_start]
@@ -122,6 +129,8 @@ class ScrollPad:
           return totextlist
 
      def add_line (self,lines=1):
+
+          """adds a new line to the end of the text list"""
           
           self.textlist += [' '*self.width]*lines
          
@@ -210,6 +219,8 @@ class ScrollPad:
 
 
      def put_char (self,char,y=None,x=None,insert=True):
+
+          """ places a character in the textlist """
           if y is None:
                y = self.cursor_y
           if x is None:
@@ -221,6 +232,8 @@ class ScrollPad:
           self.window.refresh()
 
      def finalize (self):
+
+          """ returns a list of strings of equal length """
 
           def force_length (line='',length=0):
 
@@ -244,6 +257,11 @@ class ScrollPad:
                
      
      def cascade (self,line_from=0):
+
+          """ carries over a word partially crossed over
+          the right margin down to the next line
+          Repeats for subsequent lines.
+          """
 
           for y in range(line_from,len(self.textlist)-1):
 
@@ -284,6 +302,8 @@ class ScrollPad:
 
      def reverse_cascade (self,line_to=0):
 
+          """Fills in spaces in the lines above with complete words"""
+
 
           for y in range(line_to,len(self.textlist)-1):
                if y < len(self.textlist)-1:
@@ -297,6 +317,8 @@ class ScrollPad:
 
 
      def put_all (self):
+
+          """Displays a sections of the textlist in the window"""
 
 
           text_line = self.top_line
@@ -327,9 +349,15 @@ class ScrollPad:
                     
 
      def type (self,framelist=None,y_offset=0):
+
+          """For text extry"""
+          
           go_on = True
           inserting = False
-          lastkey = 0
+          #If true, then the loop repeats only once.
+          #For entering a single note, called from the main program.
+          
+          lastkey = 0  #Previous key entered
 
 
           while go_on:
@@ -420,7 +448,7 @@ class EmptyMovingWindow (MovingWindow):
 
 
 
-     def __init__ (self,textlist=None,object_dict=None,y_dim=300,x_dim=300):
+     def __init__ (self,textlist=None,object_dict=None,y_dim=5000,x_dim=5000):
 
  
 
@@ -443,6 +471,8 @@ class EmptyMovingWindow (MovingWindow):
 
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
 
+          """ Placed one list within another list"""
+
           for y in range(len(fromtextlist)):
                newline = totextlist[y_start+y][0:x_start]
                for x in range(len(fromtextlist[0])):
@@ -457,6 +487,8 @@ class EmptyMovingWindow (MovingWindow):
      
      def transform_dictionary (self,dictionaryobject=None,fromprefix='$',toprefix='$$'):
 
+          """Changes the prefix before a key in dictionary"""
+
           if dictionaryobject is None:
                dictionaryobject = self.object_dict
           for oldkey in list(dictionaryobject):
@@ -467,6 +499,9 @@ class EmptyMovingWindow (MovingWindow):
                
      
      def make_rectangle (self,height,width,blank=False,divider=0):
+
+          """Creates a block character rectangle of the given dimension"""
+          
           textlist = []
           if not blank:
                for y in range(0,height):
@@ -485,6 +520,10 @@ class EmptyMovingWindow (MovingWindow):
           return textlist
 
      def new_note (self,y_coord,x_coord,height=30,width=30,totextlist=None,blank=False,divider=0):
+
+          """Creates a frame for a new note """
+
+          
           skip = [' ']
           if blank:
                skip = []
@@ -499,6 +538,8 @@ class EmptyMovingWindow (MovingWindow):
 
      def extend (self,top_ex=0,bottom_ex=0,left_ex=0,right_ex=0):
 
+          """Enlarges the textlist"""
+
           for y in range(len(self.textlist)):
                self.textlist[y] = left_ex*' ' + self.textlist[y] + right_ex *' '
           if self.textlist:
@@ -507,25 +548,30 @@ class EmptyMovingWindow (MovingWindow):
           else:
                return 0,0
 
-          for obj in self.object_dict:
+          if top_ex != 0 and left_ex != 0:
+               # to move objects if top row or left column added 
 
-               if 'p' in self.object_dict[obj]:
+               for obj in self.object_dict:
 
-                    positions = self.object_dict[obj]['p']
-                    up_bound = positions[0]
-                    left_bound = positions[1]
-                    down_bound = positions[2]
-                    right_bound = positions[3]
-                    up_bound += top_ex
-                    down_bound += top_ex
-                    left_bound += left_ex
-                    right_bound += left_ex
-                    self.object_dict[obj]['p'] = (up_bound,left_bound,down_bound,right_bound)
+                    if 'p' in self.object_dict[obj]:
+
+                         positions = self.object_dict[obj]['p']
+                         up_bound = positions[0]
+                         left_bound = positions[1]
+                         down_bound = positions[2]
+                         right_bound = positions[3]
+                         up_bound += top_ex
+                         down_bound += top_ex
+                         left_bound += left_ex
+                         right_bound += left_ex
+                         self.object_dict[obj]['p'] = (up_bound,left_bound,down_bound,right_bound)
                             
           return len(self.textlist),x_total
 
 
      def trim (self,top_tr=0,bottom_tr=0,left_tr=0,right_tr=0):
+
+          """ Eliminates empty rows and columns"""
 
           def establish_margins():
 
@@ -538,33 +584,40 @@ class EmptyMovingWindow (MovingWindow):
                left_found = False
                right_found = False
 
-               while (len(self.textlist) > top_margin + bottom_margin) and \
-                     self.textlist and \
-                     (len(self.textlist[0]) > left_margin + right_margin) and \
-                     not (top_found and bottom_found and left_found and right_found):
 
-                    if not top_found and  not self.textlist[top_margin].strip(' '):
-                         top_margin += 1
-                    else:
-                         top_found = True
+               for top_margin, y in enumerate(self.textlist):
+                    if y.count(' ') != len(y):
+                         break
 
-                    if not bottom_found and not self.textlist[-bottom_margin-1].strip(' '):
-                         bottom_margin += 1
-                    else:
-                         bottom_found = True
+               for bottom_margin, y in enumerate(reversed(self.textlist)):
+                    if y.count(' ') != len(y):
+                         break
 
-                    for y in range(len(self.textlist)):
-                         if self.textlist[y][left_margin] != ' ':
-                              left_found = True
-                         if list(reversed(self.textlist[y]))[right_margin] != ' ':
-                              right_found = True
-                    if not left_found:
-                         left_margin += 1
-                    if not right_found:
-                         right_margin += 1
+               left_margins = []
+               right_margins = []
+
+               for line in self.textlist[top_margin:len(self.textlist) - bottom_margin]:
+                         for left_margin, x in enumerate(line):
+                              if x != ' ':
+                                   left_margins.append(left_margin)
+                         for right_margin, x in enumerate(reversed(line)):
+                              if x != ' ':
+                                   right_margins.append(right_margin)
+
+               if left_margins and right_margins:
+               
+                    left_margin = min(left_margins)
+                    right_margin = max(right_margins)
+               else:
+                    left_margin = len(self.textlist[0])
+                    right_margin = len(self.textlist[0])
+               
+
                return top_margin,left_margin,bottom_margin,right_margin
-
+               
+                         
           top_margin,left_margin,bottom_margin,right_margin = establish_margins()
+          
           if top_tr != -1:
                top_tr = min ([top_tr,top_margin])
           else:
@@ -582,16 +635,8 @@ class EmptyMovingWindow (MovingWindow):
           else:
                right_tr = right_margin 
 
-          if bottom_tr != 0:
-               self.textlist = self.textlist[top_tr:-bottom_tr]
-          else:
-               self.textlist = self.textlist[top_tr:]
-
-          if right_tr != 0:
-               
-               self.textlist = [line[left_tr:-right_tr] for line in self.textlist]
-          else:
-               self.textlist = [line[left_tr:] for line in self.textlist]
+          self.textlist = self.textlist[top_tr:len(self.textlist)-bottom_tr]
+          self.textlist = [line[left_tr:len(line)-right_tr] for line in self.textlist]
 
 
 
@@ -619,6 +664,8 @@ class EmptyMovingWindow (MovingWindow):
           
      def dimensions (self,textlist):
 
+          """Find dimensions of textlist"""
+
           x = max([len(l) for l in textlist])
           
           textlist = [l + (x-len(l))*' ' for l in textlist]
@@ -627,6 +674,8 @@ class EmptyMovingWindow (MovingWindow):
 
 
      def find_object_in (self,y_pos,x_pos):
+
+          """Find if the coordinates are inside an object, and return the object"""
 
           
           for obj in self.object_dict:
@@ -647,6 +696,9 @@ class EmptyMovingWindow (MovingWindow):
                     
      def is_clear (self,y_pos,x_pos,y_dim,x_dim):
 
+          """Test to see a new object overlaps with existing objects"""
+          # y_dim = dimension of object 
+
           if y_pos <=1 or x_pos <=1:
                return False
 
@@ -654,14 +706,17 @@ class EmptyMovingWindow (MovingWindow):
                
                return False
           
-          for y in range(0,y_dim):
-               for x in range(0,x_dim):
+          for y in range(0,y_dim+1):
+               for x in range(0,x_dim+1):
                     if self.textlist[y_pos+y][x_pos+x] != ' ':
                          return False
           else:
                return True
 
      def is_clear_quick (self,y_pos,x_pos,y_dim,x_dim,dict_object=None):
+
+          """ A quicker version; Needs to be debugged """
+          
           if dict_object is None:
                dict_object = self.object_dict
 
@@ -678,12 +733,14 @@ class EmptyMovingWindow (MovingWindow):
                if y_pos >= up_bound or \
                   y_pos + y_dim <= down_bound or \
                   x_pos >= left_bound or \
-                  x+pos + x_dim <= right_bound:
+                  x_pos + x_dim <= right_bound:
                     return False
           return True 
                
 
-     def find_clear (self,height,width,start_y=0,start_x=0,from_corner=False):
+     def find_clear (self,height,width,start_y=0,start_x=0,from_corner=True):
+
+          """ Finds a clear space to locate an object. Some issues with it"""
 
           def square_generator(increment=50,start_y=0,start_x=0):
 
@@ -722,7 +779,7 @@ class EmptyMovingWindow (MovingWindow):
                     diagn.append((y,x))
                     if self.is_clear(y_pos=y,x_pos=x,y_dim=height,x_dim=width):
                          return y,x
-               return str(diagn)
+               return False,False
 
           else:
                diagn = []
@@ -731,10 +788,12 @@ class EmptyMovingWindow (MovingWindow):
                     if self.is_clear(y_pos=y,x_pos=x,y_dim=height,x_dim=width):
                          
                          return y,x
-               return str(diagn)
+               return False,False
 
 
      def add_from_stack (self,y_st=0,x_st=0):
+
+          """ Add a note into the pad from a stack of objects"""
 
  
 
@@ -751,10 +810,9 @@ class EmptyMovingWindow (MovingWindow):
                return False
           note1, height, width = self.dimensions(note1)
 
-          try:
-               y_pos,x_pos = self.find_clear(height,width,y_st,x_st)
-          except:
-               return False
+
+          y_pos,x_pos = self.find_clear(height,width,y_st,x_st)
+
           if isinstance(y_pos,int):
                if not note2:
                     
@@ -762,10 +820,15 @@ class EmptyMovingWindow (MovingWindow):
                     self.add_object(index,new_object_list=note1,y_pos=y_pos,x_pos=x_pos,l_prop=keywords)
                else:
                     self.add_object(index,new_object_list=note1,new_object_list2=note2,y_pos=y_pos,x_pos=x_pos,l_prop=keywords)
-                    
-          return False
+
+          else:
+               self.import_note(popped[0:3])
+          
                     
      def show_notes (self):
+
+          """Show all the notes in the pad"""
+          
           returnlist = []
           for n in self.object_dict:
 
@@ -778,40 +841,84 @@ class EmptyMovingWindow (MovingWindow):
                                       + str(coords[3]))
           return '\n'.join(returnlist)
 
-     def move_object (self,indexes=None,vert_inc=0,hor_inc=0):
+     def move_object (self,indexes=None,vert_inc=0,hor_inc=0,auto=False):
+
+          """To move an object.  Accepts a list of indexes"""
+
+          def directional_clear (up_bound,left_bound,height,width,vert_inc,hor_inc):
+
+               vert_result = True
+               hor_result = True
+               if vert_inc < 0:
+                    vert_result = self.is_clear(up_bound-(abs(vert_inc)+(2*auto)),left_bound,abs(vert_inc*auto)+(2*auto),width)
+               elif vert_inc > 0:
+                    vert_result = self.is_clear(up_bound+height+abs(vert_inc)+(2*auto),left_bound,abs(vert_inc)+(2*auto),width)
+
+               if hor_inc < 1:
+                    hor_result = self.is_clear(up_bound,left_bound-(abs(hor_inc)-+(2*auto)),height,abs(hor_inc)+(2*auto))
+               elif hor_inc > 1:
+                    hor_result = self.is_clear(up_bound,left_bound+abs(hor_inc),height,abs(hor_inc)++(2*auto))
+
+
+               return vert_result and hor_result
+          
+                    
+
+          
+
+
 
           for index in indexes:
 
                if index in self.object_dict and 'p' in self.object_dict[index]:
+
                     
-                    positions = self.object_dict[index]['p']
+                    
+                    positions = list(self.object_dict[index]['p'])
                     up_bound = positions[0]
                     left_bound = positions[1]
                     down_bound = positions[2]
                     right_bound = positions[3]
+
+                    old_up_bound = up_bound
+                    old_left_bound = left_bound
                     height = down_bound - up_bound
                     width = right_bound - left_bound
                     up_bound += vert_inc
                     down_bound += vert_inc
                     left_bound += hor_inc
                     right_bound += hor_inc
-                    
-                    if self.find_clear(height,width,up_bound,left_bound):
-                         
-                         obj = self.object_dict[index]
 
-                         self.delete_object(index)
+                    obj = copy.deepcopy(self.object_dict[index])
+
+                    self.delete_object(index)
+                    if self.is_clear(up_bound-(1*auto),left_bound-(1*auto),height+(2*auto),width+(2*auto)):
+##                    if directional_clear(up_bound,left_bound,height,width,vert_inc,hor_inc):
+##
+
+                         
+                         
+                         
                          self.add_object (index,new_object_list=obj['o'],
                                           new_object_list2=obj['oo'],
                                           l_prop=obj['l'],
                                           x_prop=obj['x'],
                                           y_pos=up_bound,
                                           x_pos=left_bound)
-                    
+                    else:
+                         self.add_object (index,new_object_list=obj['o'],
+                                          new_object_list2=obj['oo'],
+                                          l_prop=obj['l'],
+                                          x_prop=obj['x'],
+                                          y_pos=old_up_bound,
+                                          x_pos=old_left_bound)
+
 
          
 
      def delete_object(self,index=''):
+
+          """To delete an object"""
           
           if index in self.object_dict and 'p' in self.object_dict[index]:
                positions = self.object_dict[index]['p']
@@ -839,6 +946,8 @@ class EmptyMovingWindow (MovingWindow):
                     
                     y_pos=0,
                     x_pos=0):
+
+          """To add an object into the pad"""
           
           index = str(index)
           if l_prop is None:
@@ -874,7 +983,11 @@ class EmptyMovingWindow (MovingWindow):
           
 
      def import_note (self,index,show_note=None,full_note=None,keyset=None):
+
+          """To import a note into the stack."""
+          
           self.note_stack.add((str(index),show_note,full_note,keyset))
+
           
      def display (self,y_pos=0,x_pos=0):
           if not self.note_state.exists():
@@ -888,10 +1001,15 @@ class EmptyMovingWindow (MovingWindow):
           self.add_object(index,note,y_pos,x_pos)
 
      def objects_in_stack (self):
+
+          """Returns objects in the stack"""
+          
           return self.note_stack.size()
           
           
      def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1,entering=False):
+
+          """Main loop"""
 
           
           def put(y_pos,x_pos):
@@ -959,10 +1077,16 @@ class EmptyMovingWindow (MovingWindow):
           cycling = False
           once_through = False
           while go_on and not once_through:
-               self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=20)
-               self.print_to(screen,', '.join(sorted(self.object_dict.keys())),length=30,y_pos=1,x_pos=62)
+               self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=25)
+               self.print_to(screen,', '.join(reversed(sorted(self.object_dict.keys()))),length=35,y_pos=1,x_pos=62)
                self.print_to(screen,', '.join(objects_to_move),length=30,y_pos=1,x_pos=31)
-               self.print_to(screen,'CYCLING'*cycling+' '+'MOVING OBJECTS'*moving_object+' '+'MOVING SCREEN'*moving_screen_too+' '+'EXTENDING'*extending+' '+'CONTRACTING'*contracting+'CUR'*cursor_move,
+               self.print_to(screen,str(len(self.object_dict.keys()))+'/'+str(self.objects_in_stack()),length=3,y_pos=1,x_pos=1)
+               self.print_to(screen,'CYCLING'*cycling
+                             +' '+'MOVING OBJECTS'*moving_object
+                             +' '+'MOVING SCREEN'*moving_screen_too
+                             +' '+'EXTENDING'*extending+' '
+                             +'CONTRACTING'*contracting
+                             +'CUR'*cursor_move,
                              length=90,y_pos=y_max-3,x_pos=1)
                
                
@@ -972,8 +1096,7 @@ class EmptyMovingWindow (MovingWindow):
                          self.add_from_stack(y_coord,x_coord)
                          curses.beep()
                     else:
-                         if stack_dump and not self.note_stack.exists():
-                              stack_dump = False
+                         stack_dump = False
                     
                else:
                     if not entering:
@@ -1212,8 +1335,54 @@ class EmptyMovingWindow (MovingWindow):
                          self.size -= 1
                     elif key == ord('v'):
                          self.size += 1
+                    elif key == ord('m'):
+                         screen.nodelay(True)
+
+                         old_textlist = list(self.textlist)
+                         old_object_dict = copy.deepcopy(self.object_dict)
+
+                         temp_dict = {}
+
+
+                         for counter,temp_ind in enumerate(self.object_dict):
+
+                              positions = self.object_dict[temp_ind]['p']
+                              y_p = positions[0]
+                              x_p = positions[1]
+                              y_d = positions[2]-positions[0]
+                              x_d = positions[3]-positions[1]
+
+                              temp_dict[counter] = (temp_ind,find_direction(y_p,x_p,y_d,x_d,0,function=lambda a,b,c,d:True))
+                              
+                              
+
+                         iteration = 0
+                         key_pressed = -1
+                         try:
+                              while key_pressed == -1:
+                                   key_pressed = screen.getch()
+                                   iteration += 1
+                                   for counter in list(temp_dict.keys()):
+                                        temp_tup = temp_dict[counter]
+                                        
+                                        dummy1,dummy2,y_inc,x_inc,counter = next(temp_tup[1])
+     ##                                   if iteration % 10 == 0:
+     ##                                        self.print_to(screen,str((dummy1,dummy2,y_inc,x_inc,counter))+'   ',y_pos=3,x_pos=1)
+                                        
+                                   
+                                        self.move_object([temp_tup[0]],y_inc,x_inc,auto=True)
+                                   put(y_coord,x_coord)
+                                   if iteration == 10000:
+                                        break
+                         except:
+                              pass
+                         screen.nodelay(False)
+                         if key_pressed != ord('m'):
+                              self.textlist = old_textlist
+                              self.object_dict = old_object_dict
+                                   
                     
-               self.print_to(screen,str(x_coord)+'/'+str(x_total)+' : '+str(y_coord)+'/'+str(y_total),y_pos=1,x_pos=2)
+               self.print_to(screen,str(x_coord)+'/'+str(x_total)+' : '+str(y_coord)+'/'+str(y_total),y_pos=1,x_pos=7)
                 
 
                if y_coord < 0:
@@ -1238,9 +1407,9 @@ class EmptyMovingWindow (MovingWindow):
                put(y_coord,x_coord)
 
 
-          if entering:
-               self.add_from_stack(y_coord,x_coord)
-               once_through = True
+               if entering:
+                    self.add_from_stack(y_coord,x_coord)
+                    once_through = True
           return  y_coord,x_coord,self.object_dict,self.textlist
               
 
