@@ -467,7 +467,8 @@ class EmptyMovingWindow (MovingWindow):
           self.size = 5
           self.note_stack = Stack()
           self.added_notes = {0}
-          self.cycling_through = None 
+          self.cycling_through = None
+          self.get_margins = True 
 
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
 
@@ -615,28 +616,30 @@ class EmptyMovingWindow (MovingWindow):
 
                return top_margin,left_margin,bottom_margin,right_margin
                
-                         
-          top_margin,left_margin,bottom_margin,right_margin = establish_margins()
+          if self.get_margins:              
+               self.top_margin,self.left_margin,self.bottom_margin,self.right_margin = establish_margins()
+               self.get_margins = False 
           
           if top_tr != -1:
-               top_tr = min ([top_tr,top_margin])
+               top_tr = min ([top_tr,self.top_margin])
           else:
-               top_tr = top_margin
+               top_tr = self.top_margin
           if bottom_tr != -1:
-               bottom_tr = min ([bottom_tr,bottom_margin])
+               bottom_tr = min ([bottom_tr,self.bottom_margin])
           else:
-               bottom_tr = bottom_margin
+               bottom_tr = self.bottom_margin
           if left_tr != -1:
-               left_tr = min ([left_tr,left_margin])
+               left_tr = min ([left_tr,self.left_margin])
           else:
-               left_tr = left_margin
+               left_tr = self.left_margin
           if right_tr != -1:
-               right_tr = min ([right_tr,right_margin])
+               right_tr = min ([right_tr,self.right_margin])
           else:
-               right_tr = right_margin 
+               right_tr = self.right_margin 
 
           self.textlist = self.textlist[top_tr:len(self.textlist)-bottom_tr]
           self.textlist = [line[left_tr:len(line)-right_tr] for line in self.textlist]
+          self.get_margins = True
 
 
 
@@ -694,10 +697,15 @@ class EmptyMovingWindow (MovingWindow):
      
 
                     
-     def is_clear (self,y_pos,x_pos,y_dim,x_dim):
+     def is_clear (self,y_pos,x_pos,y_dim,x_dim,thorough=True):
 
           """Test to see a new object overlaps with existing objects"""
-          # y_dim = dimension of object 
+          # y_dim = dimension of object
+
+          yrange = range(0,y_dim+1)
+          xrange_inner = list(range(1,x_dim))
+          xrange_outer = [0,x_dim]
+          xrange = xrange_inner + xrange_outer 
 
           if y_pos <=1 or x_pos <=1:
                return False
@@ -706,38 +714,20 @@ class EmptyMovingWindow (MovingWindow):
                
                return False
           
-          for y in range(0,y_dim+1):
-               for x in range(0,x_dim+1):
-                    if self.textlist[y_pos+y][x_pos+x] != ' ':
-                         return False
+          for y in yrange:
+               if thorough or y in [0,y_dim]:
+                    for x in xrange:
+                         if self.textlist[y_pos+y][x_pos+x] != ' ':
+                              return False
+               else:
+                    for x in xrange_outer:
+                         if self.textlist[y_pos+y][x_pos+x] != ' ':
+                              return False
+                         
           else:
                return True
 
-##     def is_clear_quick (self,y_pos,x_pos,y_dim,x_dim,dict_object=None):
-##
-##          """ A quicker version; Needs to be debugged """
-##          
-##          if dict_object is None:
-##               dict_object = self.object_dict
-##
-##          
-##
-##          for key_temp in dict_object:
-##
-##               positions = dict_object[key_temp]['p']
-##               up_bound = positions[0]
-##               left_bound = positions[1]
-##               down_bound = positions[2]
-##               right_bound = positions[3]
-##
-##               if ((y_pos >= up_bound and \
-##                  y_pos<= down_bound) or (y_pos+y_dim >= up_bound
-##                                          and y_pos_y_dim <=down_bound)) and \
-##                  ((x_pos >= left_bound and x_pos<= right_bound) or \
-##                  (x_pos + x_dim >= left_bound and x_pos + x_dim <= right_bound)):
-##                    
-##                    return False
-##          return True 
+
                
 
      def find_clear (self,height,width,start_y=0,start_x=0,from_corner=True):
@@ -873,7 +863,7 @@ class EmptyMovingWindow (MovingWindow):
                     obj = copy.deepcopy(self.object_dict[index])
 
                     self.delete_object(index)
-                    if self.is_clear(up_bound-(1*auto),left_bound-(1*auto),height+(2*auto),width+(2*auto)):
+                    if self.is_clear(up_bound-(1*auto),left_bound-(1*auto),height+(2*auto),width+(2*auto),thorough=False):
                          
                          
                          self.add_object (index,new_object_list=obj['o'],
@@ -912,6 +902,7 @@ class EmptyMovingWindow (MovingWindow):
                del self.object_dict[index]
                self.import_note(index,objecttext)
                self.cycling_through = cycle(self.object_dict.keys())
+          self.get_margins = True 
                     
                
 
@@ -925,6 +916,8 @@ class EmptyMovingWindow (MovingWindow):
                     x_pos=0):
 
           """To add an object into the pad"""
+
+          
           
           index = str(index)
           if l_prop is None:
@@ -954,6 +947,7 @@ class EmptyMovingWindow (MovingWindow):
                                           'l':l_prop,
                                           'x':x_prop}
                self.cycling_through = cycle(self.object_dict.keys())
+               self.get_margins = True 
                
           else:
                return False
@@ -1115,20 +1109,21 @@ class EmptyMovingWindow (MovingWindow):
                                    x_coord = positions[1]
                                 
                          elif extending or contracting:
+                              
                               up, down, left, right = ec_keys[key][0]*multiplier,\
                                                       ec_keys[key][1]*multiplier,\
                                                       ec_keys[key][2]*multiplier,\
                                                       ec_keys[key][3]*multiplier
-                              
-                              if extending:
-                                   x_total, y_total = self.extend(up,down,left,right)
+
                               if contracting:
                                    x_total, y_total = self.trim(up,down,left,right)
                                    if x_total < x_max:
                                         x_max = x_total
                                    if y_total < y_max:
                                         y_max = y_total
-
+                              elif extending:
+                                        x_total, y_total = self.extend(up,down,left,right)
+                                        
 
 
                          else:
