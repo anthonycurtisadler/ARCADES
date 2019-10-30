@@ -3,7 +3,7 @@ import curses
 import time
 from movingwindow import MovingWindow
 from stack import Stack 
-from math import sqrt
+from math import sqrt, cos, sin
 import winsound
 from globalconstants import BOX_CHAR
 import copy
@@ -11,6 +11,9 @@ from itertools import cycle
 from indexclass import Index
 from indexutilities import index_expand
 from randomdirection import find_direction
+from limitedstack import LimitedStack
+
+import random
 
 
 help_script = ['F2 = to enter a note']+['F3 = to extend dimensions']+\
@@ -95,7 +98,19 @@ class ScrollPad:
 
      """ A simple scroll pad/ text editor"""
 
-     def __init__(self,height=10,width=10,y_pos=5,x_pos=5,u_margin=0,l_margin=0,enframe=False,screen=None):
+     def __init__(self,
+                  height=10,
+                  width=10,
+                  y_pos=5,
+                  x_pos=5,
+                  u_margin=0,
+                  l_margin=0,
+                  enframe=False,
+                  screen=None,
+                  textlist=None,
+                  bufferobject_redo=None,
+                  bufferobject_undo=None):
+          
           self.height = height  # height of entry box
           self.width = width    # length of entry text
           self.top_line = 0     # the topline of displayed text
@@ -103,13 +118,51 @@ class ScrollPad:
           self.cursor_x = 0
           self.u_margin = u_margin  
           self.l_margin = l_margin 
-
-          self.textlist = [' ']*self.height   #the total text 
+          if textlist is None:
+               self.textlist = [' ']*self.height   #the total text
+          else: #for editing an existing note
+               self.textlist = textlist
+               self.width = min([self.width,max([len(x) for x in textlist])])
+               self.height = min([self.height,len(textlist)])
+##               if len(self.textlist) < self.height:
+##                    self.textlist += [' '] * (self.height - len(self.textlist))
+##                    
+##               
+               
           self.window = screen
           self.y_pos = y_pos  # for the relation of the entry
           self.x_pos = x_pos  # to the screen in which it is place
+          self.highlighted_coords = set()
+          self.selected_coords = set()
+          self.text_buffer = ''
+          if bufferobject_redo:
+               self.bufferobject_redo = bufferobject_redo
+          if bufferobject_undo:
+               self.bufferobject_undo = bufferobject_undo
+               
 
+     def copy_self (self):
+          return (list(self.textlist),
+                  set(self.highlighted_coords),
+                  set(self.selected_coords),
+                  self.height,self.width,
+                  self.top_line,
+                  self.cursor_y,
+                  self.cursor_x,
+                  self.y_pos,
+                  self.x_pos,
+                  self.text_buffer)
+     
+     def change_self (self,other):
 
+          if not other:
+               return 
+
+          self.textlist, self.highlighted_coords, self.selected_coords = list(other[0]),set(other[1]),set(other[2])
+
+          self.height, self.width, self.top_line = other[3],other[4],other[5]
+
+          self.cursor_y, self.cursor_x, self.y_pos, self.x_pos, self.text_buffer = other[6],other[7],other[8],other[9],other[10]
 
      
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
@@ -158,7 +211,10 @@ class ScrollPad:
           
           self.cursor_y += 1
           if add_to_line:
-               self.textlist[self.top_line+self.cursor_y] = add_to_line
+               if self.top_line+self.cursor_y < len(self.textlist):
+                    self.textlist[self.top_line+self.cursor_y] = add_to_line
+               else:
+                    self.textlist += [add_to_line]
                self.cursor_x = len(add_to_line)
           if self.cursor_y >= self.height:
      
@@ -201,7 +257,11 @@ class ScrollPad:
 
      def hard_return (self):
 
-          self.put_char ('\n')
+
+          line = self.textlist[self.cursor_y]
+          left_of = line[0:self.cursor_x]
+          right_of = line[self.cursor_x:]
+          self.textlist = self.textlist[0:self.cursor_y] + [left_of] + [right_of] + self.textlist[self.cursor_y+1:]
           self.cursor_x = 0
           self.move_down()
           
@@ -210,12 +270,14 @@ class ScrollPad:
 
           if self.cursor_x > 0:
                self.cursor_x -=1
-          elif self._cursor_x == 0:
+          else:  
                if self.cursor_y > 0:
-                    self.cursor_x = self.width-1
+                    self.cursor_x = len(self.textlist[self.cursor_y+self.top_line-1])
                     self.move_up()
-                    return 'BACK'
-               return 'START'
+               else:
+                    self.cursor_x = 0
+                    
+
 
 
      def put_char (self,char,y=None,x=None,insert=True):
@@ -226,10 +288,18 @@ class ScrollPad:
           if x is None:
                x = self.cursor_x
 
+          if 0 <= y < self.height and self.cursor_y+self.top_line < len(self.textlist) and 0 <= x < self.width:
 
-          self.textlist[self.cursor_y+self.top_line] = self.textlist[self.cursor_y+self.top_line][0:self.cursor_x]\
-                                                      +char+self.textlist[self.cursor_y+self.top_line][self.cursor_x+(not insert):]
-          self.window.refresh()
+
+               self.textlist[self.cursor_y+self.top_line] = self.textlist[self.cursor_y+self.top_line][0:self.cursor_x]\
+                                                           +char+self.textlist[self.cursor_y+self.top_line][self.cursor_x+(not insert):]
+               self.window.refresh()
+          else:
+               self.cursor_y -= 1
+               self.cursor_x -= 1
+
+               self.cursor_y = max([0,self.cursor_y])
+               self.cursor_x = max([0,self.cursor_x])
 
      def finalize (self):
 
@@ -251,11 +321,7 @@ class ScrollPad:
                     self.textlist = self.textlist[0:-1]
                else:
                     break
-                                             
-          
-
-               
-     
+ 
      def cascade (self,line_from=0):
 
           """ carries over a word partially crossed over
@@ -283,11 +349,42 @@ class ScrollPad:
                     self.textlist += self.textlist[-1][self.width:]
      
                     
+     def reverse_cascade (self,line_from=0):
+
+          """Fills in spaces in the lines above with complete words"""
+
+          def modified_strip(x):
+               if x.startswith('  '):
+                    return x
+               else:
+                    return x.lstrip()
+
+          for y in range(line_from,len(self.textlist)):
+               if y < len(self.textlist)-1:
+                    while True:
+                         remaining  = self.width - len(self.textlist[y].rstrip())
+                         word = ''
+                         if ' ' in self.textlist[y+1]:
+                              word = self.textlist[y+1].split(' ')[0]
+                         if word.strip() and len(word) < remaining:
+                              self.textlist[y] = modified_strip((self.textlist[y].rstrip() + ' ' + word.strip()))
+                              self.textlist[y+1] = modified_strip(' '.join(self.textlist[y+1].split(' ')[1:]))
+                              if not self.textlist[y+1].strip() and len(self.textlist)>y+2:
+                                   self.textlist = self.textlist[0:y+1]+self.textlist[y+2:]
+                         else:
+                              break
+                                                                         
+                                                                         
+
+
 ##     def reverse_cascade (self,line_to=0):
 ##
+##          """Fills in spaces in the lines above with complete words"""
+##
+##
 ##          for y in range(line_to,len(self.textlist)-1):
-##               while True:
-##                    if y < len(self.textlist)-1:
+##               if y < len(self.textlist)-1:
+##                    try:
 ##                         remaining  = self.width - len(self.textlist[y].rstrip())
 ##                         word = ''
 ##                         if ' ' in self.textlist[y+1]:
@@ -295,25 +392,8 @@ class ScrollPad:
 ##                         if word.strip() and len(word) < remaining:
 ##                              self.textlist[y] = self.textlist[y].rstrip() + ' ' + word
 ##                              self.textlist[y+1] = ' '.join(self.textlist[y+1].split(' ')[1:])
-##                         else:
-##                              break
-##                    else:
-##                         break
-
-     def reverse_cascade (self,line_to=0):
-
-          """Fills in spaces in the lines above with complete words"""
-
-
-          for y in range(line_to,len(self.textlist)-1):
-               if y < len(self.textlist)-1:
-                    remaining  = self.width - len(self.textlist[y].rstrip())
-                    word = ''
-                    if ' ' in self.textlist[y+1]:
-                         word = self.textlist[y+1].split(' ')[0]
-                    if word.strip() and len(word) < remaining:
-                         self.textlist[y] = self.textlist[y].rstrip() + ' ' + word
-                         self.textlist[y+1] = ' '.join(self.textlist[y+1].split(' ')[1:])
+##                    except:
+##                         pass
 
 
      def put_all (self):
@@ -336,7 +416,7 @@ class ScrollPad:
                          except:
                               add_char = ' '
                          
-                         if y==self.cursor_y and x==self.cursor_x:
+                         if (y==self.cursor_y and x==self.cursor_x) or (y+self.top_line,x) in self.highlighted_coords:
                               self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_REVERSE)
                               
                          else:
@@ -345,30 +425,147 @@ class ScrollPad:
                     self.window.refresh()
                     y += 1
                text_line += 1
-               
+
+     def collect_text(self,gather=True,delete=False):
+
+          if not self.selected_coords:
+               return ''
+          temp_list =  sorted(list(self.selected_coords))
+          
+          
+          starting = True
+          line_at = 0
+          returntext = ''
+          for temp_xy in temp_list:
+               if starting:
+                    line_at = temp_xy[0]
+                    starting = False
+               if temp_xy[0] > line_at:
+                    returntext += '\n'
+                    line_at = temp_xy[0]
                     
+               returntext += temp_xy[2]
+
+
+
+          if delete:
+               temp_list.sort(key=lambda x:(x[0],-x[1]))  #to make sure that text deletion is from left to right 
+               for temp_xy in temp_list:
+                         self.textlist[temp_xy[0]] = self.textlist[temp_xy[0]][0:temp_xy[1]]+self.textlist[temp_xy[0]][temp_xy[1]+1:]
+
+          old_textlist = list(self.textlist)
+          self.textlist = [x for x in self.textlist if x.strip()]
+          self.textlist += (len(old_textlist)-len(self.textlist))*[' ']
+          self.selected_coords, self.highlighted_coords = set(), set()
+          
+          return returntext
+        
+
+     def get_highlighted(self,start_yx=None,end_yx=None):
+
+          
+          def get_coords (y,up_to=None,after=None,line=None):
+               returnset = set()
+               if up_to and not after:
+                    for x_temp in range(0,up_to+1):
+                         if x_temp < len(line):
+                              returnset.add((y,x_temp,line[x_temp]))
+               elif after:
+                    if after < len(line):
+                         if not up_to:
+                              for x_temp in range(after,len(line)):
+                                   returnset.add((y,x_temp,line[x_temp]))
+                         elif up_to > after:
+                              for x_temp in range(after,up_to):
+                                   returnset.add((y,x_temp,line[x_temp]))
+                         else:
+                              for x_temp in range(up_to,after):
+                                   returnset.add((y,x_temp,line[x_temp]))
+                         
+                              
+                              
+               else:
+                    for x_temp in range(0,len(line)):
+                         returnset.add((y,x_temp,line[x_temp]))
+               return returnset
+          if not start_yx or not end_yx:
+               return set(),set()
+          returnset = set()
+          if start_yx > end_yx:
+               start_yx, end_yx = end_yx, start_yx
+          if start_yx == end_yx:
+               return set(),set()
+          if  start_yx[0] != end_yx[0]:
+               for y_temp in range(start_yx[0],end_yx[0]+1):
+   
+                    if y_temp == start_yx[0]:
+                         returnset.update(get_coords(y_temp,after=start_yx[1],line=self.textlist[y_temp]))
+                    elif y_temp == end_yx[0]:
+                         returnset.update(get_coords(y_temp,up_to=end_yx[1],line=self.textlist[y_temp]))
+                    else:
+                         returnset.update(get_coords(y_temp,line=self.textlist[y_temp]))
+          else:
+
+               returnset.update(get_coords(start_yx[0],after=start_yx[1],up_to=end_yx[1],line=self.textlist[start_yx[0]]))
+          
+          return {x[0:2] for x in returnset},returnset 
 
      def type (self,framelist=None,y_offset=0):
 
+          
           """For text extry"""
+
+          def clear_selected():
+
+               return 
+
+               self.highlighted_coords, self.selected_coords = set(),set()
+
           
           go_on = True
           inserting = False
+          highlighting = False
+          select_from_xy = None
+          select_to_xy = None
+          backspace_starting = True
           #If true, then the loop repeats only once.
           #For entering a single note, called from the main program.
+          changed = False
+
           
           lastkey = 0  #Previous key entered
 
 
           while go_on:
-               self.put_all()
-               key = self.window.getch()
+               if select_from_xy:
+                    # if a selection has been initiated
+
+                    temp_set = self.get_highlighted(select_from_xy,(self.cursor_y+self.top_line,self.cursor_x))
+                    self.highlighted_coords = temp_set[0]
+                    self.selected_coords = temp_set[1]
+                    
+                    
+               self.put_all()  # display the concepts of the screen
+               key = self.window.getch()  # get a character 
+               
+               changed = True 
 
                if key == curses.KEY_ENTER or key == 10 or key == 13:
+                    # hard return
                     self.hard_return()
+                    clear_selected()
+                    
                elif key in keys:
+                    changed = False
+                    if highlighting:
+                         # if highlighting, then keep track of cursor position
+                         self.highlighted_coords.add((self.cursor_y+self.top_line,self.cursor_x))
+                         if self.cursor_y+self.top_line < len(self.textlist) and self.cursor_x < len(self.textlist[self.cursor_y+self.top_line]):
+                              self.selected_coords.add((self.cursor_y+self.top_line,self.cursor_x,self.textlist[self.cursor_y+self.top_line][self.cursor_x]))
+                    
 
                     if self.cursor_x < self.width:
+                         # moves the cursor horizontally
                          self.cursor_x += keys[key][1]
                          if self.cursor_x == self.width:
                               self.cursor_x = 0
@@ -376,17 +573,85 @@ class ScrollPad:
                                    self.cursor_y += 1
                                    if self.cursor_y == self.height - 1:
                                         self.move_up()
+                         if self.cursor_x < 0:
+                              self.move_left()
+
                     
                          
                     if self.cursor_y < self.height:
+                         # moves the cursor vertically
                          self.cursor_y += keys[key][0]
                          if self.cursor_y == self.height:
-                              self.move_up()
-                    else:
-                         if key == curses.KEY_UP:
-                              self.move_up
+                              self.scroll_down()
+                              self.cursor_y = self.height-1
+
+                         elif self.cursor_y < 0:
+                              self.cursor_y = 0
+                              self.scroll_up()
+
+  
+                              
                          
                               
+                    else:
+                         if key == curses.KEY_UP:
+                              self.move_up 
+                         
+               elif key == 19:
+
+                    highlighting = not highlighting
+                    changed = False
+
+               elif key == 27:
+                    # initiate selecting 
+                    select_from_xy = (self.cursor_y+self.top_line,self.cursor_x)
+                    
+               elif key == 29:
+                    # conclude selecting
+                    if select_from_xy:
+                         select_to_xy = (self.cursor_y+self.top_line,self.cursor_x)
+                         if select_from_xy == select_to_xy:
+                              select_from_xy, select_to_xy = None,None
+                              
+
+                         else:
+                              self.selected_coords.update(self.get_highlighted(select_from_xy,(self.cursor_y+self.top_line,self.cursor_x))[1])
+                              select_from_xy, select_to_xy = None,None
+
+               elif key == 3:
+                    # to copy
+                    if self.selected_coords:
+                         self.text_buffer = self.collect_text()
+                    self.selected_coords = set()
+               elif key == 24:
+                    # to cut
+                    if self.selected_coords:
+                         self.text_buffer = self.collect_text(delete=True)
+                    self.selected_coords = set()
+               elif key == 22:
+                    # to paste
+                    
+                    if  '\n' not in self.text_buffer:
+                         if self.cursor_y+self.top_line < len(self.textlist) and self.cursor_x < self.textlist[self.cursor_y+self.top_line]:
+                              self.textlist[self.cursor_y+self.top_line] = self.textlist[self.cursor_y+self.top_line][0:self.cursor_x] +\
+                                                                           self.text_buffer +\
+                                                                           self.textlist[self.cursor_y+self.top_line][self.cursor_x:]
+
+                    elif self.cursor_y+self.top_line+1 < len(self.textlist):
+                         self.buffer_lines = self.text_buffer.split('\n')
+                         self.textlist[self.cursor_y+self.top_line] = self.textlist[self.cursor_y+self.top_line] + self.buffer_lines[0]
+                         self.textlist[self.cursor_y+self.top_line+1] = self.buffer_lines[-1] + self.textlist[self.cursor_y+self.top_line+1]
+                         if len(self.buffer_lines) > 2:
+                              self.textlist = self.textlist[0:self.cursor_y+self.top_line+1] + self.buffer_lines[1:-1] + self.textlist[self.cursor_y+self.top_line+1:]
+                               
+                    self.cascade(self.cursor_y+self.top_line)
+                    changed = True
+                    
+                    
+                              
+                              
+                    
+               
 
                elif key == curses.KEY_INSERT:
                     inserting = not inserting
@@ -395,21 +660,52 @@ class ScrollPad:
                     self.scroll_down()
                elif key == 1: ##ctr s
                     self.scroll_up()
-               elif 0 <= key < 255:
+               elif 30 <= key < 255:
                     self.put_char(str(chr(key)),insert=inserting)
 
                     self.move_right(str(chr(key)))
                     
-                    if len(self.textlist[self.top_line + self.cursor_y].rstrip()) > self.width:
+                    if self.cursor_y + self.top_line < len(self.textlist) and len(self.textlist[self.top_line + self.cursor_y].rstrip()) > self.width:
                          self.cascade(self.top_line + self.cursor_y)
+                    clear_selected()
+               elif key == curses.KEY_TAB:
+                    for x in range(6):
+                         self.put_char(' ',insert=True)
+
+                         self.move_right(' ')
+                         
+                         if len(self.textlist[self.top_line + self.cursor_y].rstrip()) > self.width:
+                              self.cascade(self.top_line + self.cursor_y)
+                         clear_selected()
+                    
                elif key in [curses.KEY_DELETE, curses.KEY_BACKSPACE]:
-                    if len(self.textlist[self.top_line + self.cursor_y]) >= self.cursor_x and self.cursor_x > 0:
-                         self.textlist[self.top_line + self.cursor_y] = self.textlist[self.top_line + self.cursor_y][0:self.cursor_x-1] + \
-                                                                        self.textlist[self.top_line + self.cursor_y][self.cursor_x:]
-                         self.move_left()
-                    if len(self.textlist[self.top_line + self.cursor_y].replace('\n','').rstrip()) == 0 and len(self.textlist) > self.top_line + self.cursor_y:
+                    # to delete 
+                    backspace_starting = True
+                    if ((self.top_line + self.cursor_y) < len(self.textlist)
+                        and len(self.textlist[self.top_line + self.cursor_y]) >= self.cursor_x):
+                         if self.cursor_x > 0:
+                              self.textlist[self.top_line + self.cursor_y] = self.textlist[self.top_line + self.cursor_y][0:self.cursor_x-1] + \
+                                                                             self.textlist[self.top_line + self.cursor_y][self.cursor_x:]
+                              
+                              self.move_left()
+                         elif self.cursor_y > 0:
+                             temp_cursor_x = min([len(self.textlist[self.top_line + self.cursor_y-1]),self.width])
+                             self.textlist[self.top_line + self.cursor_y-1] = self.textlist[self.top_line + self.cursor_y-1] + ' ' + \
+                                                                              self.textlist[self.top_line + self.cursor_y].lstrip().split(' ')[0]
+                             if len(self.textlist[self.top_line + self.cursor_y].lstrip().split(' ')) > 0:
+                                  self.textlist[self.top_line + self.cursor_y] = ' '.join(self.textlist[self.top_line + self.cursor_y].lstrip().split(' ')[1:])
+                             else: 
+                                  self.textlist = self.textlist[0:self.top_line + self.cursor_y] + self.textlist[self.top_line + self.cursor_y+1:] + [' ']
+                         
+                             self.cursor_y -=1
+                             self.cursor_x = temp_cursor_x
+                                               
+                    if len(self.textlist[self.top_line + self.cursor_y].replace('\n','')) == 0 and len(self.textlist) > self.top_line + self.cursor_y:
                          self.textlist = self.textlist[0:self.top_line+self.cursor_y] + self.textlist[self.top_line+self.cursor_y+1:]
-                         self.textlist += ['']
+                         self.textlist += [' ']
+                             
+
+                    clear_selected()
                               
 
                          
@@ -423,15 +719,37 @@ class ScrollPad:
                     self.cursor_y = self.height - 1
                     self.cursor_x = self.width - 1
                     self.top_line = len(self.textlist)-self.height
+
+               elif key == 21:
+
+                    self.bufferobject_redo.add(self.copy_self())
+                    self.change_self(self.bufferobject_undo.get())
+                    changed = False
+                    
+               elif key == 18:
+                    self.bufferobject_undo.add(self.copy_self())
+                    self.change_self(self.bufferobject_redo.get())
+
+               else:
+                    changed = False
+
+               if key != curses.KEY_BACKSPACE and backspace_starting:
+                    self.cascade()
+                    self.reverse_cascade(self.top_line)
+                    backspace_starting = False
                     
                     
+               
                if key == curses.KEY_F1:
                     go_on = False
+
+               if changed:
+                    self.bufferobject_undo.add(self.copy_self())
 
                     
 
                self.window.addstr(3,3,'   '+str(key)+'   ')
-               self.reverse_cascade(self.top_line + self.cursor_y)
+
                lastkey = key
           self.cascade()
           self.finalize()
@@ -448,19 +766,17 @@ class EmptyMovingWindow (MovingWindow):
 
 
 
-     def __init__ (self,textlist=None,object_dict=None,y_dim=5000,x_dim=5000):
+     def __init__ (self,textlist=None,object_dict=None,y_dim=2000,x_dim=2000):
 
- 
-
-          if textlist is None:
-
-               self.textlist = [' '*x_dim]*y_dim
-          else:
-               self.textlist = list(textlist)
           if object_dict is None:
                self.object_dict = {}
           else:
                self.object_dict = copy.deepcopy(object_dict)
+          if textlist is None:
+               self.textlist = [' '*x_dim]*y_dim
+          else:
+               self.textlist = list(textlist)
+
           self.y_dim = y_dim
           self.x_dim = x_dim
           self.index = 0
@@ -468,7 +784,14 @@ class EmptyMovingWindow (MovingWindow):
           self.note_stack = Stack()
           self.added_notes = {0}
           self.cycling_through = None
-          self.get_margins = True 
+          self.get_margins = True
+
+     def populate (self,dict_object=None,totextlist=None):
+
+          for ind_temp in object_dict:
+               obj_list = dict_object[ind_temp]['o']
+               y,x = dict_object[ind_temp]['p'][0],dict_object[ind_temp]['p'][1]
+               self.put_in(y_start=y,x_start=x,fromtextlist=obj_list,totextlist=totextlist)
 
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
 
@@ -907,9 +1230,9 @@ class EmptyMovingWindow (MovingWindow):
                
 
      def add_object(self,index='',
-                    new_object_list=None,
-                    new_object_list2=None,
-                    l_prop=None,
+                    new_object_list=None, #the displayed text of note
+                    new_object_list2=None, #full text of note
+                    l_prop=None,           # keyset
                     x_prop=None,
                     
                     y_pos=0,
@@ -985,7 +1308,6 @@ class EmptyMovingWindow (MovingWindow):
 
           """Main loop"""
 
-          
           def put(y_pos,x_pos):
 
                if x_pos + x_max > x_total:
@@ -1050,6 +1372,8 @@ class EmptyMovingWindow (MovingWindow):
           cursor_move = False
           cycling = False
           once_through = False
+
+##          try:
           while go_on and not once_through:
                self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=25)
                self.print_to(screen,', '.join(reversed(sorted(self.object_dict.keys()))),length=35,y_pos=1,x_pos=62)
@@ -1150,8 +1474,12 @@ class EmptyMovingWindow (MovingWindow):
                          width = len(show_note[0])+2
                          height = len(show_note)+2
                          
-                         rectangle = self.make_rectangle (height=height,width=width,divider=0)
-                         rectangle = self.put_in (1,1,fromtextlist=show_note,totextlist=rectangle,skip=[' '])
+                         rectangle = self.make_rectangle (height=height,
+                                                          width=width,
+                                                          divider=0)
+                         rectangle = self.put_in (1,1,fromtextlist=show_note,
+                                                  totextlist=rectangle,
+                                                  skip=[' '])
                          
 
                          self.import_note (index='help',show_note=rectangle,full_note=rectangle,keyset={})
@@ -1160,21 +1488,91 @@ class EmptyMovingWindow (MovingWindow):
                          if contracting and extending:
                               extending = False
                     elif entering or key == curses.KEY_F2:
-
+                         divider = 3
+                         startnote = False
                          note_y_dim = 10
                          note_x_dim = 10
-                         if self.is_clear(y_coord+3,x_coord+3,note_y_dim,note_x_dim):
-                              frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=3)
+                         object_textlist = None
+                         object_keylist = None
+                         editing = ''
+                         if self.is_clear(y_coord+3,
+                                          x_coord+3,
+                                          note_y_dim,
+                                          note_x_dim):
+                              frame = self.new_note(y_coord+3,
+                                                    x_coord+3,
+                                                    note_y_dim,
+                                                    note_x_dim,
+                                                    divider=divider)
                               put(y_coord,x_coord)
                               divider = 3
-                              while True:
+                              startnote = True
+                         elif self.find_object_in(y_coord+3,x_coord+3):
+                              editing = '$$'
+                              
+                              
+                              obj = self.find_object_in(y_coord+3,x_coord+3)
+                              
+
+                              if obj and obj in self.object_dict:
+
+                                   positions = self.object_dict[obj]['p']
+                                   note_y_dim = positions[2] - positions[0]
+                                   note_x_dim = positions[3] - positions[1]
+                                   object_textlist = self.object_dict[obj]['o'] #the display text
+                                   if self.object_dict[obj]['oo'] and \
+                                      len(self.object_dict[obj]['oo']) > len(object_textlist):
+                                        object_textlist = self.object_dict[obj]['oo']  #the full text of the note                                         
+                                        object_keyset = self.object_dict[obj]['l']
+                                        object_keylist = [str(obj) + ' | ' + ', '.join(object_keyset),'']
+
+                                   
+
+                                   else:
+                                        # to extract information from an enframed note
+                                        object_keylist = '\n'.join(object_textlist).split(BOX_CHAR['lm'])[0]
+                                        object_textlist ='\n'.join(object_textlist).split(BOX_CHAR['rm'])[1]
+
+                                        
+
+                                        for char in BOX_CHAR:
+
+                                             object_keylist = object_keylist.replace(BOX_CHAR[char],'')
+                                             object_textlist = object_textlist.replace(BOX_CHAR[char],'')
+                                        object_keylist = [x.rstrip() for x
+                                                          in object_keylist.split('\n')
+                                                          if x.rstrip()] #purges empty lines
+                                        object_textlist = [x.rstrip() for x
+                                                           in object_textlist.split('\n')
+                                                           if x.rstrip()] 
+                                                  
+                                   divider = len(object_keylist)+1
+                                   self.delete_object(obj)
+                                   frame = self.new_note(y_coord+3,
+                                                         x_coord+3,
+                                                         note_y_dim,
+                                                         note_x_dim,
+                                                         divider=divider)
+                                   put(y_coord,x_coord)
+                                   startnote = True
+
+                                   
+                         if startnote:      
+                              
+                              while True: #to establish size of new note 
 
 
                                    frame_key = screen.getch()
                                    if frame_key in keys:
 
                                         
-                                        frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=divider)
+                                        frame = self.new_note(y_coord+3,
+                                                              x_coord+3,
+                                                              note_y_dim,
+                                                              note_x_dim,
+                                                              blank=True,
+                                                              divider=divider)
+                                        # to delete the existing frame before resizing
                                         fy_inc, fx_inc = keys[frame_key]
                                         
                                         y_temp = note_y_dim
@@ -1192,9 +1590,16 @@ class EmptyMovingWindow (MovingWindow):
                                              note_y_dim = y_max
                                         if note_x_dim > x_max:
                                              note_x_dim = x_max
-                                        if self.is_clear(y_coord+3,x_coord+3,note_y_dim,note_x_dim):
+                                        if self.is_clear(y_coord+3,
+                                                         x_coord+3,
+                                                         note_y_dim,
+                                                         note_x_dim):
                                              
-                                             frame = self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
+                                             frame = self.new_note(y_coord+3,
+                                                                   x_coord+3,
+                                                                   note_y_dim,
+                                                                   note_x_dim,
+                                                                   divider=divider)
                                              put(y_coord,x_coord)
                                         else:
                                              self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
@@ -1206,46 +1611,122 @@ class EmptyMovingWindow (MovingWindow):
 
                               
 
-                              section = False
-                              sizing = {False:(divider-1,5,3),
+                              section = False # False for the upper window/True for the lower window
+                              sizing = {False:(divider-1,5,3),  
                                         True:(note_y_dim-2-divider,5+divider,3)}
+                                        #verticle dimension/vertical starting coordinate/horizontal starting coordinate
 
                               count = 0
       
-                                  
-                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],2,sizing[section][2],l_margin=1,screen=screen)
-                              newkeys1,newkeys2 = fill(newpad.type(frame)[0]), fill(newpad.type(frame)[1])
+                              # the entry box for the keywords   
+                              newpad = ScrollPad(sizing[section][0],
+                                                 note_x_dim-2,
+                                                 sizing[section][1],
+                                                 2,sizing[section][2],
+                                                 l_margin=1,screen=screen,
+                                                 textlist=object_keylist,
+                                                 bufferobject_undo=LimitedStack(),
+                                                 bufferobject_redo=LimitedStack())
+                              temp_typed = newpad.type(frame)
+                              newkeys1,newkeys2 = fill(temp_typed[0]), fill(temp_typed[1])
                               section = True
-                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],2,sizing[section][2],l_margin=1,screen=screen)
-                              newnote1,newnote2 = fill(newpad.type(newkeys1,y_offset=3)[0]), fill(newpad.type(newkeys1)[1])
+                              # the entry box for the text
+                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],
+                                                 2,sizing[section][2],l_margin=1,screen=screen,
+                                                 textlist=object_textlist,
+                                                 bufferobject_undo=LimitedStack(),
+                                                 bufferobject_redo=LimitedStack())
+                              temp_typed = newpad.type(newkeys1,y_offset=3)
+                              newnote1,newnote2 = fill(temp_typed[0]), fill(temp_typed[1]) 
                               if '|' in ''.join(newkeys2):
                                    newindex = ''.join(newkeys2).split('|')[0].strip()
                                    newkeys2 = ''.join(newkeys2).split('|')[1]
                                    try:
                                         newindex = str(Index(index_expand(newindex)))
                                    except:
-                                        newindex = max(self.added_notes)+1
+                                        newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1
                                         
                               else:
-                                   newindex = max(self.added_notes)+1                              
+                                   newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1                              
                               self.added_notes.add(newindex)
-                              newindex = '$'+str(newindex)
+                              newindex = '$'+editing+str(newindex)
                               keyset = {k_temp.strip() for k_temp in ''.join(newkeys2).split(',')}
                               self.import_note(newindex,newnote1,newnote2,keyset)
                               self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=3)
                                # deletes the note frame and text
 
                               section = not section
-
-                                   
-                                        
-                         
+                      
 
                     elif key == curses.KEY_TAB:
                          next_note = next(self.cycling_through)
                          positions = self.object_dict[next_note]['p']
-                         y_coord = positions[0]
-                         x_coord = positions[1]
+                         y_coord = max([0,positions[0]-5])
+                         x_coord = max([0,positions[1]-10])
+
+                    elif key == ord ('o'):
+                         screen.nodelay(True)
+                         starting = True
+                         new_direction = False
+                         y_coord = int(y_total/2)
+                         x_coord = int(x_total/2)
+                         float_y = float(y_coord)
+                         float_x = float(x_coord)
+                         key_pressed = -1
+                         
+                         while key_pressed == -1:
+                              key_pressed = screen.getch()
+                              if starting:
+                                   direction = random.choice(range(360))
+                                   going_for = 0
+                                   starting = False
+                              going_for += 1
+                              if float_y  < 10:
+                                   float_y  = 10.0
+                                   new_direction = True                                  
+                              elif float_y  > y_total - y_max -10:
+                                  float_y  = float(y_total - y_max - 10)
+                                  new_direction = True 
+                              if float_x < 10:
+                                   float_x = 10.0
+                                   new_direction = True                                       
+                              elif float_x > x_total - x_max - 10:
+                                   float_x = float(x_total - x_max - 10)
+                                   new_direction = True
+                              if new_direction:
+                                   direction = random.choice(range(360))
+                                   new_direction = False
+
+                              float_y += sin(direction) 
+                              float_x += cos(direction)
+
+                              if abs(y_coord-int(float_y)) + abs(x_coord-int(float_x)) >= 1:
+                                     y_coord = int(float_y)
+                                     x_coord = int(float_x)
+                              put(y_coord,x_coord)
+                              time.sleep(.02)
+                              self.print_to(screen,str(x_coord)+'/'+str(x_total)+' : '+str(y_coord)+'/'+str(y_total),y_pos=1,x_pos=7)
+                         screen.nodelay(False)
+                              
+                                                                
+                            
+                    elif key == ord('n'):
+
+                         screen.nodelay(True)
+                         key_pressed = -1
+
+                         while key_pressed == -1:
+                              key_pressed = screen.getch()
+                              next_note = next(self.cycling_through)
+                              positions = self.object_dict[next_note]['p']
+                              y_coord = max([0,positions[0]-5])
+                              x_coord = max([0,positions[1]-10])
+                              time.sleep(.5)
+                              put(y_coord,x_coord)
+
+                         screen.nodelay(False)
+                                   
+                         
 
                     elif key == curses.KEY_F5:
                          moving_object = not moving_object
@@ -1373,7 +1854,10 @@ class EmptyMovingWindow (MovingWindow):
                     self.add_from_stack(y_coord,x_coord)
                     once_through = True
           return  y_coord,x_coord,self.object_dict,self.textlist
-              
+
+##          except:
+##               return y_coord,x_coord,self.object_dict,self.textlist
+                   
 
 if __name__ == '__main__':
 

@@ -48,6 +48,7 @@ import extract                                                          #pylint 
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
 from generalknowledge import GeneralizedKnowledge 
+from lexical import English_frequent_words
 from keydefinitions import KeyDefinitions                               #pylint 10.0/10
 from keymacrodefinitions import KeyMacroDefinitions
 import nformat                                                          #pylint 9.61/10
@@ -55,6 +56,7 @@ from ninput import q_input, s_input                                     #pylint 
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
 from knowledgebase_ns import KnowledgeBase                              #pylint  8.62/10
+from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
@@ -87,6 +89,8 @@ except:
     pass
 if not os.altsep:
     os.altsep = '/'
+
+SMALLWORDS += English_frequent_words 
 
 
 #Instantiate objects standard messages for main program and modules
@@ -10408,8 +10412,8 @@ class Console (Note_Shelf):
             self.default_dict['size'] = size_old
         elif mainterm in ['showpad']:
             bufferpad = self.currentpad
-            if otherterms[1] in self.pad_dict.keys():
-                self.currentpad = otherterms[1]
+            if otherterms[0] in self.pad_dict.keys():
+                self.currentpad = otherterms[0]
             
             
             if self.pad_dict[self.currentpad]:
