@@ -3509,8 +3509,8 @@ class Note_Shelf:
 
     def edit(self,
              index,
-             newkeyset,
-             newtext,
+             newkeyset=None,
+             newtext=None,
              changekeys=False,
              changetext=True,
              annotate=False,
@@ -3527,8 +3527,10 @@ class Note_Shelf:
             oldmeta['date'] = [str(oldmeta['date'])]
         oldmeta['date'].append(str(datetime.datetime.now()))
 
-        if newkeyset == {}:
+        if not newkeyset:
             newkeyset = oldkeyset
+            
+
         if changekeys:
             newkeyset = set(edit_keys(keyobject=list(oldkeyset),
                                       displayobject=display,
@@ -3544,7 +3546,7 @@ class Note_Shelf:
 
 
             
-        if newtext == EMPTYCHAR:
+        if not newtext:
             if changetext:
                 newtext = textedit_new(oldtext,
                                        size=display.width_needed(
@@ -4630,7 +4632,7 @@ class Note_Shelf:
             and not self.default_dict['keysafter']):
             keyset.update(oldkeys)
 
-        keyset = {k_temp for k_temp in keyset if k_temp[-1] not in [QUESTIONMARK, POUND, ATSIGN, UNDERLINE]}
+        keyset = {k_temp for k_temp in keyset if len(k_temp) > 1 and k_temp[-1] not in [QUESTIONMARK, POUND, ATSIGN, UNDERLINE]}
         keyset = modify_keys(keyset, no_arrows, strip=True)
         keyset = modify_keys(keyset, self.default_dict['macros'].do)
 
@@ -10346,7 +10348,7 @@ class Console (Note_Shelf):
                     
                     note_temp = display.noteprint(self.show(i_temp),
                                                   np_temp=True)
-                    self.pad_dict[self.currentpad].import_note(i_temp,note_temp.split(EOL))
+                    self.pad_dict[self.currentpad].import_note(i_temp,note_temp.split(EOL),full_note=self.note_dict[str(i_temp)].text,keyset=self.note_dict[str(i_temp)].keyset)
                 display.noteprint(('Objects in Stack!',str(self.pad_dict[self.currentpad].objects_in_stack())))
             self.currentpad = bufferpad
 
@@ -10411,6 +10413,26 @@ class Console (Note_Shelf):
                         self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
             self.default_dict['size'] = size_old
         elif mainterm in ['showpad']:
+
+            def reduce_blanks (x,starting=True):
+                if starting:
+                    while '  ' in x:
+                        x = x.replace('  ',' ')
+                    return x
+                else:
+                    for position, xx in enumerate(x):
+                        if xx != ' ':
+                            break
+                    if len(x) > position:
+
+                        while '  ' in x[position:]:
+                            x = x[:position]+x[position:].replace('  ',' ')
+                        return x
+                return x        
+                        
+                    
+
+            
             bufferpad = self.currentpad
             if otherterms[0] in self.pad_dict.keys():
                 self.currentpad = otherterms[0]
@@ -10419,22 +10441,54 @@ class Console (Note_Shelf):
             if self.pad_dict[self.currentpad]:
                 try:
                     display.noteprint(('ACTIVATING',self.currentpad))
-                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,x_pos=self.pad_x_pos)
+                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,
+                                                                                                                              x_pos=self.pad_x_pos)
                 except:
                     self.pad_dict[self.currentpad].restore()
 
             for obj_identifier in sorted(returnedobjects.keys()):
 
+                
+
+                if obj_identifier.startswith('$$$') and obj_identifier.count('$') == 3:
+                    if 'oo' in returnedobjects[obj_identifier]:
+                        newobject_text = ''
+
+                        # The following needed to return to original formatting...
+                        # Probably should have conceived the text editor differently -- not breaking up into lines 
+                        for line in returnedobjects[obj_identifier]['oo']:
+                            if line.startswith('  '):
+                                newobject_text += '\n' + reduce_blanks(line,starting=False)
+                            elif len(line.strip()) == 0:
+                                newobject_text += '\n'                          
+                            else:
+                                newobject_text += reduce_blanks(' ' + line + ' ')
+
+                        if newobject_text.startswith('\n'):
+                            newobject_text = nextobject_text[1:].replace('     ','!@#$%').replace('  ',' ').replace('!@#$%','     ')
+                            
+ 
+                        if 'l' in returnedobjects[obj_identifier]:
+                            newobject_keyset = returnedobjects[obj_identifier]['l']
+                        obj_identifier = obj_identifier.lstrip('$$$')
+                        self.edit(index=Index(obj_identifier),
+                                  newkeyset=newobject_keyset,
+                                  newtext=newobject_text,
+                                  changekeys=False,
+                                  changetext=False)                    
+
                 if obj_identifier.startswith('$') and obj_identifier.count('$') == 1:
                     if 'oo' in returnedobjects[obj_identifier]:
                         newobject_text = '\n'.join(returnedobjects[obj_identifier]['oo'])
-                        print(newobject_text)
+
                         if 'l' in returnedobjects[obj_identifier]:
                             newobject_keyset = returnedobjects[obj_identifier]['l']
                         obj_identifier = obj_identifier.lstrip('$')
                         self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
             if input('Do you want to reclassify uploaded objects?') in YESTERMS:
-                self.pad_dict[self.currentpad].transform_dictionary()
+                
+                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$',toprefix='$$')
+                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$$$',toprefix='$$')
             if input('Do you want to update sheetshelf?') in YESTERMS:
                 if not self.sheetshelf:
                     self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
