@@ -1,5 +1,6 @@
 
 import curses
+from drawingobject import DrawingObject
 import time
 from movingwindow import MovingWindow
 from stack import Stack 
@@ -38,6 +39,74 @@ help_script = ['F2 = to enter a note']+['F3 = to extend dimensions']+\
                ['insert = to add note from stack']+\
                ['delete = to return note from stack']
 
+
+
+painting_chars ={(curses.KEY_RIGHT,curses.KEY_RIGHT):('h',0,1),
+                     (curses.KEY_LEFT,curses.KEY_LEFT):('h',0,-1),
+                     (curses.KEY_RIGHT,curses.KEY_UP):('rl',-1,0,),
+                     (curses.KEY_RIGHT,curses.KEY_DOWN):('ru',1,0),
+                     (curses.KEY_LEFT,curses.KEY_UP):('ll',-1,0),
+                     (curses.KEY_LEFT,curses.KEY_DOWN):('lu',1,0),
+                     (curses.KEY_UP,curses.KEY_UP):('v',-1,0),
+                     (curses.KEY_DOWN,curses.KEY_DOWN):('v',1,0),
+                     (curses.KEY_UP,curses.KEY_LEFT):('ru',0,-1),
+                     (curses.KEY_UP,curses.KEY_RIGHT):('lu',0,1),
+                     (curses.KEY_DOWN,curses.KEY_LEFT):('rl',0,-1),
+                     (curses.KEY_DOWN,curses.KEY_RIGHT):('ll',0,1),
+                     (curses.KEY_RIGHT,curses.KEY_LEFT):('h',0,0),
+                     (curses.KEY_LEFT,curses.KEY_RIGHT):('h',0,0),
+                     (curses.KEY_UP,curses.KEY_DOWN):('v',0,0),
+                     (curses.KEY_DOWN,curses.KEY_UP):('v',0,0),
+                     ('',curses.KEY_UP):('v',-1,0),
+                     ('',curses.KEY_DOWN):('v',1,0),
+                     ('',curses.KEY_LEFT):('h',0,-1),
+                     ('',curses.KEY_RIGHT):('h',0,1)}
+
+BOX_CHAR['xl'] = '┬'
+BOX_CHAR['xu'] = '┴'
+BOX_CHAR['x'] = '┼'
+
+boxchar_decomp = {'v':((False,True,False),(False,True,False),(False,True,False)),  # vertical 
+                 'h':((False,False,False),(True,True,True),(False,False,False)),   # horizontal 
+                 'lu':((False,False,False),(False,True,True),(False,True,False)), #'┎'
+                 'ru':((False,False,False),(True,True,False),(False,True,False)), #'┒'
+                 'lm':((False,True,False),(False,True,True),(False,True,False)), #'┠'
+                 'rm':((False,True,False),(True,True,False),(False,True,False)), #'┨'
+                 'll':((False,True,False),(False,True,True),(False,False,False)), #'┖'
+                 'rl':((False,True,False),(True,True,False),(False,False,False)), #'┚'
+                 'xl':((False,False,False),(True,True,True),(False,True,False)),  # '┬'
+                 'xu':((False,True,False),(True,True,True),(False,False,False)),  # '┴'
+                 'x': ((False,True,False),(True,True,True),(False,True,False))}  # '┼'
+
+top_touching = set()
+bottom_touching = set()
+left_touching = set()
+right_touching = set()
+
+for x in boxchar_decomp:
+
+     if boxchar_decomp[x][0][1]:
+          top_touching.add(x)
+     if boxchar_decomp[x][2][1]:
+          bottom_touching.add(x)
+     if boxchar_decomp[x][1][0]:
+          left_touching.add(x)
+     if boxchar_decomp[x][1][2]:
+          right_touching.add(x)
+
+BOX_CHAR_REVERSE = {}
+for x in BOX_CHAR:
+     BOX_CHAR_REVERSE[BOX_CHAR[x]] = x
+
+boxchar_recomp  = {}
+for x in boxchar_decomp:
+     boxchar_recomp[boxchar_decomp[x]] = x
+
+                  
+
+
+BOX_CHAR['xl'] = '┬'
+BOX_CHAR['xu'] = '┴'
 
 
 curses.KEY_RETURN = 10
@@ -123,8 +192,11 @@ class ScrollPad:
                self.textlist = [' ']*self.height   #the total text
           else: #for editing an existing note
                self.textlist = textlist
-               self.width = min([self.width,max([len(x) for x in textlist])])
-               self.height = min([self.height,len(textlist)])
+               try:
+                    self.width = min([self.width,max([len(x) for x in textlist])])
+                    self.height = min([self.height,len(textlist)])
+               except:
+                    pass
                       
                
           self.window = screen
@@ -249,9 +321,6 @@ class ScrollPad:
                
                return 'EOT'
 
-
-               
-          
 
      def hard_return (self):
 
@@ -436,10 +505,17 @@ class ScrollPad:
                     for x in range (0,self.width):
                          add_char = (self.textlist[text_line]+' '*self.width)[x].replace('\n',' ')
                          if (y==self.cursor_y and x==self.cursor_x) or (y+self.top_line,x) in self.highlighted_coords:
-                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_REVERSE)
+                              try:
+                                   self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_REVERSE)
+                              except:
+                                   pass
                               
-                         else:                             
-                              self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_BLINK)
+                         else:
+                              try:
+                                   self.window.addch(self.y_pos+y+self.u_margin,self.x_pos+x+2+self.l_margin,add_char,curses.A_NORMAL)
+                              except:
+                                   pass
+                              
                     self.window.refresh()
                     y += 1
                text_line += 1
@@ -807,13 +883,19 @@ class EmptyMovingWindow (MovingWindow):
           self.cycling_through = None
           self.get_margins = True
           self.selected = set()
+          self.cursor_y = 0
+          self.cursor_x = 0
+          self.drew_or_typed = False
 
      def populate (self,dict_object=None,totextlist=None):
 
-          for ind_temp in object_dict:
-               obj_list = dict_object[ind_temp]['o']
-               y,x = dict_object[ind_temp]['p'][0],dict_object[ind_temp]['p'][1]
-               self.put_in(y_start=y,x_start=x,fromtextlist=obj_list,totextlist=totextlist)
+          for ind_temp in dict_object:
+               
+               if not ind_temp.startswith('%'):
+          
+                    obj_list = dict_object[ind_temp]['o']
+                    y,x = dict_object[ind_temp]['p'][0],dict_object[ind_temp]['p'][1]
+                    self.put_in(y_start=y,x_start=x,fromtextlist=obj_list,totextlist=totextlist)
 
      def put_in (self,y_start,x_start,fromtextlist=None,totextlist=None,skip=[' ']):
 
@@ -1038,6 +1120,15 @@ class EmptyMovingWindow (MovingWindow):
                     if up_bound <= y_pos <= down_bound and \
                        left_bound <= x_pos <= right_bound:
                          return obj
+               elif 'c' in self.object_dict[obj]:
+
+                    if self.object_dict[obj]['c'].contains(y_pos,x_pos):
+                         return obj
+
+               
+
+
+                    
           return ''
      
 
@@ -1071,6 +1162,15 @@ class EmptyMovingWindow (MovingWindow):
                          
           else:
                return True
+
+     def is_clear_drawn (self,coords):
+
+          for c_temp in coords:
+
+               if self.textlist[c_temp[0]][c_temp[1]] != ' ':
+                    return False
+          return True
+     
 
 
                
@@ -1128,7 +1228,7 @@ class EmptyMovingWindow (MovingWindow):
                return False,False
 
 
-     def add_from_stack (self,y_st=0,x_st=0):
+     def add_from_stack (self,y_st=0,x_st=0,y_pos=None,x_pos=None):
 
           """ Add a note into the pad from a stack of objects"""
 
@@ -1139,16 +1239,21 @@ class EmptyMovingWindow (MovingWindow):
                return False
           popped = self.note_stack.pop()
           if isinstance(popped,(list,tuple)):
-               popped = tuple(popped) + (None,None)
+               popped = tuple(popped) + (None,None,None)
 
                index,note1,note2,keywords = popped[0],popped[1],popped[2],popped[3]
 
           else:
-               return False
+               self.add_drawn_object(popped,y_pos=y_pos,x_pos=x_pos)
+               return True 
+
+          
           note1, height, width = self.dimensions(note1)
 
 
-          y_pos,x_pos = self.find_clear(height,width,y_st,x_st)
+          if not  (y_pos and x_pos) or not self.is_clear(y_pos,x_pos,height,width):
+               
+               y_pos,x_pos = self.find_clear(height,width,y_st,x_st)
 
           if isinstance(y_pos,int):
                if not note2:
@@ -1225,8 +1330,61 @@ class EmptyMovingWindow (MovingWindow):
                                           y_pos=old_up_bound,
                                           x_pos=old_left_bound)
 
+               elif index in self.object_dict and 'c' in self.object_dict[index]:
 
-         
+                    self.delete_drawn_object(index)
+                    self.object_dict[index]['c'].move(vert_inc,hor_inc)
+##                    if self.is_clear_drawn([(x[0][0],x[0][1]) for x in self.object_dict[index]['c'].get_coords()]):
+##                         self.add_drawn_object(index)
+##                    else:
+##                         self.object_dict[index]['c'].move(-vert_inc,-hor_inc)
+##                         self.add_drawn_object(index)
+                    self.add_drawn_object(index)
+
+                    
+
+               
+
+
+     def add_drawn_object(self,index='',mode='n',delete=False,y_pos=None,x_pos=None,schema=None):
+
+          
+          if not index.startswith('%'):
+               return False
+          
+          if index in self.object_dict:
+
+               if 'c' in self.object_dict[index]:
+
+                    if y_pos and x_pos:
+                         self.object_dict[index]['c'].position_object(y_pos,x_pos)
+
+                    coords = self.object_dict[index]['c'].get_coords()
+
+                    for c_temp in coords:
+
+                         y_pos = c_temp[0][0]
+                         x_pos = c_temp[0][1]
+
+                         if delete:
+                              new_char = c_temp[1][0]
+                         else:
+                              new_char = c_temp[1][1]
+
+                         
+
+                         if delete:
+                              self.textlist[y_pos] = self.textlist[y_pos][0:x_pos] + new_char + self.textlist[y_pos][x_pos+1:]
+                         else:
+                              old_char = self.textlist[y_pos][x_pos]
+                              if old_char == ' ' or mode == 'o':
+                                   self.textlist[y_pos] = self.textlist[y_pos][0:x_pos] + new_char + self.textlist[y_pos][x_pos+1:]
+
+                       
+     def delete_drawn_object(self,index=''):
+          self.add_drawn_object(index,delete=True)
+
+     
 
      def delete_object(self,index='',for_show=False):
 
@@ -1321,8 +1479,12 @@ class EmptyMovingWindow (MovingWindow):
      def import_note (self,index,show_note=None,full_note=None,keyset=None):
 
           """To import a note into the stack."""
+
+          if not index.startswith('%'):
           
-          self.note_stack.add((str(index),show_note,full_note,keyset))
+               self.note_stack.add((str(index),show_note,full_note,keyset))
+          else:
+               self.note_stack.add((str(index)))
 
      def empty_stack (self):
           self.note_stack = Stack()
@@ -1344,7 +1506,29 @@ class EmptyMovingWindow (MovingWindow):
           """Returns objects in the stack"""
           
           return self.note_stack.size()
+
+     def assign_drawing_object (self,y_pos=0,x_pos=0,schema=None):
+
+          assigned_obj = ''
+          for obj in self.object_dict:
+
+               if obj.startswith('%'):
+
+                    if self.object_dict[obj]['c'].contains(y_pos,x_pos):
+                         assigned_obj = obj
+                         
+                         break
+                    
+          if not assigned_obj:            
+               assigned_obj = '%'+str(int(sorted(['%0']+[x for x in self.object_dict if x.startswith('%')])[-1][1:])+1)
+                         # to increment by one the last drawn_object added to object_dict
+               self.object_dict[assigned_obj] = {}
+               self.object_dict[assigned_obj]['c'] = DrawingObject(textlistobject = self.textlist,schema=schema)
+          self.cycling_through = cycle(self.object_dict.keys())
+          return self.object_dict[assigned_obj]['c'], assigned_obj
           
+               
+        
           
      def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1,entering=False,override=True):
 
@@ -1356,10 +1540,22 @@ class EmptyMovingWindow (MovingWindow):
 
                     x_pos = x_total - x_max
                
+##               for y in range(y_max-1-b_margin-t_margin):
+##
+##                    if y_pos+y <= y_total:
+##                         screen.addstr(y+b_margin,l_margin,self.textlist[y_pos+y][x_pos:x_pos+x_max-l_margin-r_margin])
+##
+
                for y in range(y_max-1-b_margin-t_margin):
 
-                    if y_pos+y <= y_total:
-                         screen.addstr(y+b_margin,l_margin,self.textlist[y_pos+y][x_pos:x_pos+x_max-l_margin-r_margin])
+                    for x in range(x_max-l_margin-r_margin):
+
+                         if y_pos+y <= y_total:
+                              if x == self.cursor_x and y == self.cursor_y:
+                                   screen.addstr(y+b_margin,l_margin+x,self.textlist[y_pos+y][x_pos+x],curses.A_REVERSE)
+                              else:
+                                   screen.addstr(y+b_margin,l_margin+x,self.textlist[y_pos+y][x_pos+x],curses.A_NORMAL)
+                         
 
                
                     
@@ -1411,9 +1607,20 @@ class EmptyMovingWindow (MovingWindow):
           moving_screen_too = False
           extending = False
           contracting = False
-          cursor_move = False
+          selecting = False
+          cursor_move = True
           once_through = False
-          cycling = False 
+          cycling = False
+          self.cursor_y = int(y_max/2)
+          self.cursor_x = int(x_max/2)
+          drawing = False
+          last_key = curses.KEY_RIGHT
+          typing = False
+          started_typing = False
+          started_drawing = False
+          started_selecting = False
+          left_margin = 0
+
 
 
 
@@ -1423,21 +1630,34 @@ class EmptyMovingWindow (MovingWindow):
 ##
 ##          try:
           while go_on and not once_through:
-               self.print_to(screen,self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)),length=10,y_pos=1,x_pos=25)
+
+
+               if self.cursor_x < 0 or self.cursor_x > x_max:
+                    self.cursor_x = int(x_max/2)
+               if self.cursor_x < 0 or self.cursor_y > y_max:
+                    self.cursor_y = int(y_max/2)
+               
+               self.print_to(screen,self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x),length=10,y_pos=1,x_pos=25)
                self.print_to(screen,' '.join(list(sorted(self.object_dict))),length=35,y_pos=1,x_pos=70)
                self.print_to(screen,', '.join(objects_to_move),length=30,y_pos=1,x_pos=36)
                self.print_to(screen,str(len(self.object_dict.keys()))+'/'+str(self.objects_in_stack()),length=21,y_pos=1,x_pos=3)
                self.print_to(screen,'█'*(not not (self.find_object_in(y_coord+2,x_coord+2)) and (self.find_object_in(y_coord+2,x_coord+2) in self.selected)),length=1,y_pos=1,x_pos=1)
                self.print_to(screen,'CYCLING'*cycling
                              +' '+'MOVING OBJECTS'*moving_object
+                             +' '+'DRAWING'*drawing
+                             +' '+'TYPING'*typing
                              +' '+'MOVING SCREEN'*moving_screen_too
+                             +' '+'SELECTING'*selecting
                              +' '+'EXTENDING'*extending+' '
                              +'CONTRACTING'*contracting
-                             +'CUR'*cursor_move+' SPEED='+str(multiplier),
+                             +'CURSOR'*cursor_move+' SPEED='+str(multiplier),
                              length=90,y_pos=y_max-3,x_pos=1)
                
                
-               
+               if started_drawing and not drawing:
+                    started_drawing = False
+               if started_selecting and not selecting:
+                    started_selecting = False
                if stack_dump:
                     if self.note_stack.exists():
                          self.add_from_stack(y_coord,x_coord)
@@ -1452,36 +1672,278 @@ class EmptyMovingWindow (MovingWindow):
                          key = ''
                          
 
-                    if key in keys.keys():
+                    def superimpose (a,b):
 
-                         if cycling:
+                         def super_lines (c,d):
+
+                              return (c[0] or d[0],c[1] or d[1],c[2] or d[2])
+
+                         return (super_lines(a[0],b[0]),super_lines(a[1],b[1]),super_lines(a[2],b[2]))
+
+                    if typing:
+                         if not started_typing and 30 < key < 265:
+                              started_typing = True
+                              left_margin = self.cursor_x
+                              typing_object, type_obj_ind = self.assign_drawing_object(y_coord,x_coord)
+
+                         if started_typing and (key == curses.KEY_ENTER or key==10 or key==13):
+
+                              self.cursor_x = left_margin
+                              self.cursor_y += 1
+
+                         elif key == curses.KEY_DELETE:
+
+                              typing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=' ')
+                              self.textlist[y_coord+self.cursor_y] = self.textlist[y_coord+self.cursor_y][0:x_coord+self.cursor_x]\
+                                                                +' '+self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1:]
+                              self.cursor_x += 1
+                         elif key == curses.KEY_BACKSPACE:
+
+                              if self.cursor_x > left_margin:
+                                   typing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=' ')
+                                   self.textlist[y_coord+self.cursor_y] = self.textlist[y_coord+self.cursor_y][0:x_coord+self.cursor_x]\
+                                                                +' '+self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1:]
+                                   self.cursor_x -= 1
+                                   
+                                   
+                              
+                              
+                         elif key not in keys and started_typing and 30 < key <265:
+
+
+                              char_on = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x]
+                                                            
+                              while char_on != ' ' and self.cursor_x <= x_max:
+                                   self.cursor_x += 1
+
+                              if char_on == ' ':
+                                   char_on = chr(key)
+                                   typing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=char_on)
+
+                                   self.textlist[y_coord+self.cursor_y] = self.textlist[y_coord+self.cursor_y][0:x_coord+self.cursor_x]\
+                                                                +char_on+self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1:]
+                                   self.drew_or_typed = True
+                              self.cursor_x += 1
+                              
+                         elif key in keys:
+                              y_inc,x_inc = keys[key][0],keys[key][1]
+                              self.cursor_y += y_inc
+                              self.cursor_x += x_inc
+                 
+                    if not typing and (key in keys or key in [ord('.'),ord('>'),ord(','),ord('<'),339,338,358,262,ord('|'),ord('_'),ord('+')]):
+
+                         if selecting:
+                              if not started_selecting:
+
+                                   frame_x_dim = 10
+                                   frame_y_dim = 10
+                                   drawing_frame, obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,x_coord+self.cursor_x)
+                                   started_selecting = True
+
+                                   
+
+                              self.delete_drawn_object(obj_ind)
+                              
+                              temp_frame = self.make_rectangle(frame_y_dim,
+                                                               frame_x_dim,
+                                                               divider=-1)
+                              drawing_frame.enter_superimposed_object(y_coord=y_coord+self.cursor_y,
+                                                                      x_coord=x_coord+self.cursor_x,
+                                                                      objectlist=temp_frame)
+                              if key == curses.KEY_RIGHT:
+                                   frame_x_dim += 1
+                              elif key == curses.KEY_LEFT:
+                                   frame_x_dim -= 1
+                              elif key == curses.KEY_UP:
+                                   frame_y_dim -= 1
+                              elif key == curses.KEY_DOWN:
+                                   frame_y_dim += 1
+                              elif key == ord('<'):
+                                   selecting = False
+                              elif key == ord('>'):
+                                   selecting = False
+                                   drawing_frame.select()
+                                   self.copy_buffer = DrawingObject(textlistobject=self.textlist,schema=self.object_dict[obj_ind]['c'].get_schema())
+                                   del self.object_dict[obj_ind]
+                                   
+                                   
+                              if selecting:
+                                   self.add_drawn_object(obj_ind)
+                              
+                              
+                              
+                              
+                          
+                         elif drawing:
+
+                              if key == ord('.') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.stretch(x_pos=x_coord+self.cursor_x)
+                                   self.cursor_x += 1
+                                   self.add_drawn_object(draw_obj_ind)
+
+                              elif key == ord('>') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.stretch(y_pos=y_coord+self.cursor_y)
+                                   self.cursor_y += 1
+                                   self.add_drawn_object(draw_obj_ind)
+                              elif key == ord(',') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.stretch(x_pos=x_coord+self.cursor_x,contracting=True)
+                                   self.cursor_x -= 1
+                                   self.add_drawn_object(draw_obj_ind)
+                              elif key == ord('<') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.stretch(y_pos=y_coord+self.cursor_y,contracting=True)
+                                   self.cursor_y -= 1
+                                   self.add_drawn_object(draw_obj_ind)
+                              elif key == 339: # fn up
+                                   self.cursor_y -= 1
+                              elif key == 338: # fn down
+                                   self.cursor_y += 1
+                              elif key == 358: #fn right 
+                                   self.cursor_x += 1
+                              elif key == 262: #fn left 
+                                   self.cursor_x -= 1
+                              elif key == ord('|') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.flip(vertical=True)
+                                   self.add_drawn_object(draw_obj_ind)
+                              elif key == ord('_') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.flip(horizontal=True)
+                                   self.add_drawn_object(draw_obj_ind)
+                              elif key == ord('+') and started_drawing:
+                                   self.delete_drawn_object(draw_obj_ind)
+                                   drawing_object.rotate()
+                                   self.add_drawn_object(draw_obj_ind)
+                                   
+                                   
+                                   
+                                   
+                                   
+                                     
+                              else:
+
+                                   if not started_drawing:
+                                        started_drawing = True
+                                        drawing_object,draw_obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,x_coord+self.cursor_x)
+
+                                   else: # To avoid an error a key error for Painting Chars 
+                                        self.drew_or_typed = True
+                                        
+                                        char_from = orig_char = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x]
+                                        char_above = char_below = char_left = char_right = ' '
+                                        char_above = self.textlist[y_coord+self.cursor_y-1][x_coord+self.cursor_x]
+                                        char_below = self.textlist[y_coord+self.cursor_y+1][x_coord+self.cursor_x]
+                                        char_left = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x-1]
+                                        char_right = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1]
+
+
+                                        new_char = BOX_CHAR[painting_chars[(last_key,key)][0]]
+                                        y_inc,x_inc = painting_chars[(last_key,key)][1],painting_chars[(last_key,key)][2]
+
+                                        if new_char in (BOX_CHAR['ru'],BOX_CHAR['lu'],BOX_CHAR['ll'],BOX_CHAR['rl']):
+
+
+                                             if new_char == BOX_CHAR['ru'] and char_above in [BOX_CHAR[x] for x in bottom_touching]:
+                                                  new_char = BOX_CHAR['rm']
+                                             if new_char == BOX_CHAR['ru'] and char_right in [BOX_CHAR[x] for x in left_touching]:
+                                                  new_char = BOX_CHAR['xl']
+           
+                                             if new_char == BOX_CHAR['lu'] and char_above in [BOX_CHAR[x] for x in top_touching]:
+                                                  new_char = BOX_CHAR['lm']
+                                             if new_char == BOX_CHAR['lu'] and char_left in [BOX_CHAR[x] for x in right_touching]:
+                                                  new_char = BOX_CHAR['lm']
+                                             if new_char == BOX_CHAR['ll'] and char_left in [BOX_CHAR[x] for x in right_touching]:
+                                                  new_char = BOX_CHAR['xu']
+                                             if new_char == BOX_CHAR['ll'] and char_below in [BOX_CHAR[x] for x in top_touching]:
+                                                  new_char = BOX_CHAR['lm']
+                                             if new_char == BOX_CHAR['rl'] and char_right in [BOX_CHAR[x] for x in left_touching]:
+                                                  new_char = BOX_CHAR['xu']
+                                             if new_char == BOX_CHAR['rl'] and char_below in [BOX_CHAR[x] for x in top_touching]:
+                                                  new_char = BOX_CHAR['rm']
+                                             if new_char in ['┠','┨','┬','┴'] and char_above in [BOX_CHAR[x] for x in bottom_touching] \
+                                                and char_below in [BOX_CHAR[x] for x in top_touching] \
+                                                and char_right in [BOX_CHAR[x] for x in left_touching] \
+                                                and char_left in [BOX_CHAR[x] for x in right_touching]:
+                                                  new_char = BOX_CHAR['x']
+                                             
+                                             
+                                             drawing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=new_char)
+                                             self.textlist[y_coord+self.cursor_y] = self.textlist[y_coord+self.cursor_y][0:x_coord+self.cursor_x]\
+                                                                          +new_char+self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1:]
+                                             
+                                             
+                                             
+                                             
+                                        else:
+
+                                             
+                                             old_y = self.cursor_y
+                                             old_x = self.cursor_x
+                                             
+                                             self.cursor_y += y_inc
+                                             self.cursor_x += x_inc
+                                             
+
+                                             if char_from == BOX_CHAR['v'] and x_inc != 0:
+                                                  
+
+                                                  if self.cursor_x == 1:
+                                                       new_char = BOX_CHAR['rm']
+                                                  else:
+                                                       new_char = BOX_CHAR['lm']
+                                             if char_from == BOX_CHAR['h'] and y_inc != 0:
+                                                  if self.cursor_y == 1:
+                                                       new_char = BOX_CHAR['xl']
+                                                  else:
+                                                       new_char = BOX_CHAR['xu']
+
+                                             
+                                             drawing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=new_char)
+                                             self.textlist[y_coord+self.cursor_y] = self.textlist[y_coord+self.cursor_y][0:x_coord+self.cursor_x]\
+                                                                          +new_char+self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1:]
+                                             
+                                            
+                                        if key not in [ord('.'),ord('>'),ord(','),ord('<'),339,338,358,262,ord('|'),ord('_'),ord('+')]:
+                                             last_key = key
+
+                              
+
+                              
+
+                         elif cycling and key in keys:
                               
                               if key == curses.KEY_RIGHT:
                                    next_note = next(self.cycling_through)
-                                   positions = self.object_dict[next_note]['p']
-                                   y_coord = positions[0]
-                                   x_coord = positions[1]
+                                   
                               elif key == curses.KEY_LEFT:
                                    for x in range(len(self.object_dict.keys())-1):
                                         next_note = next(self.cycling_through)
-                                   positions = self.object_dict[next_note]['p']
-                                   y_coord = positions[0]
-                                   x_coord = positions[1]
+                                   
                               elif key == curses.KEY_UP:
                                    self.cycling_through = cycle(self.object_dict.keys())
                                    next_note = next(self.cycling_through)
-                                   positions = self.object_dict[next_note]['p']
-                                   y_coord = positions[0]
-                                   x_coord = positions[1]
+                                   
                               elif key == curses.KEY_DOWN:
                                    self.cycling_through = cycle(self.object_dict.keys())
                                    for x in range(len(self.object_dict.keys())-1):
                                         next_note = next(self.cycling_through)
-                                   positions = self.object_dict[next_note]['p']
-                                   y_coord = positions[0]
-                                   x_coord = positions[1]
+                                   
+
+                              if 'p' in self.object_dict[next_note]:
+                                   positions = self.object_dict[next_note]['p']  #for notes
+                                   
+                                   y_coord = max([0,positions[0]-self.cursor_y])# to keep from going 
+                                   x_coord = max([0,positions[1]-self.cursor_x])# off the side
+
+                              elif 'c' in self.object_dict[next_note]:          # for non-note objects 
+                                   y_coord, x_coord = self.object_dict[next_note]['c'].top_left()
+                                   y_coord = max([0,y_coord-self.cursor_y])     # to keep from going 
+                                   x_coord = max([0,x_coord-self.cursor_x])     # off the side 
                                 
-                         elif extending or contracting:
+                         elif key in keys and (extending or contracting):
                               
                               up, down, left, right = ec_keys[key][0]*multiplier,\
                                                       ec_keys[key][1]*multiplier,\
@@ -1496,10 +1958,25 @@ class EmptyMovingWindow (MovingWindow):
                                         y_max = y_total
                               elif extending:
                                         x_total, y_total = self.extend(up,down,left,right)
+
+                         elif key in keys and cursor_move:
+
+                              y_inc,x_inc = keys[key][0],keys[key][1]
+
+                              self.cursor_y += y_inc
+                              self.cursor_x += x_inc
+                              if self.cursor_y < 0:
+                                   self.cursor_y = 0
+                              elif self.cursor_y > y_max - 9:
+                                   self.cursor_y = y_max - 9
+                              if self.cursor_x < 0:
+                                   self.cursor_x = 0
+                              elif self.cursor_x > x_max - 3:
+                                   self.cursor_x = x_max - 3
                                         
 
 
-                         else:
+                         elif key in keys:
                               y_inc,x_inc = keys[key][0],keys[key][1]
                               
                               if not moving_object:
@@ -1507,452 +1984,591 @@ class EmptyMovingWindow (MovingWindow):
                                    y_coord += y_inc * multiplier
                                    x_coord += x_inc * multiplier
 
-                              if moving_object and self.find_object_in(y_coord+int(y_max/2),x_coord+int(x_max/2)):    
+                              if moving_object:
+                                   #and self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x)
                                    self.move_object(objects_to_move,y_inc*multiplier,x_inc*multiplier)
                                    if moving_screen_too:
                                         x_coord += x_inc * multiplier
                                         y_coord += y_inc * multiplier
                                    
                     elif key == curses.KEY_F3:
-                         extending = not extending
-                         if contracting and extending:
-                              contracting = False
-
-                    elif key == curses.KEY_F1:
-                         show_note=fill(help_script)
-                         width = len(show_note[0])+2
-                         height = len(show_note)+2
-                         
-                         rectangle = self.make_rectangle (height=height,
-                                                          width=width,
-                                                          divider=0)
-                         rectangle = self.put_in (1,1,fromtextlist=show_note,
-                                                  totextlist=rectangle,
-                                                  skip=[' '])
-                         
-
-                         self.import_note (index='help',show_note=rectangle,full_note=rectangle,keyset={})
-                    elif key == curses.KEY_F4:
-                         contracting = not contracting
-                         if contracting and extending:
+                         # toggles between extension, contraction, and cursor
+                         if typing:
+                              cursor_move = True
                               extending = False
-                    elif entering or key == curses.KEY_F2:
-                         divider = 3
-                         startnote = False
-                         note_y_dim = 10
-                         note_x_dim = 10
-                         object_textlist = None
-                         object_keylist = None
-                         editing = ''
-                         if self.is_clear(y_coord+3,
-                                          x_coord+3,
-                                          note_y_dim,
-                                          note_x_dim):
-                              # To create a new note
-                              frame = self.new_note(y_coord+3,
-                                                    x_coord+3,
-                                                    note_y_dim,
-                                                    note_x_dim,
-                                                    divider=divider)
-                              put(y_coord,x_coord)
+                              contracting = False
+                              moving_object = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = False
+                         elif cursor_move:
+                              cursor_move = False
+                              extending = True
+                              contracting = False
+                              moving_object = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = False
+                         elif extending:
+                              cursor_move = False
+                              extending = False
+                              contracting = True
+                              moving_object = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = False
+                         elif contracting:
+                              moving_object = True
+                              cursor_move = False
+                              extending = False 
+                              contracting = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = False
+                         elif moving_object and not moving_screen_too:
+                              moving_object = True
+                              cursor_move = False
+                              extending = False 
+                              contracting = False
+                              moving_screen_too = True
+                              drawing = False
+                              typing = False
+                         elif moving_object and  moving_screen_too:
+                              moving_object = False
+                              cursor_move = False
+                              extending = False 
+                              contracting = False
+                              moving_screen_too = False
+                              drawing = True
+                              typing = False
+                         elif drawing:
+                              cursor_move = False
+                              extending = False
+                              contracting = False
+                              moving_object = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = False
+                         else:
+                              cursor_move = False
+                              extending = False
+                              contracting = False
+                              moving_object = False
+                              moving_screen_too = False
+                              drawing = False
+                              typing = True
+                              
+                              
+                              
+                    if not typing:
+
+                         started_typing = False
+
+                         if key == curses.KEY_F1:
+                              show_note=fill(help_script)
+                              width = len(show_note[0])+2
+                              height = len(show_note)+2
+                              
+                              rectangle = self.make_rectangle (height=height,
+                                                               width=width,
+                                                               divider=0)
+                              rectangle = self.put_in (1,1,fromtextlist=show_note,
+                                                       totextlist=rectangle,
+                                                       skip=[' '])
+                              
+
+                              self.import_note (index='help',show_note=rectangle,full_note=rectangle,keyset={})
+                         elif key == curses.KEY_F4:
+                              contracting = not contracting
+                              if contracting and extending:
+                                   extending = False
+                         elif entering or key == curses.KEY_F2:
                               divider = 3
-                              startnote = True
-                         elif self.find_object_in(y_coord+3,x_coord+3):
-                              # To edit an existing note
-                              editing = '$$'
-                              
-                              
-                              obj = self.find_object_in(y_coord+3,x_coord+3)
-                              
-
-                              if obj and obj in self.object_dict:
-
-                                   positions = self.object_dict[obj]['p']
-                                   note_y_dim = positions[2] - positions[0]
-                                   note_x_dim = positions[3] - positions[1]
-                                   object_textlist = self.object_dict[obj]['o'] #the display text
-                                   if self.object_dict[obj]['oo'] and \
-                                      len(self.object_dict[obj]['oo']) > len(object_textlist):
-                                        object_textlist = self.object_dict[obj]['oo']  #the full text of the note                                         
-                                        object_keyset = self.object_dict[obj]['l']
-                                        object_keylist = [str(obj) + ' | ' + ', '.join(object_keyset),'']
-
-
-                                   else:
-                                        # to extract information from an enframed note
-                                        object_keylist = '\n'.join(object_textlist).split(BOX_CHAR['lm'])[0]
-                                        object_textlist ='\n'.join(object_textlist).split(BOX_CHAR['rm'])[1]
-
-                                        
-
-                                        for char in BOX_CHAR:
-
-                                             object_keylist = object_keylist.replace(BOX_CHAR[char],'')
-                                             object_textlist = object_textlist.replace(BOX_CHAR[char],'')
-                                        object_keylist = [x.rstrip() for x
-                                                          in object_keylist.split('\n')
-                                                          if x.rstrip()] #purges empty lines
-                                        object_textlist = [x.rstrip() for x
-                                                           in object_textlist.split('\n')
-                                                           if x.rstrip()]
-
-                                               
-                                   divider = len(object_keylist)+1
-                                   self.delete_object(obj)
+                              startnote = False
+                              note_y_dim = 10
+                              note_x_dim = 10
+                              object_textlist = None
+                              object_keylist = None
+                              editing = ''
+                              if self.is_clear(y_coord+3,
+                                               x_coord+3,
+                                               note_y_dim,
+                                               note_x_dim):
+                                   # To create a new note
                                    frame = self.new_note(y_coord+3,
                                                          x_coord+3,
                                                          note_y_dim,
                                                          note_x_dim,
                                                          divider=divider)
                                    put(y_coord,x_coord)
+                                   divider = 3
                                    startnote = True
-
+                              elif self.find_object_in(y_coord+3,x_coord+3):
+                                   # To edit an existing note
+                                   editing = '$$'
                                    
-                         if startnote:      
-                              
-                              while True: #to establish size of new note 
+                                   
+                                   obj = self.find_object_in(y_coord+3,x_coord+3)
+                                   
+
+                                   if obj and obj in self.object_dict:
+
+                                        positions = self.object_dict[obj]['p']
+                                        note_y_dim = positions[2] - positions[0]
+                                        note_x_dim = positions[3] - positions[1]
+                                        object_textlist = self.object_dict[obj]['o'] #the display text
+                                        if self.object_dict[obj]['oo'] and \
+                                           len(self.object_dict[obj]['oo']) > len(object_textlist):
+                                             object_textlist = self.object_dict[obj]['oo']  #the full text of the note                                         
+                                             object_keyset = self.object_dict[obj]['l']
+                                             object_keylist = [str(obj) + ' | ' + ', '.join(object_keyset),'']
 
 
-                                   frame_key = screen.getch()
-                                   if frame_key in keys:
+                                        else:
+                                             # to extract information from an enframed note
+                                             object_keylist = '\n'.join(object_textlist).split(BOX_CHAR['lm'])[0]
+                                             object_textlist ='\n'.join(object_textlist).split(BOX_CHAR['rm'])[1]
 
-                                        
+                                             
+
+                                             for char in BOX_CHAR:
+
+                                                  object_keylist = object_keylist.replace(BOX_CHAR[char],'')
+                                                  object_textlist = object_textlist.replace(BOX_CHAR[char],'')
+                                             object_keylist = [x.rstrip() for x
+                                                               in object_keylist.split('\n')
+                                                               if x.rstrip()] #purges empty lines
+                                             object_textlist = [x.rstrip() for x
+                                                                in object_textlist.split('\n')
+                                                                if x.rstrip()]
+
+                                                    
+                                        divider = len(object_keylist)+1
+                                        self.delete_object(obj)
                                         frame = self.new_note(y_coord+3,
                                                               x_coord+3,
                                                               note_y_dim,
                                                               note_x_dim,
-                                                              blank=True,
                                                               divider=divider)
-                                        # to delete the existing frame before resizing
-                                        fy_inc, fx_inc = keys[frame_key]
+                                        put(y_coord,x_coord)
+                                        startnote = True
+
                                         
-                                        y_temp = note_y_dim
-                                        x_temp = note_x_dim
-                                        note_y_dim += fy_inc
-                                        note_x_dim += fx_inc
-                                        note_y_dim += fy_inc
-                                        note_x_dim += fx_inc
-                                        
-                                        if note_y_dim <10:
-                                             note_y_dim = 10
-                                        if note_x_dim <10:
-                                             note_x_dim = 10
-                                        if note_y_dim > y_max:
-                                             note_y_dim = y_max
-                                        if note_x_dim > x_max:
-                                             note_x_dim = x_max
-                                        if self.is_clear(y_coord+3,
-                                                         x_coord+3,
-                                                         note_y_dim,
-                                                         note_x_dim):
+                              if startnote:      
+                                   
+                                   while True: #to establish size of new note 
+
+
+                                        frame_key = screen.getch()
+                                        if frame_key in keys:
+
                                              
                                              frame = self.new_note(y_coord+3,
                                                                    x_coord+3,
                                                                    note_y_dim,
                                                                    note_x_dim,
+                                                                   blank=True,
                                                                    divider=divider)
-                                             put(y_coord,x_coord)
-                                        else:
-                                             self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
-                                             put(y_coord,x_coord)
+                                             # to delete the existing frame before resizing
+                                             fy_inc, fx_inc = keys[frame_key]
                                              
-                                        
-                                   if frame_key == curses.KEY_F2:
-                                        break
+                                             y_temp = note_y_dim
+                                             x_temp = note_x_dim
+                                             note_y_dim += fy_inc
+                                             note_x_dim += fx_inc
+                                             note_y_dim += fy_inc
+                                             note_x_dim += fx_inc
+                                             
+                                             if note_y_dim <10:
+                                                  note_y_dim = 10
+                                             if note_x_dim <10:
+                                                  note_x_dim = 10
+                                             if note_y_dim > y_max:
+                                                  note_y_dim = y_max
+                                             if note_x_dim > x_max:
+                                                  note_x_dim = x_max
+                                             if self.is_clear(y_coord+3,
+                                                              x_coord+3,
+                                                              note_y_dim,
+                                                              note_x_dim):
+                                                  
+                                                  frame = self.new_note(y_coord+3,
+                                                                        x_coord+3,
+                                                                        note_y_dim,
+                                                                        note_x_dim,
+                                                                        divider=divider)
+                                                  put(y_coord,x_coord)
+                                             else:
+                                                  self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,divider=divider)
+                                                  put(y_coord,x_coord)
+                                                  
+                                             
+                                        if frame_key == curses.KEY_F2:
+                                             break
 
-                              
+                                   
 
-                              section = False # False for the upper window/True for the lower window
-                              sizing = {False:(divider-1,5,3),  
-                                        True:(note_y_dim-divider-2,5+divider,3)}
-                                        #verticle dimension/vertical starting coordinate/horizontal starting coordinate
+                                   section = False # False for the upper window/True for the lower window
+                                   sizing = {False:(divider-1,5,3),  
+                                             True:(note_y_dim-divider-2,5+divider,3)}
+                                             #verticle dimension/vertical starting coordinate/horizontal starting coordinate
 
-                              count = 0
+                                   count = 0
 
-                              if isinstance(object_textlist,str):
-                                   # For transforming a string into a list 
-                                   temp_x_dim = note_x_dim-int(note_x_dim/3)
-                                   # for the right margin 
+                                   if isinstance(object_textlist,str):
+                                        # For transforming a string into a list 
+                                        temp_x_dim = note_x_dim-int(note_x_dim/3)
+                                        # for the right margin 
 
-                                   linelist = []
+                                        linelist = []
 
-                                   for paragraph in object_textlist.split('\n'):
-                                        
+                                        for paragraph in object_textlist.split('\n'):
+                                             
 
-                                        line = ''
+                                             line = ''
 
-                                        counter = 0
-                                        for counter, char in enumerate(paragraph):
-                                             if char != ' ':
-                                                  break
-                                        line = counter * ' '
-                                        paragraph = paragraph[counter:]
+                                             counter = 0
+                                             for counter, char in enumerate(paragraph):
+                                                  if char != ' ':
+                                                       break
+                                             line = counter * ' '
+                                             paragraph = paragraph[counter:]
 
-                                        for word in paragraph.split(' '):
-                                             if word:
-                                                  if (len(line) + len(word)) < temp_x_dim:
-                                                       line += word + ' '
-                                                  elif not line and (len(word) >= temp_x_dim):
-                                                       line += word + ' '
-                                                       linelist.append(line)
-                                                       line = ''
-                                                  else:
-                                                       line += word + ' '
-                                                       linelist.append(line)
-                                                       line = ''
-                                        linelist.append(line)
-                                   object_textlist = linelist
-                                   if  note_y_dim > len(linelist):
-                                        object_textlist +=(note_y_dim - len(linelist))*' '
+                                             for word in paragraph.split(' '):
+                                                  if word:
+                                                       if (len(line) + len(word)) < temp_x_dim:
+                                                            line += word + ' '
+                                                       elif not line and (len(word) >= temp_x_dim):
+                                                            line += word + ' '
+                                                            linelist.append(line)
+                                                            line = ''
+                                                       else:
+                                                            line += word + ' '
+                                                            linelist.append(line)
+                                                            line = ''
+                                             linelist.append(line)
+                                        object_textlist = linelist
+                                        if  note_y_dim > len(linelist):
+                                             object_textlist +=(note_y_dim - len(linelist))*' '
 
-      
-                              # the entry box for the keywords   
-                              newpad = ScrollPad(sizing[section][0],
-                                                 note_x_dim-2,
-                                                 sizing[section][1],
-                                                 2,sizing[section][2],
-                                                 l_margin=1,screen=screen,
-                                                 textlist=object_keylist,
-                                                 bufferobject_undo=LimitedStack(),
-                                                 bufferobject_redo=LimitedStack())
-                              temp_typed = newpad.type(frame)
-                              newkeys1,newkeys2 = fill(temp_typed[0]), fill(temp_typed[1])
-                              if not newkeys1:
-                                   newkeys1 = [' ']
-                              if not newkeys2:
-                                   newkeys2 = [' ']
-                              
-                              section = True
-                              # the entry box for the text
-                              newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],
-                                                 2,sizing[section][2],l_margin=1,screen=screen,
-                                                 textlist=object_textlist,
-                                                 bufferobject_undo=LimitedStack(),
-                                                 bufferobject_redo=LimitedStack())
-                              temp_typed = newpad.type(newkeys1,y_offset=3)
-                              newnote1,newnote2 = fill(temp_typed[0]), fill(temp_typed[1])
-                              if not newnote1:
-                                   newnote1 = [' ']
-                              if not newnote2:
-                                   newnote2 = [' ']
-                              if '|' in ''.join(newkeys2):
-                                   newindex = ''.join(newkeys2).split('|')[0].strip()
-                                   newkeys2 = ''.join(newkeys2).split('|')[1]
-                                   try:
-                                        newindex = str(Index(index_expand(newindex)))
-                                   except:
-                                        newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1
-                                        
-                              else:
-                                   newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1                              
-                              self.added_notes.add(newindex)
-                              newindex = '$'+editing+str(newindex)
-                              keyset = {k_temp.strip() for k_temp in ''.join(newkeys2).split(',')}
-                              self.import_note(newindex,newnote1,newnote2,keyset)
-                              self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=3)
-                               # deletes the note frame and text
+           
+                                   # the entry box for the keywords   
+                                   newpad = ScrollPad(sizing[section][0],
+                                                      note_x_dim-2,
+                                                      sizing[section][1],
+                                                      2,sizing[section][2],
+                                                      l_margin=1,screen=screen,
+                                                      textlist=object_keylist,
+                                                      bufferobject_undo=LimitedStack(),
+                                                      bufferobject_redo=LimitedStack())
+                                   temp_typed = newpad.type(frame)
+                                   newkeys1,newkeys2 = fill(temp_typed[0]), fill(temp_typed[1])
+                                   if not newkeys1:
+                                        newkeys1 = [' ']
+                                   if not newkeys2:
+                                        newkeys2 = [' ']
+                                   
+                                   section = True
+                                   # the entry box for the text
+                                   newpad = ScrollPad(sizing[section][0],note_x_dim-2,sizing[section][1],
+                                                      2,sizing[section][2],l_margin=1,screen=screen,
+                                                      textlist=object_textlist,
+                                                      bufferobject_undo=LimitedStack(),
+                                                      bufferobject_redo=LimitedStack())
+                                   temp_typed = newpad.type(newkeys1,y_offset=3)
+                                   newnote1,newnote2 = fill(temp_typed[0]), fill(temp_typed[1])
+                                   if not newnote1:
+                                        newnote1 = [' ']
+                                   if not newnote2:
+                                        newnote2 = [' ']
+                                   if '|' in ''.join(newkeys2):
+                                        newindex = ''.join(newkeys2).split('|')[0].strip()
+                                        newkeys2 = ''.join(newkeys2).split('|')[1]
+                                        try:
+                                             newindex = str(Index(index_expand(newindex)))
+                                        except:
+                                             newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1
+                                             
+                                   else:
+                                        newindex = max([int(str(x).split('.')[0]) for x in self.added_notes])+1                              
+                                   self.added_notes.add(newindex)
+                                   newindex = '$'+editing+str(newindex)
+                                   keyset = {k_temp.strip() for k_temp in ''.join(newkeys2).split(',')}
+                                   self.import_note(newindex,newnote1,newnote2,keyset)
+                                   self.new_note(y_coord+3,x_coord+3,note_y_dim,note_x_dim,blank=True,divider=3)
+                                   self.add_from_stack(y_pos=y_coord+3,x_pos=x_coord+3)
+                                   
+                                    # deletes the note frame and text
 
-                              section = not section
-                      
+                                   section = not section
+                           
 
-                    elif key == curses.KEY_TAB:
-                         next_note = next(self.cycling_through)
-                         positions = self.object_dict[next_note]['p']
-                         y_coord = max([0,positions[0]-2])
-                         x_coord = max([0,positions[1]-2])
-                         self.delete_object(next_note,for_show=True)
-                         self.add_object(next_note,for_show=True)
-                         
-
-
-                    elif key == ord ('o'):
-                         screen.nodelay(True)
-                         starting = True
-                         new_direction = False
-                         y_coord = int(y_total/2)
-                         x_coord = int(x_total/2)
-                         float_y = float(y_coord)
-                         float_x = float(x_coord)
-                         key_pressed = -1
-                         
-                         while key_pressed == -1:
-                              key_pressed = screen.getch()
-                              if starting:
-                                   direction = random.choice(range(360))
-                                   going_for = 0
-                                   starting = False
-                              going_for += 1
-                              if float_y  < 10:
-                                   float_y  = 10.0
-                                   new_direction = True                                  
-                              elif float_y  > y_total - y_max -10:
-                                  float_y  = float(y_total - y_max - 10)
-                                  new_direction = True 
-                              if float_x < 10:
-                                   float_x = 10.0
-                                   new_direction = True                                       
-                              elif float_x > x_total - x_max - 10:
-                                   float_x = float(x_total - x_max - 10)
-                                   new_direction = True
-                              if new_direction:
-                                   direction = random.choice(range(360))
-                                   new_direction = False
-
-                              float_y += sin(direction) 
-                              float_x += cos(direction)
-
-                              if abs(y_coord-int(float_y)) + abs(x_coord-int(float_x)) >= 1:
-                                     y_coord = int(float_y)
-                                     x_coord = int(float_x)
-                              put(y_coord,x_coord)
-                              time.sleep(.02)
-                              self.print_to(screen,
-                                            str(x_coord)
-                                            +'/'+str(x_total)
-                                            +' : '+str(y_coord)
-                                            +'/'+str(y_total),
-                                            length=20,
-                                            y_pos=2,
-                                            x_pos=3)
-                         screen.nodelay(False)
-                              
-                                                                
-                            
-                    elif key == ord('n'):
-
-                         screen.nodelay(True)
-                         key_pressed = -1
-
-                         while key_pressed == -1:
-                              key_pressed = screen.getch()
+                         elif key == curses.KEY_TAB:
                               next_note = next(self.cycling_through)
-                              positions = self.object_dict[next_note]['p']
-                              y_coord = max([0,positions[0]-5])
-                              x_coord = max([0,positions[1]-10])
-                              time.sleep(.5)
-                              put(y_coord,x_coord)
+                              if 'p' in self.object_dict[next_note]:            #for notes 
+                                   positions = self.object_dict[next_note]['p']
+                                   y_coord = max([0,positions[0]-self.cursor_y])
+                                   x_coord = max([0,positions[0]-self.cursor_y])
+                                   self.delete_object(next_note,for_show=True)
+                                   self.add_object(next_note,for_show=True)
+                              elif 'c' in self.object_dict[next_note]:          # for non-note objects 
+                                   y_coord, x_coord = self.object_dict[next_note]['c'].top_left()
+                                   y_coord = max([0,y_coord-self.cursor_y])     # to keep from going 
+                                   x_coord = max([0,x_coord-self.cursor_x])     # over the edge 
+                                    
 
-                         screen.nodelay(False)
                                    
-                    elif key == 92:
-                         if self.find_object_in(y_coord+2,x_coord+2):
-                              if self.find_object_in(y_coord+2,x_coord+2) in self.selected:
-                                   self.selected.discard(self.find_object_in(y_coord+2,x_coord+2))
+                                   
+
+
+                         elif key == ord ('o'):
+                              screen.nodelay(True)
+                              starting = True
+                              new_direction = False
+                              y_coord = int(y_total/2)
+                              x_coord = int(x_total/2)
+                              float_y = float(y_coord)
+                              float_x = float(x_coord)
+                              key_pressed = -1
+                              
+                              while key_pressed == -1:
+                                   key_pressed = screen.getch()
+                                   if starting:
+                                        direction = random.choice(range(360))
+                                        going_for = 0
+                                        starting = False
+                                   going_for += 1
+                                   if float_y  < 10:
+                                        float_y  = 10.0
+                                        new_direction = True                                  
+                                   elif float_y  > y_total - y_max -10:
+                                       float_y  = float(y_total - y_max - 10)
+                                       new_direction = True 
+                                   if float_x < 10:
+                                        float_x = 10.0
+                                        new_direction = True                                       
+                                   elif float_x > x_total - x_max - 10:
+                                        float_x = float(x_total - x_max - 10)
+                                        new_direction = True
+                                   if new_direction:
+                                        direction = random.choice(range(360))
+                                        new_direction = False
+
+                                   float_y += sin(direction) 
+                                   float_x += cos(direction)
+
+                                   if abs(y_coord-int(float_y)) + abs(x_coord-int(float_x)) >= 1:
+                                          y_coord = int(float_y)
+                                          x_coord = int(float_x)
+                                   put(y_coord,x_coord)
+                                   time.sleep(.02)
+                                   self.print_to(screen,
+                                                 str(x_coord)
+                                                 +'/'+str(x_total)
+                                                 +' : '+str(y_coord)
+                                                 +'/'+str(y_total),
+                                                 length=20,
+                                                 y_pos=2,
+                                                 x_pos=3)
+                              screen.nodelay(False)
+                                   
+                                                                     
+                                 
+                         elif key == ord('n'):
+
+                              screen.nodelay(True)
+                              key_pressed = -1
+
+                              while key_pressed == -1:
+                                   key_pressed = screen.getch()
+                                   next_note = next(self.cycling_through)
+                                   if 'p' in self.object_dict[next_note]:
+                                        positions = self.object_dict[next_note]['p']
+                                        y_coord = max([0,positions[0]-5])
+                                        x_coord = max([0,positions[1]-10])
+
+                                   elif 'c' in self.object_dict[next_note]:          # for non-note objects 
+                                        y_coord, x_coord = self.object_dict[next_note]['c'].top_left()
+                                        y_coord = max([0,y_coord-self.cursor_y])     # to keep from going 
+                                        x_coord = max([0,x_coord-self.cursor_x])     # over the edge 
+                                   time.sleep(.5)
+                                   put(y_coord,x_coord)
+
+                              screen.nodelay(False)
+                         elif key == 3: # to copy object
+
+                              object_to_copy = self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x)
+                              if object_to_copy:
+                                   if 'o' in self.object_dict[object_to_copy]:
+
+                                        self.copy_buffer = DrawingObject(textlistobject=self.textlist,objectlist=self.object_dict[object_to_copy]['o'])
+                                   elif 'c' in self.object_dict[object_to_copy]:
+                                        self.copy_buffer = DrawingObject(textlistobject=self.textlist,schema=self.object_dict[object_to_copy]['c'].get_schema())
+                                        
+                         elif key == 22: # to paste objet 
+
+                              if self.copy_buffer:
+                                   copy_object,draw_obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,
+                                                                                            x_coord+self.cursor_x,
+                                                                                            schema=self.copy_buffer.get_schema())
+                                   
+                                   copy_object.position_object(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,from_schema=True)
+                                   self.add_drawn_object(draw_obj_ind)
+
+                                   
+                         elif key == 92:
+                              if self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x):
+                                   if self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x) in self.selected:
+                                        self.selected.discard(self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x))
+                                   else:
+                                        self.selected.add(self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x))
+                                        is_selected = True
+                         elif key == curses.KEY_F5:
+                              moving_object = not moving_object
+                         elif key == curses.KEY_F6:
+                              moving_screen_too = not moving_screen_too
+                         elif key == curses.KEY_F7:
+                              if (self.find_object_in(y_coord+self.cursor_y,
+                                                      x_coord+self.cursor_x)):
+                                   objects_to_move.add(self.find_object_in(y_coord+self.cursor_y,
+                                                                           x_coord+self.cursor_x))
+                         elif key == curses.KEY_F8:
+                              if (self.find_object_in(y_coord+self.cursor_y,
+                                                      x_coord+self.cursor_x)):  
+                                   objects_to_move.discard(self.find_object_in(y_coord+self.cursor_y,
+                                                                               x_coord+self.cursor_x))
+                         elif key in [curses.KEY_F10,curses.KEY_BREAK,curses.KEY_EXIT]:
+                              go_on = False
+                         elif key == curses.KEY_DELETE and self.find_object_in(y_coord+self.cursor_y,
+                                                                               x_coord+self.cursor_x):
+
+                              obj_temp = self.find_object_in(y_coord+self.cursor_y,
+                                                                     x_coord+self.cursor_x)
+
+                              if not obj_temp.startswith('%'):
+                                   self.delete_object(obj_temp)
+                                   
                               else:
-                                   self.selected.add(self.find_object_in(y_coord+2,x_coord+2))
-                                   is_selected = True
-                    elif key == curses.KEY_F5:
-                         moving_object = not moving_object
-                    elif key == curses.KEY_F6:
-                         moving_screen_too = not moving_screen_too
-                    elif key == curses.KEY_F7:
-                         if (self.find_object_in(y_coord+int(y_max/2),
-                                                 x_coord+int(x_max/2))):
-                              objects_to_move.add(self.find_object_in(y_coord+int(y_max/2),
-                                                                      x_coord+int(x_max/2)))
-                    elif key == curses.KEY_F8:
-                         if (self.find_object_in(y_coord+int(y_max/2),
-                                                 x_coord+int(x_max/2))):  
-                              objects_to_move.discard(self.find_object_in(y_coord+int(y_max/2),
-                                                                          x_coord+int(x_max/2)))
-                    elif key in [curses.KEY_F10,curses.KEY_BREAK,curses.KEY_EXIT]:
-                         go_on = False
-                    elif key == curses.KEY_DELETE and self.find_object_in(y_coord+int(y_max/2),
-                                                                          x_coord+int(x_max/2)):
-                         self.delete_object(self.find_object_in(y_coord+int(y_max/2),
-                                                                x_coord+int(x_max/2)))
-                    elif key == ord('['):
-                         if y_coord - y_max >= 0:
-                              
-                              y_coord -= y_max
-                         
-                    elif key == ord(']'):
-                         if y_coord - y_max <= y_total:
-                              
-                              y_coord += y_max
-                    elif key == ord('{'):
-                         if x_coord - x_max >= 0:
-                              x_coord -= x_max
-                    elif key == ord('}'):
-                         if x_coord + x_max <= x_total:
-                              x_coord += x_max
-                    elif key == curses.KEY_F9:
-                         cycling = not cycling
-                         
-                         
-                    elif key == curses.KEY_F11:
-                         stack_dump = True 
-
-                              
-                              
-                    elif key == ord('z'):
-
-                         if multiplier > 1:
-                              multiplier -= 1
-                    elif key == ord('x'):
-                         if multiplier <30:
-                              multiplier += 1
-     
-                    elif key == curses.KEY_INSERT:
-                         self.add_from_stack(y_coord,x_coord)
-                    elif key == ord('c'):
-                         self.size -= 1
-                    elif key == ord('v'):
-                         self.size += 1
-                    elif key == ord('m'):
-                         screen.nodelay(True)
-
-                         old_textlist = list(self.textlist)
-                         old_object_dict = copy.deepcopy(self.object_dict)
-
-                         temp_dict = {}
-
-
-                         for counter,temp_ind in enumerate(self.object_dict):
-
-                              positions = self.object_dict[temp_ind]['p']
-                              y_p = positions[0]
-                              x_p = positions[1]
-                              y_d = positions[2]-positions[0]
-                              x_d = positions[3]-positions[1]
-
-                              temp_dict[counter] = (temp_ind,
-                                                    find_direction(y_p,x_p,y_d,x_d,0,
-                                                                   function=lambda a,b,c,d:True))
-                              
-                              
-
-                         iteration = 0
-                         key_pressed = -1
-##                              try:
-                         while key_pressed == -1:
-                              key_pressed = screen.getch()
-                              iteration += 1
-                              for counter in list(temp_dict.keys()):
-                                   temp_tup = temp_dict[counter]
+                                   self.delete_drawn_object(obj_temp)
+                                   self.import_note(obj_temp)
+                         elif key == ord('['):
+                              if y_coord - y_max >= 0:
                                    
-                                   dummy1,dummy2,y_inc,x_inc,counter = next(temp_tup[1])
-                                     
+                                   y_coord -= y_max
                               
-                                   self.move_object([temp_tup[0]],
-                                                    y_inc,
-                                                    x_inc,
-                                                    auto=True)
+                         elif key == ord(']'):
+                              if y_coord - y_max <= y_total:
+                                   
+                                   y_coord += y_max
+                         elif key == ord('{'):
+                              if x_coord - x_max >= 0:
+                                   x_coord -= x_max
+                         elif key == ord('}'):
+                              if x_coord + x_max <= x_total:
+                                   x_coord += x_max
+                         elif key == curses.KEY_F9:
+                              if not selecting and not cycling:
+                                   cycling = True
+                                   
+                              elif cycling and not selecting:
+                                   selecting = True
+                                   cycling = False
+                                   
+                              elif selecting and not cycling:
+                                   selecting = False   
+                                   cycling = False 
                               
-                              if iteration == 100:
-                                   y_coord = random.randrange(0,y_total-y_max,y_max)
-                                   x_coord = random.randrange(0,x_total-x_max,x_max)
-                                   iteration = 0
-                                   curses.beep()
-                              put(y_coord,x_coord)
-                         
-##                                        
-##                              except:
-##                                   pass
-                         screen.nodelay(False)
-                         if key_pressed != ord('m'):
-                              self.textlist = old_textlist
-                              self.object_dict = old_object_dict
+                              
+                         elif key == curses.KEY_F11:
+                              stack_dump = True 
+
+                                   
+                                   
+                         elif key == ord('z'):
+
+                              if multiplier > 1:
+                                   multiplier -= 1
+                         elif key == ord('x'):
+                              if multiplier <30:
+                                   multiplier += 1
+          
+                         elif key == curses.KEY_INSERT:
+                              self.add_from_stack(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x)
+                         elif key == ord('c'):
+                              self.size -= 1
+                         elif key == ord('v'):
+                              self.size += 1
+                         elif key == ord('m'):
+                              screen.nodelay(True)
+
+                              old_textlist = list(self.textlist)
+                              old_object_dict = copy.deepcopy(self.object_dict)
+
+                              temp_dict = {}
+
+
+                              for counter,temp_ind in enumerate(self.object_dict):
+
+                                   if 'p' in self.object_dict[temp_ind]:
+
+                                        positions = self.object_dict[temp_ind]['p']
+                                        y_p = positions[0]
+                                        x_p = positions[1]
+                                        y_d = positions[2]-positions[0]
+                                        x_d = positions[3]-positions[1]
+
+                                        temp_dict[counter] = (temp_ind,
+                                                              find_direction(y_p,x_p,y_d,x_d,0,
+                                                                             function=lambda a,b,c,d:True))
+##                                   elif 'c' in self.object_dict[temp_ind]:
+##                                        positions = self.object_dict[temp_ind]['c'].boxed_dimensions()
+##                                        y_p = positions[0]
+##                                        x_p = positions[1]
+##                                        y_d = positions[2]-positions[0]
+##                                        x_d = positions[3]-positions[1]
+##
+##                                        temp_dict[counter] = (temp_ind,
+##                                                              find_direction(y_p,x_p,y_d,x_d,0,
+##                                                                             function=lambda a,b,c,d:True))
+##
+                                        
+                              
+
+                                   
+                                        
+                                   
+
+                              iteration = 0
+                              key_pressed = -1
+     ##                              try:
+                              while key_pressed == -1:
+                                   key_pressed = screen.getch()
+                                   iteration += 1
+                                   for counter in list(temp_dict.keys()):
+                                        temp_tup = temp_dict[counter]
+                                        
+                                        dummy1,dummy2,y_inc,x_inc,counter = next(temp_tup[1])
+                                          
+                                   
+                                        self.move_object([temp_tup[0]],
+                                                         y_inc,
+                                                         x_inc,
+                                                         auto=True)
+                                   
+##                                   if iteration == 100:
+##                                        y_coord = random.randrange(0,y_total-y_max,y_max)
+##                                        x_coord = random.randrange(0,x_total-x_max,x_max)
+##                                        iteration = 0
+##                                        curses.beep()
+                                   put(y_coord,x_coord)
+                              
+     ##                                        
+     ##                              except:
+     ##                                   pass
+                              screen.nodelay(False)
+                              if key_pressed != ord('m'):
+                                   self.textlist = old_textlist
+                                   self.object_dict = old_object_dict
 
 
                          

@@ -60,7 +60,8 @@ class MovingWindow:
                for y in range(y_max-1-b_margin-t_margin):
 
                     if y_pos+y <= y_total:
-                         screen.addstr(y+b_margin,l_margin,self.textlist[y_pos+y][x_pos:x_pos+x_max-l_margin-r_margin])
+                         for x in range (x_max-l_margin-r_margin):
+                              screen.addch(y+b_margin,x+l_margin,self.textlist[y_pos+y][x_pos+x])
                screen.refresh()
 
                          

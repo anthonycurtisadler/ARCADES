@@ -74,14 +74,17 @@ BACKSLASH = '\\'
 
 COMMABLANK = COMMA + BLANK
 
-BOX_CHAR = {'v':'┃',
+BOX_CHAR = {'v':'│',
             'h':'─',
-            'lu':'┎',
-            'ru':'┒',
-            'lm':'┠',
-            'rm':'┨',
-            'll':'┖',
-            'rl':'┚'}
+            'lu':'┌',
+            'ru':'┐',
+            'lm':'├',
+            'rm':'┤',
+            'll':'└',
+            'rl':'┘',
+            'xl':'┬',
+            'xu':'┴	',
+            'x':'┼'}
 
 KNOWLEDGEITERATIONS = 20
 
