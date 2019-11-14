@@ -9084,7 +9084,7 @@ class Console (Note_Shelf):
 
         if mainterm in ['showknowledge']:
 
-            self.result_text = knowledge_text = self.default_dict['generalknowledge'].dump()
+            self.text_result = knowledge_text = self.default_dict['generalknowledge'].dump()
             display.noteprint(('GENERAL KNOWLEDGE',knowledge_text))
           
             
@@ -10441,8 +10441,8 @@ class Console (Note_Shelf):
             if self.pad_dict[self.currentpad]:
                 try:
                     display.noteprint(('ACTIVATING',self.currentpad))
-                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,
-                                                                                                                              x_pos=self.pad_x_pos)
+                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist, self.text_result = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,
+                                                                                                                                                x_pos=self.pad_x_pos)
                 except:
                     self.pad_dict[self.currentpad].restore()
 

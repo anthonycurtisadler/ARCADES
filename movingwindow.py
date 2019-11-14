@@ -166,7 +166,7 @@ class MovingWindow:
 
 
                put(y_coord,x_coord)
-          return y_coord,x_coord, None, None
+          return y_coord,x_coord, None, None, None
 
 
      def create_frame (self,screen):
@@ -204,14 +204,14 @@ class MovingWindow:
 
           self.bottom_window = self.create_frame(self.screen)
           
-          y_pos,x_pos, object_dict, textlist = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos,entering=entering)                                                       
+          y_pos,x_pos, object_dict, textlist, boxedobject = self.moving_screen(self.screen,y_coord=y_pos,x_coord=x_pos,entering=entering)                                                       
 
           curses.nocbreak()
           self.screen.keypad(False)
           curses.echo()
           curses.endwin()
           del self.screen
-          return y_pos,x_pos, object_dict, textlist 
+          return y_pos,x_pos, object_dict, textlist, boxedobject
 
      def restore (self):
 

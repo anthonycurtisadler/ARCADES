@@ -68,6 +68,25 @@ class DrawingObject:
                     for x in range(len(objectlist[y])):
                          self.schema[(y,x)] = objectlist[y][x]
 
+          def make_rectangle (self,height,width,blank=False):
+
+               """Creates a block character rectangle of the given dimension"""
+               
+               textlist = []
+               if not blank:
+                    for y in range(0,height):
+
+                         if y == 0:
+                              textlist.append(BOX_CHAR['lu']+BOX_CHAR['h']*(width-2)+BOX_CHAR['ru'])
+                         elif 0 < y < height-1:
+                              textlist.append(BOX_CHAR['v']+' '*(width-2)+BOX_CHAR['v'])
+                         else:
+                              textlist.append(BOX_CHAR['ll'] + BOX_CHAR['h']*(width-2) + BOX_CHAR['rl'])
+               else:
+                    textlist = [' '*width]*height
+                         
+               return textlist
+
      def make_schema (self):
 
           coord_list = sorted(self.drawn_object.keys())
@@ -81,6 +100,30 @@ class DrawingObject:
           if not self.schema:
                self.make_schema()
           return self.schema
+
+     def return_boxed_note (self,schema=None):
+          if not schema:
+               if not self.schema:
+                    self.make_schema()
+                    schema = self.schema
+                    
+     
+          min_y,min_x,max_y,max_x = self.get_boxed_dimensions()
+          height = (max_y - min_y) + 2
+          width = (max_x - min_x) + 2
+          textlist = self.make_rectangle(height=height,width=width)
+
+          for c in schema:
+
+               y = c[0]+1
+               x = c[1]+1
+               new_char = schema[c]
+               
+               textlist[y] = textlist[y][0:x] + new_char + textlist[y][x+1:]
+          return textlist 
+          
+
+          
 
      def enter_superimposed_object (self,
                                     y_coord=0,
@@ -124,13 +167,48 @@ class DrawingObject:
                self.drawn_object[(c[0]+y_pos,c[1]+x_pos)] = (self.textlistobject[c[0]+y_pos][c[1]+x_pos],self.schema[c])
 
      def select (self,square=True):
+          # creates an object from the interior space of a boxed frame or an amorphous shape
 
-          y_min,x_min,y_max,x_max = self.boxed_dimensions()
+          if square:
 
-          objectlist = [x[x_min+1:x_max] for x in self.textlistobject[y_min+1:y_max]]
-          self.enter_superimposed_object(y_coord=y_min+1,x_coord=x_min+1,objectlist=objectlist)
+               y_min,x_min,y_max,x_max = self.boxed_dimensions()
+
+               objectlist = [x[x_min+1:x_max] for x in self.textlistobject[y_min+1:y_max]]
+               self.enter_superimposed_object(y_coord=y_min+1,x_coord=x_min+1,objectlist=objectlist)
+          else:
+               amorphous_frame = {}
+               y_min = 0
+               x_min = 0
+               for c in self.drawn_object.keys():
+                    y = c[0]
+                    x = c[1]
+                    if y < y_min:
+                         y_min = y
+                    if x < x_min:
+                         x_min = x
+                    
+
+                    if y not in amorphous_frame:
+                         amorphous_frame[y] = [x]
+                    else:
+                         amorphous_frame[y].append(x)
+               objectlist = []
+               for y in sorted(list(amorphous_frame.keys()))[1:-1]:
+                    if min(amorphous_frame[y]) != max(amorphous_frame[y]):
+                         objectlist.append(self.textlistobject[y][min(amorphous_frame[y])+1:max(amorphous_frame[y])])
+               self.enter_superimposed_object(y_coord=y_min+1,x_coord=x_min+1,objectlist=objectlist)
+               
+               
+                    
+                    
+                    
+                    
+
+     
 
      def flip (self,horizontal=False,vertical=False):
+
+          # flips on horizontal or vertical axis 
 
           flipped_object = {}
           y_min,x_min,y_max,x_max = self.boxed_dimensions()
