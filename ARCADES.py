@@ -1241,7 +1241,7 @@ def save_file(returntext=EMPTYCHAR,
                     +filename+'.txt',
                     'x',
                     encoding='utf-8') as textfile:
-        textfile.write(returntext.replace('\ufeff', EMPTYCHAR))
+        textfile.write(returntext.replace('\ufeff', ' '))
 
     return 'Saved to ' + directoryname+SLASH+filename+'.txt' 
 

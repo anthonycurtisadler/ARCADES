@@ -1,6 +1,11 @@
 import copy
 import random
-from globalconstants import BOX_CHAR
+from globalconstants import BOX_CHAR, BOX_CHAR_NORMAL,BOX_CHAR_ROUND,BOX_CHAR_THICK,BOX_CHAR_DOUBLE
+
+BOX_CHAR_LIST = []
+
+          
+     
 
 
 transformation_table = {}
@@ -40,11 +45,14 @@ transformation_table['right_rotation'] =  {'v':'h',   #For rotation on horizonal
                                                'xu':'lm',  # '┴'
                                                'x':'x'} # '┼'
 
-
+keys = list(transformation_table['horizontal_rotation'].keys())
 for a in ['horizontal_rotation','vertical_rotation','right_rotation']:
 
-     transformation_table[a] = {BOX_CHAR[x]:BOX_CHAR[transformation_table[a][x]]
-                                                                         for x in transformation_table[a]}
+     for b in [BOX_CHAR_NORMAL,BOX_CHAR_ROUND,BOX_CHAR_THICK,BOX_CHAR_DOUBLE]:
+          
+          for x in keys:
+               transformation_table[a][b[x]] = b[transformation_table[a][x]]
+
 
 
 
@@ -68,6 +76,8 @@ class DrawingObject:
                     for x in range(len(objectlist[y])):
                          self.schema[(y,x)] = objectlist[y][x]
 
+          self.BOX_CHAR = BOX_CHAR
+
           def make_rectangle (self,height,width,blank=False):
 
                """Creates a block character rectangle of the given dimension"""
@@ -77,11 +87,11 @@ class DrawingObject:
                     for y in range(0,height):
 
                          if y == 0:
-                              textlist.append(BOX_CHAR['lu']+BOX_CHAR['h']*(width-2)+BOX_CHAR['ru'])
+                              textlist.append(self.BOX_CHAR['lu']+self.BOX_CHAR['h']*(width-2)+self.BOX_CHAR['ru'])
                          elif 0 < y < height-1:
-                              textlist.append(BOX_CHAR['v']+' '*(width-2)+BOX_CHAR['v'])
+                              textlist.append(self.BOX_CHAR['v']+' '*(width-2)+self.BOX_CHAR['v'])
                          else:
-                              textlist.append(BOX_CHAR['ll'] + BOX_CHAR['h']*(width-2) + BOX_CHAR['rl'])
+                              textlist.append(self.BOX_CHAR['ll'] + self.BOX_CHAR['h']*(width-2) + self.BOX_CHAR['rl'])
                else:
                     textlist = [' '*width]*height
                          
@@ -120,7 +130,17 @@ class DrawingObject:
                new_char = schema[c]
                
                textlist[y] = textlist[y][0:x] + new_char + textlist[y][x+1:]
-          return textlist 
+          return textlist
+
+     def switch_box_chars (self,switch_to='normal'):
+
+          if switch_to not in ['normal','thick','round','double']:
+               switch_to = 'normal'
+
+          self.BOX_CHAR = {'normal':BOX_CHAR_NORMAL,
+                           'thick':BOX_CHAR_THICK,
+                           'round':BOX_CHAR_ROUND,
+                           'double':BOX_CHAR_DOUBLE}[switch_to]
           
 
           
@@ -283,7 +303,7 @@ class DrawingObject:
                for c in self.drawn_object:
 
                     if c[1] == x_pos:
-                         if self.drawn_object[c][1] == BOX_CHAR['h']:
+                         if self.drawn_object[c][1] == self.BOX_CHAR['h']:
                               stretching.append(c[0])
                          else:
                               return False
@@ -292,7 +312,7 @@ class DrawingObject:
                     self.move(x_inc=1,min_x=x_pos)
                for temp_y in stretching:
                     if not contracting:
-                         self.add(y_pos=temp_y,x_pos=x_pos+1,newchar=BOX_CHAR['h'])
+                         self.add(y_pos=temp_y,x_pos=x_pos+1,newchar=self.BOX_CHAR['h'])
                     else:
                          self.delete(y_pos=temp_y,x_pos=x_pos+1)
                if contracting:
@@ -305,7 +325,7 @@ class DrawingObject:
                for c in self.drawn_object:
 
                     if c[0] == y_pos:
-                         if self.drawn_object[c][1] == BOX_CHAR['v']:
+                         if self.drawn_object[c][1] == self.BOX_CHAR['v']:
                               stretching.append(c[1])
                          else:
                               return False
@@ -313,7 +333,7 @@ class DrawingObject:
                     self.move(y_inc=1,min_y=y_pos)
                for temp_x in stretching:
                     if not contracting:
-                         self.add(y_pos=y_pos+1,x_pos=temp_x,newchar=BOX_CHAR['v'])
+                         self.add(y_pos=y_pos+1,x_pos=temp_x,newchar=self.BOX_CHAR['v'])
                     else:
                          self.delete(y_pos=y_pos+1,x_pos=temp_x)
                if contracting:
@@ -360,6 +380,7 @@ class DrawingObject:
           
 
           coord_list = sorted(coord_list,key=lambda c:(y_polarity*c[0],x_polarity*c[1]))
+             #organize coordinates according to polarity of move 
 
           for coord in list(coord_list):
 
@@ -381,6 +402,9 @@ class DrawingObject:
      def contains (self,y_pos=0,x_pos=0):
 
           return (y_pos,x_pos) in self.drawn_object
+
+     def get_just_coords (self):
+          return set(self.drawn_object.keys())
 
      def get_coords (self):
 
