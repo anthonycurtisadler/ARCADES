@@ -58,12 +58,13 @@ for a in ['horizontal_rotation','vertical_rotation','right_rotation']:
 
 class DrawingObject:
 
-     def __init__ (self,textlistobject=None,objectlist=None,schema=None):
+     def __init__ (self,displaydictobject=None,objectlist=None,schema=None):
 
           self.drawn_object = {} # dictionary in the form
                            # (y,x):(oldchar,newchar)
-          if textlistobject:
-               self.textlistobject = textlistobject
+
+          self.displaydictobject = displaydictobject
+          
 
           if not schema:
                self.schema = {}
@@ -97,6 +98,59 @@ class DrawingObject:
                          
                return textlist
 
+
+     def get_line_from_text (self,y_pos=0,x_pos=0,length=1):
+
+          returntext = ''
+          for counter in range(length):
+               if (y_pos,x_pos+counter) in self.displaydictobject:
+                    returntext += self.displaydictobject[(y_pos,x_pos+counter)][0]
+               else:
+                    returntext += ' '
+          return returntext
+     
+
+     def get_line_from_to (self,y_pos=0,x_from=0,x_to=0):
+
+          returntext = ''
+          for x in range(x_from,x_to):
+               if (y_pos,x) in self.displaydictobject:
+                    returntext += self.displaydictobject[(y_pos,x)][0]
+               else:
+                    returntext += ' '
+          return returntext
+
+     def put_in_text (self,y_pos=0,x_pos=0,text=''):
+
+          for counter, char in enumerate(text):
+               if char != ' ':
+                    self.displaydictobject[(y_pos,x_pos+counter)] = (char,None,None)
+                 # character; attribute; color
+               else:
+                    if (y_pos,x_pos+counter) in self.displaydictobject:
+                         del self.displaydictobject[(y_pos,x_pos+counter)]
+          
+          
+          else:
+               return False
+
+
+     def extract (self,y_pos=0,x_pos=0,y_dim=0,x_dim=0):
+
+          """ to extract a rectangular segment from the textlist"""
+
+          returnlist = []
+
+          for y in range(y_pos,y_pos+y_dim):
+               line = ''
+               for x in range(x_pos,x_pos+x_dim):
+                    if (y,x) in self.displaydictobject:
+                         line += self.displaydictobject[(y,x)][0]
+                    else:
+                         line += ' '
+               returnlist.append(line)                    
+          return returnlist
+     
      def make_schema (self):
 
           coord_list = sorted(self.drawn_object.keys())
@@ -162,7 +216,7 @@ class DrawingObject:
                          if (y+y_coord,x+x_coord) in self.drawn_object:
                               old_char = self.drawn_object[(y+y_coord,x+x_coord)][0]
                          else:
-                              old_char = self.textlistobject[y+y_coord][x+x_coord]
+                              old_char = self.get_line_from_text(y+y_coord,x+x_coord)
 
                          new_object[(y+y_coord,x+x_coord)] = (old_char,objectlist[y][x])
 
@@ -179,13 +233,9 @@ class DrawingObject:
           max_y = max([c[0] for c in self.schema])
           max_x = max([c[1] for c in self.schema])
 
-          if y_pos + max_y > len(self.textlistobject) and x_pos + max_x > len(self.textlistobject[y_pos + max_y]):
-
-               return False
-
           self.drawn_object = {}
           for c in self.schema:
-               self.drawn_object[(c[0]+y_pos,c[1]+x_pos)] = (self.textlistobject[c[0]+y_pos][c[1]+x_pos],self.schema[c])
+               self.drawn_object[(c[0]+y_pos,c[1]+x_pos)] = (self.get_line_from_text((c[0]+y_pos,c[1]+x_pos)),self.schema[c])
 
      def select (self,square=True):
           # creates an object from the interior space of a boxed frame or an amorphous shape
@@ -194,7 +244,7 @@ class DrawingObject:
 
                y_min,x_min,y_max,x_max = self.boxed_dimensions()
 
-               objectlist = [x[x_min+1:x_max] for x in self.textlistobject[y_min+1:y_max]]
+               objectlist = self.extract (y_pos=y_min+1,x_pos=x_min+1,y_dim=x_max-x_min-2,x_dim=x_max-x_min-2)
                self.enter_superimposed_object(y_coord=y_min+1,x_coord=x_min+1,objectlist=objectlist)
           else:
                amorphous_frame = {}
@@ -216,7 +266,7 @@ class DrawingObject:
                objectlist = []
                for y in sorted(list(amorphous_frame.keys()))[1:-1]:
                     if min(amorphous_frame[y]) != max(amorphous_frame[y]):
-                         objectlist.append(self.textlistobject[y][min(amorphous_frame[y])+1:max(amorphous_frame[y])])
+                         objectlist.append(self.get_line_from_to(y_pos=y,x_from=min(amorphous_frame[y])+1,x_to=max(amorphous_frame[y])))
                self.enter_superimposed_object(y_coord=y_min+1,x_coord=x_min+1,objectlist=objectlist)
                
                
@@ -246,7 +296,7 @@ class DrawingObject:
                if (y_transformed,x_transformed) in self.drawn_object:
                     old_char_transformed = self.drawn_object[(y_transformed,x_transformed)][0]
                else:
-                    old_char_transformed = self.textlistobject[y_transformed][x_transformed]
+                    old_char_transformed = self.get_line_from_text(y_transformed,x_transformed)
                if horizontal:
                     if new_char_transformed in transformation_table['horizontal_rotation']:
                          new_char_transformed = transformation_table['horizontal_rotation'][new_char_transformed]
@@ -284,7 +334,7 @@ class DrawingObject:
                     if (y_transformed,x_transformed) in self.drawn_object:
                          old_char_transformed = self.drawn_object[(y_transformed,x_transformed)][0]
                     else:
-                         old_char_transformed = self.textlistobject[y_transformed][x_transformed]
+                         old_char_transformed = self.get_line_from_text(y_transformed,x_transformed)
                     if new_char_transformed in transformation_table['right_rotation']:
                               new_char_transformed = transformation_table['right_rotation'][new_char_transformed]
                     
@@ -347,12 +397,9 @@ class DrawingObject:
           
      def add (self,y_pos=0,x_pos=0,newchar=' '):
 
-          if 0 <= y_pos < len(self.textlistobject)\
-             and 0 <= x_pos < len(self.textlistobject[y_pos]):
-
                if (y_pos,x_pos) not in self.drawn_object:
 
-                    self.drawn_object[(y_pos,x_pos)] = (self.textlistobject[y_pos][x_pos],
+                    self.drawn_object[(y_pos,x_pos)] = (self.get_line_from_text(y_pos,x_pos),
                                                         newchar)
 
                else:
@@ -395,7 +442,7 @@ class DrawingObject:
                     if newcoord in ghost:
                          new_value = ghost[newcoord][0],old_value[1]
                     else:
-                         new_value = self.textlistobject[newcoord[0]][newcoord[1]],old_value[1]
+                         new_value = self.get_line_from_text(newcoord[0],newcoord[1]),old_value[1]
 
                     self.drawn_object[newcoord] = new_value
                     del self.drawn_object[coord]
