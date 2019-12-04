@@ -1,3 +1,4 @@
+
 ## Expanded version of the  knowledgebase
 ##
 
@@ -84,7 +85,7 @@ class GeneralizedKnowledge:
 
           def empty_shelf(shelfobject):
 
-               for key in shelfobject:
+               for key in list(shelfobject.keys()):
                     del shelfobject[key]
 
           if input('DO YOU REALLY WANT TO CLEAR THE ENTIRE KNOWLEDGE SHELF?? Type "yes" to continue!') == 'yes':
@@ -254,6 +255,29 @@ class GeneralizedKnowledge:
      
           if self.delete_directed_edge (relation,nodeone,nodetwo) and self.delete_directed_edge (relation,nodetwo,nodeone):
                return True
+
+     def find_nodes_with_attributes (self,relation,content,findin=True):
+
+          
+          if relation not in self.relations:
+               return set()
+          returnset = set()
+
+          for node in self.knowledge:
+
+               if relation in self.knowledge[node]:
+
+                    if not findin:
+
+                         if content  in self.knowledge[node][relation]:
+
+                              returnset.add(node)
+                    else:
+
+                         for phrase in self.knowledge[node][relation]:
+                              if content in phrase:
+                                   returnset.add(node)
+          return returnset 
 
      def find_nodes (self,relation,nodeset=None,resultlist=None,pathlist=None,searched_nodes=None):
 
@@ -434,7 +458,11 @@ class GeneralizedKnowledge:
           def reduce_blanks (command):
                while '  ' in command:
                     command = command.replace('  ',' ')
-               return command 
+               return command
+
+          if ':' in command:
+               return(self.interpret(command,reverse_order=False))
+               
           
           ARE_NODES = ' are nodes'
           IS_A_NODE = ' is a node'
@@ -501,7 +529,7 @@ class GeneralizedKnowledge:
                if ';' in command:
                     command_end = command.split(':')[1].split(';')[1]
           command_end = command_end.replace(' from ','>').replace(' from ','>')
-          if 'self' in command_end:
+          if 'self' in command_end or 'self' in command_end:
                command_end = command_beginning
           if all_true:
                command_middle_list = command_middle.split(',')
@@ -562,8 +590,11 @@ class GeneralizedKnowledge:
           if command.startswith('$$$$') or command.startswith('????'):
 
                header = 'ALL SHELVES'
+               returntext += 'RELATIONS \n'
                returntext += print_complex_object(self.relations)
+               returntext += '\n KNOWLEDGE \n'
                returntext += print_complex_object(self.knowledge)
+               returntext += '\n CONVERSES \n'
                returntext += print_complex_object(self.converses)
                returntext += '\n'
                return header, returntext
@@ -581,16 +612,40 @@ class GeneralizedKnowledge:
                # to show all the relatives of a node 
 
                nodes,all_relations,contents = splitcommand(command[2:],reverse_order)
+               found_nodes = set()
+
+               if nodes[0] in self.relations and self.relations[nodes[0]] == 2:
+                    attribute_search = True
+                    all_relations, contents = nodes,all_relations
+               else:
+                    attribute_search = False
+                    
+
+          
 
                for relation in all_relations:
 
                     if relation in self.relations and self.relations[relation]==2:
 
                          header = 'ATTRIBUTE'
-                         for node in nodes:
+                         if not attribute_search:
+                              for node in nodes:
 
-                              if node in self.knowledge and relation in self.knowledge[node]:
-                                   returntext += node + ' is ' + ', '.join(self.knowledge[node][relation]) + '\n'
+                                   returntext += '// \n'
+
+                                   if node in self.knowledge and relation in self.knowledge[node]:
+                                        returntext += node + ' is ' + ', '.join(self.knowledge[node][relation]) + '\n'
+                         else:
+                              for content in contents:
+                                        found_nodes.update(self.find_nodes_with_attributes(relation,content))
+               if attribute_search:
+
+                    returntext += ','.join(sorted(found_nodes)) + '// \n'
+                    
+                                   
+                                   
+
+                              
 
  
 
@@ -609,32 +664,7 @@ class GeneralizedKnowledge:
                     returntext += '\n'
                return header, returntext
 
-##               for relation in all_relations:
-##                    print('Rel',relation)
-##
-##                    if relation in self.relations and self.relations[relation]==2:
-##
-##                         header = 'ATTRIBUTE'
-##                         for node in nodes:
-##
-##                              if node in self.knowledge and relation in self.knowledge[node]:
-##                                   returntext += node + ' is ' + ', '.join(self.knowledge[node][relation]) + '\n'
-##                    else:
-##
-##                         relation = self.unpack_complex_relation(relation)
-##                         if not relation:
-##                              pass
-##                          
-##                         for node in nodes:
-##                              header = str(relation) + '(s) of '+node+ ''
-##                              results = self.find_all_relations(relation,node)
-##                              returntext += ','.join(results[0])
-##                              returntext += '// \n'
-##                              returntext += listprint(list(set(results[1])))
-##                              returntext += '\n'
-##                              listprint(results[2])
-##                              returntext += '\n'
-##               return header, returntext
+
 
           elif command.startswith('$') or command.startswith('?'):
                # to show the immediate relations of a node
@@ -782,10 +812,23 @@ if __name__ == '__main__':
      while True:
           x= input('?')
           print(listprint(b.text_interpret(x)))
+ 
 
           if not x:
                break
-     
+
+          if x=='?':
+               while True:
+                    
+                    y = input('???')
+                    if '/' in y:
+                         print(b.find_nodes_with_attributes(y.split('/')[0],y.split('/')[1]))
+
+                    if not y:
+                         break
+                    
+                    
+          
      
                
                
