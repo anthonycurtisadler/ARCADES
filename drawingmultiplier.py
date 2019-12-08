@@ -72,8 +72,26 @@ class multiplied_draw:
             # starting y, starting x, y polarity, x polarity
           self.modes = itertools.cycle(range(19))
           self.mode = next(self.modes)
+          self.y_divisions = None
+          self.x_divisions = None
           
-            
+     def show_symmetry_image (self):
+
+          if not self.y_divisions:
+               return ['']
+
+          returntext = ''
+          for y in range(self.y_divisions):
+               for x in range(self.x_divisions):
+                    segment = y*self.x_divisions + x
+                    if segment in self.segment_dictionary:
+                         returntext+={True:'→',
+                                      False:'←'}[self.segment_dictionary[segment][2]]
+                         returntext+={True:'↑',
+                                      False:'↓'}[self.segment_dictionary[segment][3]]
+               returntext+='\n'
+          return returntext.split('\n')
+          
 
 
      def return_value (self,y_pos,x_pos,char=None):
@@ -219,6 +237,7 @@ class multiplied_draw:
      def switch_mode (self):
 
           self.mode = next(self.modes)
+          return self.mode 
           
                
 

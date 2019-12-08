@@ -51,8 +51,9 @@ help_script =  ['F1 = to change background color']+ \
                ['shift F3 = to switch linetype']+\
                ['F4 = to contract or extend the workpad']+\
                ['TAB = to toggle through notes']+\
-               ['F5 = to move selected objects']+\
-               ['F6 = to move screen while moving selected objects']+\
+               ['F5 = to define movement']+\
+               ['F6 = to define drawing multiplier']+\
+               ['shift F6 = To choose new unicode set']+\
                ['F7 = to select an object to move']+\
                ['F8 = to delect an object to move']+\
                ['F9 = to toggle between cycle or select']+\
@@ -141,14 +142,6 @@ painting_chars ={(curses.KEY_RIGHT,curses.KEY_RIGHT):('h',0,1),
                      ('',curses.KEY_RIGHT):('h',0,1)}
 
 
-drawing_chars = {}
-drawing_chars[0] = cycle("┼ █░▒▓╭╮╯╰╱╲╳")
-drawing_chars[1] = cycle('>■□▪▫▬▲▴▸►▼▾◂◄◊○◌●◙◦')
-drawing_chars[2] = cycle('┅┆┇┈┉┊┋╌╍╎╏')
-drawing_chars[3] = cycle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUZWXYZ')
-drawing_chars[4] = cycle('1234567890')
-drawing_chars[5] = cycle('!@#$%^&*()_-+={}[]<>,.?/')
-drawing_keys = cycle(drawing_chars.keys())
 
 
 
@@ -1154,7 +1147,7 @@ class EmptyMovingWindow (MovingWindow):
           return textlist 
 
      def put_in_text (self,y_pos=0,x_pos=0,text='',textlistobject=None,fill_mode=False):
-          if len(text)>1:
+          if len(text)>1 and text.strip():
                fill_mode = True 
 
           if not self.dictionary_mode and textlistobject is None:
@@ -1619,7 +1612,7 @@ class EmptyMovingWindow (MovingWindow):
 
                
 
-     def find_clear (self,height,width,start_y=0,start_x=0,from_corner=True):
+     def find_clear (self,height,width,start_y=0,start_x=0,from_corner=True,spacing=50):
 
           """ Finds a clear space to locate an object. Some issues with it"""
 
@@ -1656,7 +1649,7 @@ class EmptyMovingWindow (MovingWindow):
                     
           if from_corner:
                diagn = []
-               for y,x in square_generator(50,start_y=start_y,start_x=start_x):
+               for y,x in square_generator(spacing,start_y=start_y,start_x=start_x):
                     diagn.append((y,x))
                     if self.is_clear(y_pos=y,x_pos=x,y_dim=height,x_dim=width):
                          return y,x
@@ -1664,7 +1657,7 @@ class EmptyMovingWindow (MovingWindow):
 
           else:
                diagn = []
-               for y,x in centripetal_generator(5,start_y=start_y,start_x=start_x):
+               for y,x in centripetal_generator(spacing,start_y=start_y,start_x=start_x):
                     diagn.append((y,x))
                     if self.is_clear(y_pos=y,x_pos=x,y_dim=height,x_dim=width):
                          
@@ -1672,7 +1665,7 @@ class EmptyMovingWindow (MovingWindow):
                return False,False
 
 
-     def add_from_stack (self,y_st=0,x_st=0,y_pos=None,x_pos=None):
+     def add_from_stack (self,y_st=0,x_st=0,y_pos=None,x_pos=None,mode=True,spacing=10):
 
           """ Add a note into the pad from a stack of objects"""
 
@@ -1698,7 +1691,7 @@ class EmptyMovingWindow (MovingWindow):
           if not  (y_pos and x_pos):
                
                
-               y_pos,x_pos = self.find_clear(height,width,y_st,x_st)
+               y_pos,x_pos = self.find_clear(height,width,y_st,x_st,from_corner=mode,spacing=spacing)
 
           if isinstance(y_pos,int):
                if not note2:
@@ -1881,6 +1874,7 @@ class EmptyMovingWindow (MovingWindow):
 
                          if delete:
                               new_char = c_temp[1][0]
+                              
                          else:
                               new_char = c_temp[1][1]
 
@@ -1916,12 +1910,13 @@ class EmptyMovingWindow (MovingWindow):
                if 'r' not in self.object_dict[index]:
                     # if there is not information for the overwritten coordinates 
                     for y in range(up_bound,down_bound):
-                         objecttext.append(self.get_line_from_text(y_pos=y,x_pos=left_bound,length=right_bound+1-left_bound))
+                         objecttext.append(self.get_line_from_text(y_pos=y,x_pos=left_bound,length=right_bound-left_bound))
                          self.put_in_text (y,left_bound,' '*(right_bound-left_bound))
 
                else:
+                    # if there is information for overwritten coordinates
                     for y in range(up_bound,down_bound):
-                         objecttext.append(self.get_line_from_text(y_pos=y,x_pos=left_bound,length=right_bound+1-left_bound))
+                         objecttext.append(self.get_line_from_text(y_pos=y,x_pos=left_bound,length=right_bound-left_bound))
                          self.put_in_text (y,left_bound,self.object_dict[index]['r'][y-up_bound][0:right_bound-left_bound])
 
                if not for_show:
@@ -2012,7 +2007,7 @@ class EmptyMovingWindow (MovingWindow):
 
           """To import a note into the stack."""
 
-          if not index.startswith('%'):
+          if not str(index).startswith('%'):
           
                self.note_stack.add((str(index),show_note,full_note,keyset))
           else:
@@ -2240,13 +2235,27 @@ class EmptyMovingWindow (MovingWindow):
           self.copy_buffer = None
           starting_coord = (0,0)
           self.copy_buffer = None
-          drawing_key = next(drawing_keys)
-          drawing_char = next(drawing_chars[drawing_key])
+
           conway = None
           self.cursor_moved = False
           self.linetypes = cycle(['normal','round','thick','double'])
           linetype = 'normal'
           self.BOX_CHAR = BOX_CHAR
+          self.dump_mode = True
+          self.dump_spacing = 10
+          self.unicode_starting = 256
+          self.drawing_chars = {}
+          self.drawing_chars[0] = cycle("┼ █░▒▓╭╮╯╰╱╲╳")
+          self.drawing_chars[1] = cycle('>■□▪▫▬▲▴▸►▼▾◂◄◊○◌●◙◦')
+          self.drawing_chars[2] = cycle('┅┆┇┈┉┊┋╌╍╎╏')
+          self.drawing_chars[3] = cycle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUZWXYZ')
+          self.drawing_chars[4] = cycle('1234567890')
+          self.drawing_chars[5] = cycle('!@#$%^&*()_-+={}[]<>,.?/')
+
+          self.drawing_keys = cycle(self.drawing_chars.keys())
+          self.drawing_key = next(self.drawing_keys)
+          self.drawing_char = next(self.drawing_chars[self.drawing_key])
+
 
 
 
@@ -2271,12 +2280,19 @@ class EmptyMovingWindow (MovingWindow):
 
                     if self.multiply:
                          mode_to_display = self.multiply.mode
-                    self.print_to(screen,self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x),length=10,y_pos=1,x_pos=25)
-                    self.print_to(screen,' '.join(list(sorted(self.object_dict))),length=35,y_pos=1,x_pos=70)
-                    self.print_to(screen,', '.join(objects_to_move),length=30,y_pos=1,x_pos=36)
-                    self.print_to(screen,str(len(self.object_dict.keys()))+'/'+str(self.objects_in_stack()),length=21,y_pos=1,x_pos=3)
-                    self.print_to(screen,'█'*(not not (self.find_object_in(y_coord+2,x_coord+2)) and (self.find_object_in(y_coord+2,x_coord+2) in self.selected)),length=1,y_pos=1,x_pos=1)
-                    self.print_to(screen,linetype+' '+self.show_colors+' SHIFT+F12 for HELP '+'['+drawing_char+'] '
+                    self.print_to(screen,self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x),
+                                  length=10,y_pos=1,x_pos=25)
+                    self.print_to(screen,' '.join(list(sorted(self.object_dict))),
+                                  length=35,y_pos=1,x_pos=70)
+                    self.print_to(screen,', '.join(objects_to_move),
+                                  length=30,y_pos=1,x_pos=36)
+                    self.print_to(screen,str(len(self.object_dict.keys()))
+                                  +'/'+str(self.objects_in_stack()),
+                                  length=21,y_pos=1,x_pos=3)
+                    self.print_to(screen,'█'*(not not (self.find_object_in(y_coord+2,x_coord+2))
+                                              and (self.find_object_in(y_coord+2,x_coord+2)
+                                                   in self.selected)),length=1,y_pos=1,x_pos=1)
+                    self.print_to(screen,linetype+' '+self.show_colors+' SHIFT+F12 for HELP '+'['+self.drawing_char+'] '
                                   +'CYCLING'*cycling
                                   +' '+str(self.vert_divisions)+'/'+str(self.hor_divisions)+'/'+str(mode_to_display)
                                   +' MOVING OBJECTS'*moving_object
@@ -2300,8 +2316,7 @@ class EmptyMovingWindow (MovingWindow):
                          started_selecting = False
                     if stack_dump:
                          if self.note_stack.exists():
-                              self.add_from_stack(y_coord,x_coord)
-                              curses.beep()
+                              self.add_from_stack(y_coord,x_coord,mode=self.dump_mode,spacing=self.dump_spacing)
                          else:
                               stack_dump = False
                          
@@ -2333,14 +2348,18 @@ class EmptyMovingWindow (MovingWindow):
 
                               elif key == curses.KEY_DELETE:
 
-                                   typing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=' ')
-                                   self.put_in_text(y_coord+self.cursor_y,x_coord+self.cursor_x,' ')
+                                   typing_object.add(y_pos=y_coord+self.cursor_y,
+                                                     x_pos=x_coord+self.cursor_x,newchar=' ')
+                                   self.put_in_text(y_coord+self.cursor_y,
+                                                    x_coord+self.cursor_x,' ')
                                    self.cursor_x += 1
                               elif key == curses.KEY_BACKSPACE:
 
                                    if self.cursor_x > left_margin:
-                                        typing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=' ')
-                                        self.put_in_text(y_coord+self.cursor_y,x_coord+self.cursor_x,' ')
+                                        typing_object.add(y_pos=y_coord+self.cursor_y,
+                                                          x_pos=x_coord+self.cursor_x,newchar=' ')
+                                        self.put_in_text(y_coord+self.cursor_y,
+                                                         x_coord+self.cursor_x,' ')
 
                                         self.cursor_x -= 1
                                         
@@ -2366,7 +2385,17 @@ class EmptyMovingWindow (MovingWindow):
                                    self.cursor_y += y_inc
                                    self.cursor_x += x_inc
                       
-                         if not typing and (key in keys or key in [ord('#'),ord('%'),ord('*'),ord('.'),ord('>'),ord(','),ord('<'),287,339,338,358,262,ord('|'),ord('_'),ord('+'),ord('='),curses.KEY_BACKSPACE,curses.KEY_TAB]):
+                         if not typing and (key in keys or key in [ord('#'),
+                                                                   ord('%'),
+                                                                   ord('*'),
+                                                                   ord('.'),
+                                                                   ord('>'),
+                                                                   ord(','),
+                                                                   ord('<'),
+                                                                   287,339,338,358,262,
+                                                                   ord('|'),ord('_'),
+                                                                   ord('+'),ord('='),
+                                                                   curses.KEY_BACKSPACE,curses.KEY_TAB]):
 
                               if selecting and not drawing:
                                    if not started_selecting:
@@ -2399,7 +2428,8 @@ class EmptyMovingWindow (MovingWindow):
                                    elif key == ord('>'): #to select object 
                                         selecting = False
                                         drawing_frame.select()
-                                        self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,schema=self.object_dict[obj_ind]['c'].get_schema())
+                                        self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,
+                                                                         schema=self.object_dict[obj_ind]['c'].get_schema())
                                         del self.object_dict[obj_ind]
                                         
                                         
@@ -2427,10 +2457,10 @@ class EmptyMovingWindow (MovingWindow):
                                                         x_max=min([self.cursor_x+140,x_total]))
                                    
                                    elif key == curses.KEY_TAB and started_drawing:
-                                        drawing_char = next(drawing_chars[drawing_key])
+                                        self.drawing_char = next(self.drawing_chars[self.drawing_key])
                                    elif key == 287 and started_drawing:
-                                        drawing_key = next(drawing_keys)
-                                        drawing_char = next(drawing_chars[drawing_key])
+                                        self.drawing_key = next(self.drawing_keys)
+                                        self.drawing_char = next(self.drawing_chars[self.drawing_key])
                                    elif key == ord('*'):
                                         if not self.dictionary_mode:
                                              blankchar = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x]
@@ -2441,11 +2471,11 @@ class EmptyMovingWindow (MovingWindow):
                                                   blankchar = ' '
                                         self.fill_space(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,
                                                         blankchar=blankchar,
-                                                        tochar=drawing_char)
+                                                        tochar=self.drawing_char)
                                         
                                    elif key == curses.KEY_BACKSPACE and started_drawing:
                                         for x in range(5):
-                                             drawing_char = next(drawing_chars)
+                                             self.drawing_char = next(self.drawing_chars[self.drawing_key])
                                    elif key == ord('>') and started_drawing:
                                         self.delete_drawn_object(draw_obj_ind)
                                         drawing_object.stretch(y_pos=y_coord+self.cursor_y)
@@ -2489,7 +2519,8 @@ class EmptyMovingWindow (MovingWindow):
                                              self.delete_drawn_object(draw_obj_ind)
                                              drawing_object.select(square=False)
                                              
-                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,schema=self.object_dict[draw_obj_ind]['c'].get_schema())
+                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,
+                                                                              schema=self.object_dict[draw_obj_ind]['c'].get_schema())
                                              
                                              del self.object_dict[draw_obj_ind]
                                              drawing = False
@@ -2504,7 +2535,8 @@ class EmptyMovingWindow (MovingWindow):
 
                                         if not started_drawing:
                                              started_drawing = True
-                                             drawing_object,draw_obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,x_coord+self.cursor_x)
+                                             drawing_object,draw_obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,
+                                                                                                      x_coord+self.cursor_x)
                                              
                                         
                                         else: # To avoid an error a key error for Painting Chars
@@ -2512,7 +2544,7 @@ class EmptyMovingWindow (MovingWindow):
                                              
                                              self.drew_or_typed = True
 
-                                             if drawing_char != '┼':
+                                             if self.drawing_char != '┼':
 
                                                   y_inc,x_inc = keys[key][0],keys[key][1]
 
@@ -2526,10 +2558,10 @@ class EmptyMovingWindow (MovingWindow):
 
                                                        drawing_object.add(y_pos=y_coord+self.cursor_y,
                                                                           x_pos=x_coord+self.cursor_x,
-                                                                          newchar=drawing_char)
+                                                                          newchar=self.drawing_char)
                                                        self.put_in_text (y_coord+self.cursor_y,
                                                                          x_coord+self.cursor_x,
-                                                                         drawing_char)
+                                                                         self.drawing_char)
 
                                                   if self.multiply:
 
@@ -2538,10 +2570,10 @@ class EmptyMovingWindow (MovingWindow):
                                                             
                                                             drawing_object.add(y_pos=y_coord+point[0],
                                                                                x_pos=x_coord+point[1],
-                                                                               newchar=drawing_char)
+                                                                               newchar=self.drawing_char)
                                                             self.put_in_text (y_coord+point[0],
                                                                               x_coord+point[1],
-                                                                              drawing_char)
+                                                                              self.drawing_char)
 
                                                                  
                                                   
@@ -2558,18 +2590,23 @@ class EmptyMovingWindow (MovingWindow):
                                                        char_right = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x+1]
                                                   else:
                                                        if (y_coord+self.cursor_y,x_coord+self.cursor_x) in self.display_dict:
-                                                            char_from = orig_char = self.display_dict[(y_coord+self.cursor_y,x_coord+self.cursor_x)][0]
+                                                            char_from = orig_char = self.display_dict[(y_coord+self.cursor_y,
+                                                                                                       x_coord+self.cursor_x)][0]
                                                        else:
                                                             char_from = ' '
                                                        char_above = char_below = char_left = char_right = ' '
                                                        if (y_coord+self.cursor_y-1,x_coord+self.cursor_x) in self.display_dict:
-                                                            char_above = self.display_dict[(y_coord+self.cursor_y-1,x_coord+self.cursor_x)][0]
+                                                            char_above = self.display_dict[(y_coord+self.cursor_y-1,
+                                                                                            x_coord+self.cursor_x)][0]
                                                        if (y_coord+self.cursor_y+1,x_coord+self.cursor_x) in self.display_dict:
-                                                            char_below = self.display_dict[(y_coord+self.cursor_y+1,x_coord+self.cursor_x)][0]
+                                                            char_below = self.display_dict[(y_coord+self.cursor_y+1,
+                                                                                            x_coord+self.cursor_x)][0]
                                                        if (y_coord+self.cursor_y,x_coord+self.cursor_x-1) in self.display_dict:
-                                                            char_left = self.display_dict[(y_coord+self.cursor_y,x_coord+self.cursor_x-1)][0]
+                                                            char_left = self.display_dict[(y_coord+self.cursor_y,
+                                                                                           x_coord+self.cursor_x-1)][0]
                                                        if (y_coord+self.cursor_y,x_coord+self.cursor_x+1) in self.display_dict:
-                                                            char_right = self.display_dict[(y_coord+self.cursor_y,x_coord+self.cursor_x+1)][0]
+                                                            char_right = self.display_dict[(y_coord+self.cursor_y,
+                                                                                            x_coord+self.cursor_x+1)][0]
                                                        
 
 
@@ -2604,13 +2641,21 @@ class EmptyMovingWindow (MovingWindow):
                                                        
 
                                                        if not self.multiply:
-                                                            drawing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=new_char)
-                                                            self.put_in_text(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,text=new_char)
+                                                            drawing_object.add(y_pos=y_coord+self.cursor_y,
+                                                                               x_pos=x_coord+self.cursor_x,newchar=new_char)
+                                                            self.put_in_text(y_pos=y_coord+self.cursor_y,
+                                                                             x_pos=x_coord+self.cursor_x,text=new_char)
 
                                                        else:
-                                                            for point in self.multiply.return_value(y_pos=self.cursor_y,x_pos=self.cursor_x,char=new_char):
-                                                                 drawing_object.add(y_pos=y_coord+point[0],x_pos=x_coord+point[1],newchar=point[2])
-                                                                 self.put_in_text(y_pos=y_coord+point[0],x_pos=x_coord+point[1],text=point[2])
+                                                            for point in self.multiply.return_value(y_pos=self.cursor_y,
+                                                                                                    x_pos=self.cursor_x,
+                                                                                                    char=new_char):
+                                                                 drawing_object.add(y_pos=y_coord+point[0],
+                                                                                    x_pos=x_coord+point[1],
+                                                                                    newchar=point[2])
+                                                                 self.put_in_text(y_pos=y_coord+point[0],
+                                                                                  x_pos=x_coord+point[1],
+                                                                                  text=point[2])
                                                 
                                                        
                                                   else:
@@ -2637,16 +2682,39 @@ class EmptyMovingWindow (MovingWindow):
                                                                  new_char = self.BOX_CHAR['xu']
 
                                                        if not self.multiply:
-                                                            drawing_object.add(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,newchar=new_char)
-                                                            self.put_in_text(y_coord+self.cursor_y,x_coord+self.cursor_x,new_char)
+                                                            drawing_object.add(y_pos=y_coord+self.cursor_y,
+                                                                               x_pos=x_coord+self.cursor_x,
+                                                                               newchar=new_char)
+                                                            self.put_in_text(y_coord+self.cursor_y,
+                                                                             x_coord+self.cursor_x,
+                                                                             new_char)
                                                        else:
-                                                            for point in self.multiply.return_value(y_pos=self.cursor_y,x_pos=self.cursor_x,char=new_char):
-                                                                 drawing_object.add(y_pos=y_coord+point[0],x_pos=x_coord+point[1],newchar=point[2])
-                                                                 self.put_in_text(y_pos=y_coord+point[0],x_pos=x_coord+point[1],text=point[2])
+                                                            for point in self.multiply.return_value(y_pos=self.cursor_y,
+                                                                                                    x_pos=self.cursor_x,
+                                                                                                    char=new_char):
+                                                                 drawing_object.add(y_pos=y_coord+point[0],
+                                                                                    x_pos=x_coord+point[1],
+                                                                                    newchar=point[2])
+                                                                 self.put_in_text(y_pos=y_coord+point[0],
+                                                                                  x_pos=x_coord+point[1],
+                                                                                  text=point[2])
                                                                  
                                                       
                                                       
-                                                  if key not in [ord('#'),ord('%'),ord('*'),ord('.'),ord('>'),ord(','),ord('<'),287,339,338,358,262,ord('|'),ord('_'),ord('+'),ord('='),curses.KEY_TAB,curses.KEY_BACKSPACE]:
+                                                  if key not in [ord('#'),
+                                                                 ord('%'),
+                                                                 ord('*'),
+                                                                 ord('.'),
+                                                                 ord('>'),
+                                                                 ord(','),
+                                                                 ord('<'),
+                                                                 287,339,338,358,262,
+                                                                 ord('|'),
+                                                                 ord('_'),
+                                                                 ord('+'),
+                                                                 ord('='),
+                                                                 curses.KEY_TAB,
+                                                                 curses.KEY_BACKSPACE]:
                                                        last_key = key
 
                                         
@@ -2856,14 +2924,17 @@ class EmptyMovingWindow (MovingWindow):
                                    hs = 2
                                    if self.help is None:
 
-                                        self.help = self.show_temporary(showlist=helpscripts[hs],y_coord=y_coord,x_coord=x_coord)
+                                        self.help = self.show_temporary(showlist=helpscripts[hs],
+                                                                        y_coord=y_coord,
+                                                                        x_coord=x_coord)
                                         next(self.help)
                                              
                                    else:
                                         next(self.help)
                                         self.help = None
                                         
-                                        self.help = self.show_temporary(showlist=helpscripts[hs],y_coord=y_coord,x_coord=x_coord)
+                                        self.help = self.show_temporary(showlist=helpscripts[hs],
+                                                                        y_coord=y_coord,x_coord=x_coord)
                                         next(self.help)
 
                                         
@@ -2877,10 +2948,12 @@ class EmptyMovingWindow (MovingWindow):
                                    object_textlist = None
                                    object_keylist = None
                                    editing = ''
-                                   if self.is_clear(y_coord+3,
+                                   if (self.is_clear(y_coord+3,
                                                     x_coord+3,
                                                     note_y_dim,
-                                                    note_x_dim):
+                                                    note_x_dim)
+                                       or (self.find_object_in(y_coord+3,x_coord+3) in self.object_dict
+                                           and 'p' not in self.object_dict[self.find_object_in(y_coord+3,x_coord+3)])):
                                         # To create a new note
                                         frame = self.new_note(y_coord+3,
                                                               x_coord+3,
@@ -3117,99 +3190,91 @@ class EmptyMovingWindow (MovingWindow):
                                              next(self.help)
                                              self.help = None
                                      
-
                               elif key == curses.KEY_TAB and not drawing:
+
                                    self.quit_help()
+
                                    next_note = next(self.cycling_through)
-                                   label = '['+ str(next_note) + '] '
-                                   
-                                   
-                                   if next_note in self.moving_qualities:
-                                        
-                                        label += str(self.moving_qualities[next_note][0]) + '/' + str(self.moving_qualities[next_note][1])
-                                   
-                                   self.print_to(screen,label,length=40,y_pos=y_max-3,x_pos=20)
-                                   
-                                   if 'p' in self.object_dict[next_note]:            #for notes 
+                                   if 'p' in self.object_dict[next_note]:            #for notes
                                         positions = self.object_dict[next_note]['p']
                                         y_coord = max([0,positions[0]-self.cursor_y])
                                         x_coord = max([0,positions[1]-self.cursor_x])
-                                        put(y_coord,x_coord)
-                                        length = 1
-                                        movementtype = 'r'
-                                        while selecting:
-                                             
-                                             label = '[' + str(next_note) + '] '
-                                             label += str(movementtype+ '/' + str(length))
-                                             self.print_to(screen,' '*45,length=45,y_pos=y_max-2,x_pos=20)
-                                             self.print_to(screen,label,length=40,y_pos=y_max-2,x_pos=20)
-                                             
-                                             selected_key = screen.getch()
-                                             if selected_key in [curses.KEY_TAB]:
-                                                  self.print_to(screen,' '*45,length=45,y_pos=y_max-3,x_pos=20)
-                                                  self.print_to(screen,' '*45,length=45,y_pos=y_max-2,x_pos=20)
-                                                  break
-                                             if selected_key == ord('s'):
-                                                  movementtype = 's'
-                                             elif selected_key == ord('s'):
-                                                  movementtype = 'r'
-                                             elif selected_key == curses.KEY_UP:
-                                                  length *= 10
-                                             elif selected_key == curses.KEY_DOWN:
-                                                  length =  max([1,int(length/10)])
-                                             elif selected_key == curses.KEY_RIGHT:
-                                                  length += 1
-                                             elif selected_key == curses.KEY_LEFT:
-                                                  length -= 1 
-                                             elif selected_key == ord('+'):
-                                                  self.moving_qualities[next_note] = (movementtype,length)
-                                             elif selected_key == ord('-'):
-                                                  del self.moving_qualities[next_note]
-                                             
-                                                  
-                                             
-                                             
-                                        
-                                                  
-                                        
-                                        
+
                                    elif 'c' in self.object_dict[next_note]:          # for non-note objects 
                                         y_coord, x_coord = self.object_dict[next_note]['c'].top_left()
                                         y_coord = max([0,y_coord-self.cursor_y])     # to keep from going 
                                         x_coord = max([0,x_coord-self.cursor_x])     # over the edge
-                                        put(y_coord,x_coord)
 
-                                        length = 1
-                                        movementtype = 'r'
-                                        while selecting:
+                              elif key == curses.KEY_F5 and not drawing and self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x):
+                                   self.quit_help()
+                                   next_note = self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x)
+
+                                   if 'p' in self.object_dict[next_note]:            #for notes
+                                             positions = self.object_dict[next_note]['p']
+                                             y_coord = max([0,positions[0]-self.cursor_y])
+                                             x_coord = max([0,positions[1]-self.cursor_x])
+
+                                   elif 'c' in self.object_dict[next_note]:          # for non-note objects 
+                                        y_coord, x_coord = self.object_dict[next_note]['c'].top_left()
+                                        y_coord = max([0,y_coord-self.cursor_y])     # to keep from going 
+                                        x_coord = max([0,x_coord-self.cursor_x])     # over the edge
+
+                                   length = 1
+                                   movementtype = 'r'
+                                   menu = None 
+                                   while True:
+                                   
+                                        label = '[' + str(next_note) + '] '
+                                        label += str(movementtype) + '/' + str(length)+' ' 
+                                        if next_note in self.moving_qualities:
                                              
-                                             label = '[' + str(next_note) + '] '
-                                             label += str(movementtype+ '/' + str(length))
+                                             label += '||' + str(self.moving_qualities[next_note][0]) + '/' + str(self.moving_qualities[next_note][1])
+                                        temp_show_list = ['DEFINE MOVEMENT']+\
+                                                    [label]+\
+                                                    ['s for square movement']+\
+                                                    ['r for random movement']+\
+                                                    ['UP length * 10']+\
+                                                    ['DOWN length / 10']+\
+                                                    ['RIGHT length + 1']+\
+                                                    ['LEFT length -1']+\
+                                                    ['+ DEFINE movement type']+\
+                                                    ['- UNDEFINE movement type']+\
+                                                    ['ENTER exit']
+                                   
+                                        if menu:
+                                             next(menu)
+                                        menu = self.show_temporary(showlist=temp_show_list,y_coord=y_coord,x_coord=x_coord)
+                                        next(menu)
+                                        put(y_coord,x_coord)
+                                        
+                                        selected_key = screen.getch()
+                                        if selected_key in [curses.KEY_TAB]:
+                                             self.print_to(screen,' '*45,length=45,y_pos=y_max-3,x_pos=20)
                                              self.print_to(screen,' '*45,length=45,y_pos=y_max-2,x_pos=20)
-                                             self.print_to(screen,label,length=40,y_pos=y_max-2,x_pos=20)
-                                             
-                                             selected_key = screen.getch()
-                                             if selected_key in [curses.KEY_TAB]:
-                                                  self.print_to(screen,' '*45,length=45,y_pos=y_max-3,x_pos=20)
-                                                  self.print_to(screen,' '*45,length=45,y_pos=y_max-2,x_pos=20)
-                                                  break
-                                             if selected_key == ord('s'):
-                                                  movementtype = 's'
-                                             elif selected_key == ord('s'):
-                                                  movementtype = 'r'
-                                             elif selected_key == curses.KEY_UP:
-                                                  length *= 10
-                                             elif selected_key == curses.KEY_DOWN:
-                                                  length =  max([1,int(length/10)])
-                                             elif selected_key == curses.KEY_RIGHT:
-                                                  length += 1
-                                             elif selected_key == curses.KEY_LEFT:
-                                                  length -= 1 
-                                             elif selected_key == ord('+'):
-                                                  self.moving_qualities[next_note] = (movementtype,length)
-                                             elif selected_key == ord('-'):
-                                                  del self.moving_qualities[next_note]
-                                             
+                                             break
+                                        if selected_key == ord('s'):
+                                             movementtype = 's'
+                                        elif selected_key == ord('r'):
+                                             movementtype = 'r'
+                                        elif selected_key == curses.KEY_UP:
+                                             length *= 10
+                                        elif selected_key == curses.KEY_DOWN:
+                                             length =  max([1,int(length/10)])
+                                        elif selected_key == curses.KEY_RIGHT:
+                                             length += 1
+                                        elif selected_key == curses.KEY_LEFT:
+                                             length -= 1 
+                                        elif selected_key == ord('+'):
+                                             self.moving_qualities[next_note] = (movementtype,length)
+                                        elif selected_key == ord('-'):
+                                             del self.moving_qualities[next_note]
+                                        elif selected_key == 10:
+                                             if menu:
+                                                  next(menu)
+                                             break
+                                   
+                            
+        
                                                   
                                          
 
@@ -3230,6 +3295,8 @@ class EmptyMovingWindow (MovingWindow):
                                    screen.nodelay(True)
                                    starting = True
                                    new_direction = False
+                                   x_total = max([c[1] for c in self.display_dict])
+                                   y_total = max([c[0] for c in self.display_dict])
                                    y_coord = int(y_total/2)
                                    x_coord = int(x_total/2)
                                    float_y = float(y_coord)
@@ -3308,9 +3375,11 @@ class EmptyMovingWindow (MovingWindow):
                                    if object_to_copy:
                                         if 'o' in self.object_dict[object_to_copy]:
 
-                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,objectlist=self.object_dict[object_to_copy]['o'])
+                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,
+                                                                              objectlist=self.object_dict[object_to_copy]['o'])
                                         elif 'c' in self.object_dict[object_to_copy]:
-                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,schema=self.object_dict[object_to_copy]['c'].get_schema())
+                                             self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,
+                                                                              schema=self.object_dict[object_to_copy]['c'].get_schema())
                                              
                               elif key == 22: # to paste objet 
 
@@ -3319,7 +3388,9 @@ class EmptyMovingWindow (MovingWindow):
                                                                                                  x_coord+self.cursor_x,
                                                                                                  schema=self.copy_buffer.get_schema())
                                         
-                                        copy_object.position_object(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,from_schema=True)
+                                        copy_object.position_object(y_pos=y_coord+self.cursor_y,
+                                                                    x_pos=x_coord+self.cursor_x,
+                                                                    from_schema=True)
                                         self.add_drawn_object(draw_obj_ind)
 
                               elif key == 279:
@@ -3333,32 +3404,75 @@ class EmptyMovingWindow (MovingWindow):
                                         self.BOX_CHAR = BOX_CHAR_THICK
                                    elif linetype == 'double':
                                         self.BOX_CHAR = BOX_CHAR_DOUBLE
+                                        
 
-                              elif key in [ord(x) for x in '01234567890!@#$%^&*()']:
-                                   key_diff = key - ord('0')
-                                   if 0 <= key_diff < 10:
-                                   
-                                        if key_diff == 0:
-                                             self.vert_divisions = 1
-                                        else:
-                                             if 0 < key_diff < 10:
-                                                  self.vert_divisions += key_diff
-                                   else:
-                                        if key in [ord(x) for x in '!@#$%^&*()']:
-                                             key_diff = [ord(x) for x in '!@#$%^&*()'].index(key) + 1
-                                        if key == ord(')'):
-                                             self.hor_divisions = 1
-                                        else:
-                                             self.hor_divisions += key_diff
+                              elif key == curses.KEY_F6:
+
+                                   menu = None
+                                   if self.multiply:
+                                        mode_to_display = self.multiply.mode
+
+                                   while True: 
+
+                                        temp_show_list = ['DEFINE MULTIPLIER']+\
+                                                         ['1-9 add to horizontal']+\
+                                                         ['SHIFT 1-9 add to vertical']+\
+                                                         ['0 to reset horizontal']+\
+                                                         [') to reset vertical']+\
+                                                         ['? to switch mode']+\
+                                                         ['ENTER to quit']+\
+                                                         ['ATTRIBUTES:']+\
+                                                         [str(self.vert_divisions)+'/'+str(self.hor_divisions)+'/'+str(mode_to_display)]
+
+                                        if self.multiply:
+                                             temp_show_list += self.multiply.show_symmetry_image()
+                                        
+                                        if menu:
+                                             next(menu)
+                                        menu = self.show_temporary(showlist=temp_show_list,
+                                                                   y_coord=y_coord,
+                                                                   x_coord=x_coord)
+                                        next(menu)
+                                        put(y_coord,x_coord)
+                                        temp_key = screen.getch()
+
+                                        if temp_key in [ord(x) for x in '0123456789']:
+                                             key_diff = temp_key - ord('0')
+                                             if 0 <= key_diff < 10:
+                                             
+                                                  if key_diff == 0:
+                                                       self.vert_divisions = 1
+                                                  else:
+                                                       if 0 < key_diff < 10:
+                                                            self.vert_divisions += key_diff
+                                        elif temp_key in [ord(x) for x in '!@#$%^&*()']:
+                                             key_diff = [ord(x) for x in '!@#$%^&*()'].index(temp_key) + 1
+                                             if temp_key == ord(')'):
+                                                  self.hor_divisions = 1
+                                             else:
+                                                  self.hor_divisions += key_diff
+                                        elif temp_key == ord('?'):
+
+
+                                             mode_to_display = self.multiply.switch_mode()
+                                             self.multiply.divide(self.vert_divisions,
+                                                                  self.hor_divisions)
+                                             
+                                        elif temp_key == 10:
+                                             if menu:
+                                                  next(menu)
+                                             break
                                    if self.vert_divisions == 1 and self.hor_divisions == 1:
                                         self.multiply =  None
-                                   if self.multiply:
-                                        self.multiply.divide(self.vert_divisions,self.hor_divisions)
-                              elif key == ord('?'):
+                                   else:
+                                        if not self.multiply:
+                                             self.multiply = multiplied_draw(window_height=curses.LINES-10,window_width=curses.COLS-2)
+                                             self.multiply.divide(self.vert_divisions,
+                                                                  self.hor_divisions)
+                                        
+                                        
 
-                                   if self.multiply:
-                                        self.multiply.switch_mode()
-                                        self.multiply.divide(self.vert_divisions,self.hor_divisions)
+                                   
                               elif key == ord('~'):
                                    key = screen.getch()
                                    if key == curses.KEY_ENTER or key == 10 or key == 13:
@@ -3366,6 +3480,61 @@ class EmptyMovingWindow (MovingWindow):
                                              self.textlist = [' '*self.x_dim]*self.y_dim
                                         self.object_dict = {}
                                    
+                              elif key == 282:
+
+                                   menu = None
+                                   while True:
+
+                                        temp_show_list = [str(self.unicode_starting/256)]
+                                        characters = ''
+                                        for y in range(16):
+                                             newline = ''
+                                             for x in range(16):
+                                                  
+                                                  if len(chr(self.unicode_starting+y*16+x))==1 and chr(self.unicode_starting+y*16+x)!='�':
+                                                         newline+=chr(self.unicode_starting+y*16+x)
+                                                         characters+=chr(self.unicode_starting+y*16+x)
+                                             if newline:
+                                                  temp_show_list.append(newline)
+                                                         
+                                        temp_show_list.append('> advance forward')
+                                        temp_show_list.append('< advance backwards')
+                                        temp_show_list.append('UP move forward 16 screens')
+                                        temp_show_list.append('DOWN move backward 16 screens')
+                                        temp_show_list.append('TAB selects')
+                                        temp_show_list.append('ENTER quit')
+                                        
+                                        if menu:
+                                             next(menu)
+                                        menu = self.show_temporary(showlist=temp_show_list,
+                                                                   y_coord=y_coord,
+                                                                   x_coord=x_coord)
+                                        next(menu)
+                                        put(y_coord,x_coord)
+                                        temp_key = screen.getch()
+                                        if temp_key == curses.KEY_LEFT:
+                                             self.unicode_starting -= 256
+                                        elif temp_key == curses.KEY_RIGHT:
+                                             self.unicode_starting += 256
+                                        elif temp_key == curses.KEY_UP:
+                                             self.unicode_starting -= 256*16
+                                        elif temp_key == curses.KEY_DOWN:
+                                             self.unicode_starting += 256*16
+                                        elif temp_key == curses.KEY_TAB:
+                                             self.drawing_chars[6] = cycle(characters)
+                                             self.drawing_keys = cycle(self.drawing_chars.keys())
+                                             self.drawing_key = next(self.drawing_keys)
+                                        elif temp_key == 10:
+                                             if menu:
+                                                  next(menu)
+                                             break
+                                        if self.unicode_starting <256:
+                                             self.unicode_starting = 256
+                                             
+                                   
+                                        
+                                        
+
                                    
                                
                               elif key == 288:
@@ -3376,7 +3545,9 @@ class EmptyMovingWindow (MovingWindow):
                                         hs=0
                                    if self.help is None:
 
-                                        self.help = self.show_temporary(showlist=helpscripts[hs],y_coord=y_coord,x_coord=x_coord)
+                                        self.help = self.show_temporary(showlist=helpscripts[hs],
+                                                                        y_coord=y_coord,
+                                                                        x_coord=x_coord)
                                         next(self.help)
                                              
                                    else:
@@ -3386,27 +3557,33 @@ class EmptyMovingWindow (MovingWindow):
 
                                       
                               elif key == 92: #\
-                                   if self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x):
+                                   if self.find_object_in(y_coord+self.cursor_y,
+                                                          x_coord+self.cursor_x):
                                         old_attribute = self.attribute
-                                        found = self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x)
+                                        found = self.find_object_in(y_coord+self.cursor_y,
+                                                                    x_coord+self.cursor_x)
                                         if found in self.selected:
-                                             self.selected.discard(self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x))
+                                             self.selected.discard(self.find_object_in(y_coord+self.cursor_y,
+                                                                                       x_coord+self.cursor_x))
                                              
                                              self.attribute = curses.A_NORMAL
                                              
                                         else:
-                                             self.selected.add(self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x))
+                                             self.selected.add(self.find_object_in(y_coord+self.cursor_y,
+                                                                                   x_coord+self.cursor_x))
                                              is_selected = True
                                              self.attribute = curses.A_STANDOUT
-                                        self.delete_object(found,for_show=True)
-                                        self.add_object(found,for_show=True)
+                                        
+                                        if 'p' in self.object_dict[found]:
+                                             self.delete_object(found,for_show=True)
+                                             self.add_object(found,for_show=True)
+                                        elif 'c' in self.object_dict[found]:
+                                             self.delete_drawn_object(found)
+                                             self.add_drawn_object(found)
+                                             
                                         self.attribute = old_attribute
-                                        
-                                        
-                              elif key == curses.KEY_F5:
-                                   moving_object = not moving_object
-                              elif key == curses.KEY_F6:
-                                   moving_screen_too = not moving_screen_too
+                                             
+                                   
                               elif key == curses.KEY_F7:
                                    if (self.find_object_in(y_coord+self.cursor_y,
                                                            x_coord+self.cursor_x)):
@@ -3435,6 +3612,7 @@ class EmptyMovingWindow (MovingWindow):
 
                                         else:
                                              del self.object_dict[obj_temp]
+                                   self.cycling_through = cycle(self.object_dict.keys())
                                         
                                              
                               elif key == ord('['):
@@ -3470,6 +3648,44 @@ class EmptyMovingWindow (MovingWindow):
                                    
                                    
                               elif key == curses.KEY_F11:
+                                   menu = None
+                                   while True:
+                                        
+
+                                        temp_show_list = ['MODE='+{True:' square',
+                                                                   False:' peripheral' }[self.dump_mode]]+\
+                                                                   ['SPACING='+str(self.dump_spacing)]+\
+                                                                   ['TAB to change mode']+\
+                                                                   ['up * 10']+['down /10']+ ['right +1'] +\
+                                                                   ['left -1']+['ENTER quit']
+                                        if menu:
+                                             next(menu)
+                                        menu = self.show_temporary(showlist=temp_show_list,
+                                                                   y_coord=y_coord,
+                                                                   x_coord=x_coord)
+                                        next(menu)
+                                        put(y_coord,x_coord)
+                                        temp_key = screen.getch()
+                                        
+                                        if temp_key == curses.KEY_TAB:
+                                             self.dump_mode = not self.dump_mode
+                                        elif temp_key == curses.KEY_LEFT:
+                                             self.dump_spacing -= 1
+                                        elif temp_key == curses.KEY_RIGHT:
+                                             self.dump_spacing += 1
+                                        elif temp_key == curses.KEY_UP:
+                                             self.dump_spacing *= 10
+                                        elif temp_key == curses.KEY_DOWN:
+                                             self.dump_spacing =  int(self.dump_spacing/10)
+                                        elif temp_key == curses.KEY_F11:
+                                             next(menu)
+                                             put(y_coord,x_coord)
+                                             menu = None
+                                             break
+                                        if self.dump_spacing < 1:
+                                             self.dump_spacing = 1
+                                        if self.dump_spacing > 200:
+                                             self.dump_spacing = 200 
                                    stack_dump = True
                               elif key == 19:
                                    return_text = '\n'.join(self.make_textlist())
@@ -3477,7 +3693,10 @@ class EmptyMovingWindow (MovingWindow):
                                               filename = 'workpad '+str(datetime.datetime.now()).split('.')[0].replace(':',' '))
                                    
                               elif key == 1:
-                                   return_text = '\n'.join(self.make_textlist(y_min=y_coord,y_max=y_coord+y_max-8,x_min=x_coord,x_max=x_coord+x_max-20))
+                                   return_text = '\n'.join(self.make_textlist(y_min=y_coord,
+                                                                              y_max=y_coord+y_max-8,
+                                                                              x_min=x_coord,
+                                                                              x_max=x_coord+x_max-20))
                                    save_file (returntext=return_text,
                                                              filename = 'screenshot '+str(datetime.datetime.now()).split('.')[0].replace(':',' '))
                                         
@@ -3491,7 +3710,10 @@ class EmptyMovingWindow (MovingWindow):
                                         multiplier += 1
                
                               elif key == curses.KEY_INSERT:
-                                   self.add_from_stack(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x)
+                                   if self.is_clear(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,y_dim=2,x_dim=2):
+                                   
+                                        self.add_from_stack(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x)
+                                        self.cycling_through = cycle(self.object_dict.keys())
                               elif key == ord('c'):
                                    self.size -= 1
                               elif key == ord('v'):
@@ -3547,20 +3769,78 @@ class EmptyMovingWindow (MovingWindow):
 
                                                  
           
-
+                                   randommode = True
                                    iteration = 0
                                    key_pressed = -1
                                    distance = 1
                                    left_odd = 100
                                    key_set = 0
                                    iteration = 0
+                                   bursting = False
+                                   
+                                   if conway:
+                                        mode = conway.change_mode()
+                                   menu = None
           ##                              try:
-                                   while key_pressed in [-1,curses.KEY_UP,curses.KEY_DOWN,curses.KEY_LEFT,curses.KEY_RIGHT,curses.KEY_INSERT]:
+                                   after_pressed = 0
+                                   while key_pressed in [-1,curses.KEY_UP,
+                                                         curses.KEY_DOWN,
+                                                         curses.KEY_LEFT,
+                                                         curses.KEY_RIGHT,
+                                                         curses.KEY_INSERT,
+                                                         curses.KEY_TAB,
+                                                         curses.KEY_DELETE,
+                                                         curses.KEY_INSERT,
+                                                         curses.KEY_BACKSPACE,
+                                                         ord(' ')]:
                                         key_pressed = screen.getch()
                                         iteration += 1
                                         
                                         if conway:
                                              
+                                             if key_pressed in [curses.KEY_UP,
+                                                                curses.KEY_DOWN,
+                                                                curses.KEY_LEFT,
+                                                                curses.KEY_RIGHT,
+                                                                curses.KEY_INSERT,
+                                                                curses.KEY_DELETE,
+                                                                curses.KEY_TAB,
+                                                                curses.KEY_BACKSPACE,
+                                                                ord(' ')]:
+                                                  after_pressed = 0
+                                             after_pressed += 1
+
+                                             temp_show_list =['BURSTS='+{True:' True',
+                                                                         False:' False' }[bursting]]+\
+                                                                         ['MODENAME '+mode[2]]+\
+                                                                         ['b '+','.join([str(x) for x in mode[1]])]+\
+                                                                         ['s '+','.join([str(x) for x in mode[0]])]+\
+                                                                        ['LEFT OFF='+str(left_odd)]+\
+                                                                        ['KEY SET='+str(key_set%4+1)]+\
+                                                                        ['DISTANCE='+str(distance)]+\
+                                                                        ['ITERATION='+str(iteration)]+\
+                                                                        ['RANDOM '+{True:' True',
+                                                                                    False:' False' }[randommode]]+\
+                                                                        ['DELETE to change mode']+\
+                                                                        ['INSERT to change key set']+\
+                                                                        ['TAB to change bursting']+\
+                                                                        ['up set random<']+['down set random>']+ ['right +1'] +\
+                                                                        ['left -1']+['OTHER KEY TO QUIT']+\
+                                                                        [str(conway.get_properties())]
+                                             if 0 < after_pressed <= 10 :
+                                                  if menu:
+                                                       next(menu)
+                                                  menu = self.show_temporary(showlist=temp_show_list,
+                                                                             y_coord=y_coord,
+                                                                             x_coord=x_coord)
+                                                  next(menu)
+                                             if after_pressed > 10:
+                                                  if menu:
+                                                       next(menu)
+                                                       menu = None
+                                             
+
+                                             put(y_coord,x_coord)
                                              if key_pressed == curses.KEY_UP:
                                                   distance += 1
                                              elif key_pressed == curses.KEY_DOWN:
@@ -3571,6 +3851,12 @@ class EmptyMovingWindow (MovingWindow):
                                                   left_odd -= 5
                                              elif key_pressed == curses.KEY_INSERT:
                                                   key_set += 1
+                                             elif key_pressed == curses.KEY_TAB:
+                                                  bursting = not bursting
+                                             elif key_pressed == curses.KEY_DELETE:
+                                                  mode = conway.change_mode()
+                                             elif key_pressed == curses.KEY_BACKSPACE:
+                                                  randommode = conway.change_random()
                                              if left_odd < 50:
                                                   left_odd = 50
                                              if left_odd > 100:
@@ -3582,19 +3868,10 @@ class EmptyMovingWindow (MovingWindow):
                                                   
                                              conway.change_odds((left_odd,100),key=(key_set%4)+1)
                                              conway.change_distance(distance)
-                                             if random.randrange(0,3) == 2:
+                                             if bursting and random.randrange(0,3) == 2:
                                                   conway.burst()
-                                             self.print_to(screen,
-                                                           str(iteration)+' / '+str(distance)+' / '+str(conway.get_properties()),
-                                                           length=90,
-                                                           y_pos=2,
-                                                           x_pos=25)
-                                             
-                                             
-                                             
-                                             
                                              conway.generate()
-                                        iteration += 1
+                                             iteration += 1
                                         for obj in self.moving_dict:
                                              
                                              
@@ -3606,13 +3883,6 @@ class EmptyMovingWindow (MovingWindow):
                                                               x_inc,
                                                               auto=True)
                                              
-                                        
-     ##                                   if iteration == 100:
-     ##                                        y_coord = random.randrange(0,y_total-y_max,y_max)
-     ##                                        x_coord = random.randrange(0,x_total-x_max,x_max)
-     ##                                        iteration = 0
-     ##                                        curses.beep()
-                                             put(y_coord,x_coord)
                                         put(y_coord,x_coord)
                                    
           ##                                        
@@ -3624,15 +3894,9 @@ class EmptyMovingWindow (MovingWindow):
                                         self.textlist = old_textlist
                                         self.object_dict = old_object_dict
                                         self.display_dict = old_display_dict
-                                   
-                                        
-                                        
-
-
-                              
-                         
-                                        
-                         
+                                        if menu:
+                                             next(menu)
+                       
                     self.print_to(screen,
                                   str(x_coord)
                                   +'/'+str(x_total)
@@ -3641,7 +3905,7 @@ class EmptyMovingWindow (MovingWindow):
                                   length=20,
                                   y_pos=2,
                                   x_pos=3)
-                     
+      
 
                     if y_coord < 0:
                          y_coord = 0
@@ -3670,19 +3934,23 @@ class EmptyMovingWindow (MovingWindow):
 
 
                     if entering:
-                         self.add_from_stack(y_coord,x_coord)
+                         self.add_from_stack(y_coord+self.cursor_y,x_coord+self.cursor_x)
                          once_through = True
 
                if self.copy_buffer:
 
-                    return  y_coord,x_coord,copy.deepcopy(self.object_dict),copy.deepcopy(self.display_dict), return_boxed_note(schema=self.copy_buffer.get_schema())
+                    return  y_coord,x_coord,copy.deepcopy(self.object_dict),\
+                           copy.deepcopy(self.display_dict), \
+                           return_boxed_note(schema=self.copy_buffer.get_schema())
                else:
-                    return  y_coord,x_coord,copy.deepcopy(self.object_dict),copy.deepcopy(self.display_dict),''
-                         
+                    return  y_coord,x_coord,copy.deepcopy(self.object_dict),\
+                           copy.deepcopy(self.display_dict),''
+               
 
           except:
                
-               return y_coord,x_coord,self.object_dict,self.textlist, return_boxed_note(schema=self.copy_buffer)
+               return y_coord,x_coord,self.object_dict,self.textlist,\
+                      return_boxed_note(schema=self.copy_buffer)
 
           
 

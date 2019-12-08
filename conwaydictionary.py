@@ -1,5 +1,6 @@
 import random
 import copy
+from itertools import cycle
 
 
 
@@ -35,6 +36,42 @@ class Conway:
           self.random_mode = randomizing
           self.livechar = livechar
           self.old_image = {}
+          self.mode_iterator = cycle(range(11))
+          self.mode = next(self.mode_iterator)
+          self.modes = {}
+          self.modes[0] = {0:[2,3],           
+                           1:[3],
+                           2:'life'}
+          self.modes[1]  = {0:[1,3,5,7],
+                            1:[1,3,5,7],
+                            2:'replicator'}
+          self.modes[2]  = {0:[4],
+                            1:[2,5],
+                            2:'no name 1'}
+          self.modes[3]  = {0:[0,1,2,3,4,5,6,7,8],
+                            1:[3],
+                            2:'life without death'}
+          self.modes[4]  = {0:[3,4],
+                            1:[3,4],
+                            2:'34 life'}
+          self.modes[5]  = {0:[5,6,7,8],
+                            1:[3,5,6,7,8],
+                            2:'Diamoeba'}
+          self.modes[6]  = {0:[1,2,5],
+                            1:[3,6],
+                            2:'2*2'}
+          self.modes[7]  = {0:[2,3],
+                            1:[3,6],
+                            2:'HighLife'}
+          self.modes[8]  = {0:[3,4,6,7,8],
+                            1:[3,6,7,8],
+                            2:'Day&Night'}
+          self.modes[9]  = {0:[2,4,5],
+                            1:[3,6,8],
+                            2:'Morley'}
+          self.modes[10]  = {0:[4,6,7,8],
+                            1:[3,5,6,7,8],
+                            2:'Anneal'}
           
           self.odds = {1:(1000,1000),
                        2:(1000,1000),
@@ -88,7 +125,12 @@ class Conway:
 
      def get_properties (self):
           return self.odds,self.distance
-
+     def change_mode (self):
+          self.mode = next(self.mode_iterator)
+          return self.modes[self.mode]
+     def change_random (self):
+          self.random_mode = not self.random_mode
+          return self.random_mode 
      def burst (self):
 
           y = random.randrange(self.y_min+5,self.max_y-5)
@@ -150,14 +192,14 @@ class Conway:
 
                if self.cells[cell]:
 
-                    if self.get_surrounding(cell) in [2,3]:
+                    if self.get_surrounding(cell) in self.modes[self.mode][0]:
                          new_cells[cell] = self.randomize(True,odds=self.odds[1])
 
-                    elif self.get_surrounding(cell) in [0,1,4,5,6]:
+                    else:
                          new_cells[cell] = self.randomize(False,odds=self.odds[2])
 
                else:
-                    if self.get_surrounding(cell) == 3:
+                    if self.get_surrounding(cell) in self.modes[self.mode][1]:
                          new_cells[cell] = self.randomize(True,odds=self.odds[3])
 
                     else:
@@ -177,7 +219,7 @@ class Conway:
                          self.displaydictobject[(y,x)] = ({False:self.deadchar,True:self.livechar}[self.cells[(y,x)]],None,None)
                     else:
                          if (y,x) in self.background:
-                              self.displaydictobject[(y,x)] = self.background((y,x))
+                              self.displaydictobject[(y,x)] = self.background[(y,x)]
 
 
           return self.displaydictobject
