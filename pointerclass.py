@@ -106,6 +106,9 @@ class Pointer:
 
         """Advance forward according to the speed"""
 
+        if not self.all:
+            return Index(1)
+
 
         if not self.random:
             if self.tilt == 0:              

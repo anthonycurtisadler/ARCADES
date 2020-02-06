@@ -44,14 +44,66 @@ def range_set(entrystring):
 def range_find(pageset,reduce=False):
 
     """Tranforms a list of pages into a formatted range
+    Reduce to give indexes in a reduced form!
     """
 
-    def redux (x):
-        if reduce:
-            return index_reduce(x)
-        else:
-            return x
+
+    if reduce:
+
+        def integer_part (x):
+
+            if '.' in str(x):
+                return int(str(x).split('.')[0])
+            else:
+                return int(x)
+            
+
+        pages = set()
+        pair_list = []
+        integer_pages = set()
+        for page in pageset:
+            ip_temp = integer_part(page)
+            integer_pages.add(ip_temp)
         
+        all_indexes = sorted(integer_pages)
+        del integer_pages
+        try:
+            starting = all_indexes[0]
+        except:
+            starting = 0
+        
+        ending = starting
+
+        if len(all_indexes)>0:
+            
+            for ind in all_indexes[1:]:
+
+                 if ind == ending + 1:
+                      ending = ind
+                 elif ind > ending + 1:
+                      pair_list.append((starting,ending))
+                      starting = ind
+                      ending = ind
+                 else:
+                      pass
+            if (len(pair_list)>0 and pair_list[-1] != (starting,ending)) or len(pair_list) == 0:
+                     pair_list.append((starting,ending))
+                 
+            result = ''
+            for pair in pair_list:
+                 starting,ending = pair[0],pair[1]
+                 if ending>starting:
+                      result+=str(starting)+LONGDASH+str(ending)+', '
+                 else:
+                      result+=str(starting)+', '
+            if len(result)>2:
+                return result[0:-2]
+            else:
+                return ''
+        else:
+            return ''
+
+
         
     pagerangelist = []
 
@@ -67,7 +119,7 @@ def range_find(pageset,reduce=False):
 
                 pagerangelist.append([str(page)])
 
-        if isinstance(page,str):
+        elif isinstance(page,str):
             if page.isnumeric():
                 if page in pageset and str(int(page)-1) in pageset:
 
@@ -77,7 +129,7 @@ def range_find(pageset,reduce=False):
 
                     pagerangelist.append([str(page)])
 
-        if type(page) == type(Index(0)):
+        elif type(page) == type(Index(0)):
             if page in pageset and page-Index(1) in pageset:
 
                 pagerangelist[-1].append(str(page))
@@ -85,7 +137,12 @@ def range_find(pageset,reduce=False):
             elif page in pageset and not page-Index(1) in pageset:
 
                 pagerangelist.append([str(page)])
-            
+
+    def redux (x):
+        if reduce:
+            return index_reduce(x)
+        else:
+            return x            
             
 
     pagerangestringlist = []
@@ -99,3 +156,4 @@ def range_find(pageset,reduce=False):
                                        +LONGDASH+redux(str(pagerange[-1])))
 
     return COMMABLANK.join(pagerangestringlist)
+

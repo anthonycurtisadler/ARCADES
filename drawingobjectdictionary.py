@@ -97,7 +97,7 @@ class DrawingObject:
                     textlist = [' '*width]*height
                          
                return textlist
-
+          
 
      def get_line_from_text (self,y_pos=0,x_pos=0,length=1):
 

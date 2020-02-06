@@ -21,30 +21,8 @@ curses.KEY_TAB = 9
 
 class MovingWindow:
 
-     def __init__ (self, textlist=None):
-
-
-          if textlist is None:
-
-               test_text = input('?')*1000
-          
-               self.textlist = [test_text[0:10]*100,test_text[1:11]*100,
-                          test_text[2:12]*100,test_text[3:13]*100,
-                          test_text[4:14]*100,test_text[5:15]*100,
-                          test_text[6:16]*100,test_text[7:17]*100]*30
-
-          else:
-               self.textlist = textlist
-
-          self.coordinate_list = []
-          for y in range(len(self.textlist)):
-
-               for x, char in enumerate(self.textlist[y]):
-
-                    if char == BOX_CHAR['lu']:
-
-                         self.coordinate_list.append((y,x))
-          self.sheet_cycling_through = cycle(self.coordinate_list)
+     def __init__ (self,textlist=None):
+          pass
               
 
      def moving_screen (self,screen,y_coord=0,x_coord=0,b_margin=4,t_margin=3,l_margin=1,r_margin=1,entering=False):

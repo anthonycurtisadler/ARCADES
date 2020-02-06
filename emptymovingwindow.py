@@ -1,5 +1,6 @@
 
 import curses
+from binaryabacus import BinaryAbacus 
 from conwaydictionary import Conway
 from drawingobjectdictionary import DrawingObject
 import time
@@ -66,10 +67,11 @@ help_script =  ['F1 = to change background color']+ \
                ['} = page right']+\
                ['z = decrease speed']+\
                ['x = increase speed']+\
-               ['o =move through workpad']+\
+               ['o = move through workpad']+\
                ['n = automatically cycle through notes']+\
-               ['m =set objects in motion/activate conway']+\
-               ['ctrl c = copy | ctrl v = paste']+\
+               ['m =  set objects in motion/activate conway']+\
+               ['b =binary abacus']+\
+               ['ctrl c = copy | ctrl e = empty | ctrl v = paste']+\
                ['ctrl a = screen shot | ctrl s = save text']+\
                ['~ + RETURN to clear the workpad']+\
                ['123456789/!@#$%^&*( to add to vert/hor divisions']+\
@@ -85,7 +87,8 @@ help_script2 = ['ARROW KEYS = draw object']+\
                ['% set on conway mode']+\
                ['TAB next drawing character']+\
                ['shift F11 next drawing palette']+\
-               ['* fill out space']+\
+               ['* fill out space calling up menu']+\
+               ['& fill out space with no menu']+\
                ['BACKSPACE previous drawing character']+\
                ['> stretch horizontally']+\
                [', contract vertically']+\
@@ -1806,7 +1809,7 @@ class EmptyMovingWindow (MovingWindow):
                          time.sleep(1)
                          self.add_drawn_object(obj_ind)
                          
-     def fill_space (self,y_pos,x_pos,blankchar=' ',tochar='X'):
+     def fill_space (self,y_pos,x_pos,blankchar=' ',charlist=None,tochar='X',quantity=40000,mode=False):
 
           """fills up an empty space"""
 
@@ -1823,12 +1826,27 @@ class EmptyMovingWindow (MovingWindow):
           seed_set =  {(y_pos,x_pos)}
           done_set = set()
           counter = 0
+          saved_tochar = tochar
+          if not mode:
+               if charlist:
+                    charlist = cycle(charlist)
+               
           
           while True:
                counter += 1
                done_set_copy = set(done_set)
                for c in list(seed_set):
                     counter += 1
+                    if mode:
+                         if charlist:
+                              tochar = random.choice(charlist)
+                         else:
+                              tochar = random.choice([saved_tochar,blankchar])
+                    else:
+                         if charlist:
+                              tochar = next(charlist)
+                         else:
+                              tochar = saved_tochar
                     if c not in done_set:
 
                          if not self.dictionary_mode:
@@ -1843,7 +1861,7 @@ class EmptyMovingWindow (MovingWindow):
                               done_set.add(c)
                               seed_set.update([c for c in get_adjacent(c[0],c[1]) if (c[0],c[1]) not in self.display_dict or self.display_dict[(c[0],c[1])][0] == blankchar])
                               
-               if not len(done_set) > len(done_set_copy) or counter > 40000:
+               if not len(done_set) > len(done_set_copy) or counter > quantity:
                     break
           
                
@@ -2236,6 +2254,10 @@ class EmptyMovingWindow (MovingWindow):
           starting_coord = (0,0)
           self.copy_buffer = None
 
+          self.quantity = 10
+          self.fill_chars = None
+          self.random = False
+
           conway = None
           self.cursor_moved = False
           self.linetypes = cycle(['normal','round','thick','double'])
@@ -2387,6 +2409,7 @@ class EmptyMovingWindow (MovingWindow):
                       
                          if not typing and (key in keys or key in [ord('#'),
                                                                    ord('%'),
+                                                                   ord('&'),
                                                                    ord('*'),
                                                                    ord('.'),
                                                                    ord('>'),
@@ -2461,7 +2484,63 @@ class EmptyMovingWindow (MovingWindow):
                                    elif key == 287 and started_drawing:
                                         self.drawing_key = next(self.drawing_keys)
                                         self.drawing_char = next(self.drawing_chars[self.drawing_key])
-                                   elif key == ord('*'):
+                                   elif key in [ord('*'),ord('&')]:
+                                        menu = False
+                                        start_fill = False
+                                        char_label = ''
+                                        self.fill_chars = []
+                                        if key == ord('&'):
+                                             start_fill = True
+                                        if self.copy_buffer:
+                                             temp_obj_sch = self.copy_buffer.get_schema()
+                                             self.fill_chars = [temp_obj_sch[a] for a in temp_obj_sch]
+                                             char_label = ''.join(self.fill_chars)
+                                        
+
+                                        while not start_fill:
+                                             temp_show_list = ['Mode = '+{True:'Random',
+                                                                     False:'Regular'}[self.random]]+\
+                                                         ['Quantity = '+str(self.quantity)]+\
+                                                         ['UP *10']+\
+                                                         ['DOWN /10']+\
+                                                         ['UP +1']+\
+                                                         ['DOWN -1']+\
+                                                         ['* FILL']+\
+                                                         ['- REDUCE CHARS']+\
+                                                         ['ENTER QUIT']+\
+                                                         [char_label]
+                                             if menu:
+                                                  next(menu)
+                                             menu = self.show_temporary(showlist=temp_show_list,y_coord=y_coord,x_coord=x_coord)
+                                             next(menu)
+                                             put(y_coord,x_coord)
+                                             
+                                             temp_key = screen.getch()
+                                             if temp_key == curses.KEY_UP:
+                                                  self.quantity *= 10
+                                             elif temp_key == curses.KEY_DOWN:
+                                                  self.quantity = int(self.quantity/10)
+                                             elif temp_key == curses.KEY_RIGHT:
+                                                  self.quantity += 1
+                                             elif temp_key == curses.KEY_LEFT:
+                                                  self.quantity -= 1
+                                             elif temp_key == ord('?'):
+                                                  self.random = not self.random
+                                             elif temp_key == ord('-'):
+                                                  self.fill_chars = list(set(self.fill_chars))
+                                                  char_label = ''.join(self.fill_chars)
+                                             elif temp_key == curses.KEY_ENTER or temp_key == 10:
+                                                  next(menu)
+                                                  break
+                                             elif temp_key == ord('*'):
+                                                  next(menu)
+                                                  start_fill = True
+                                                  break
+                                             if self.quantity < 1:
+                                                  self.quantity = 1
+                                                  
+                                             
+                                                 
                                         if not self.dictionary_mode:
                                              blankchar = self.textlist[y_coord+self.cursor_y][x_coord+self.cursor_x]
                                         else:
@@ -2469,9 +2548,10 @@ class EmptyMovingWindow (MovingWindow):
                                                   blankchar = self.display_dict[(y_coord+self.cursor_y,x_coord+self.cursor_x)][0]
                                              else:
                                                   blankchar = ' '
-                                        self.fill_space(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,
-                                                        blankchar=blankchar,
-                                                        tochar=self.drawing_char)
+                                        if start_fill:
+                                             self.fill_space(y_pos=y_coord+self.cursor_y,x_pos=x_coord+self.cursor_x,
+                                                             blankchar=blankchar,
+                                                             tochar=self.drawing_char,charlist=self.fill_chars,quantity=self.quantity,mode=self.random)
                                         
                                    elif key == curses.KEY_BACKSPACE and started_drawing:
                                         for x in range(5):
@@ -2704,6 +2784,7 @@ class EmptyMovingWindow (MovingWindow):
                                                   if key not in [ord('#'),
                                                                  ord('%'),
                                                                  ord('*'),
+                                                                 ord('&'),
                                                                  ord('.'),
                                                                  ord('>'),
                                                                  ord(','),
@@ -3345,7 +3426,59 @@ class EmptyMovingWindow (MovingWindow):
                                    screen.nodelay(False)
                                         
                                                                           
-                                      
+                              elif key == ord('b'):
+
+                                   screen.nodelay(True)
+                                   key_pressed = -1
+                                   backup_dict = copy.deepcopy(self.display_dict)
+
+                                   binary = BinaryAbacus(displaydictobject=self.display_dict,
+                                                         y_min=y_coord+1,
+                                                         y_max=y_coord+y_max-10,
+                                                         x_min=x_coord+1,
+                                                         x_max=x_max-3,
+                                                         char='o')
+                                   
+                                   
+                                   maximum = 2
+                                   while key_pressed in [-1,10]:
+                                        key_pressed = screen.getch()
+                                        if key_pressed == 10:
+                                             key_pressed = -1
+                                             while key_pressed == -1:
+                                                  key_pressed = screen.getch()
+
+                                        x = binary.run(maximum=maximum)
+                                        while True:
+                                             n = next(x)
+                                             if not n[0]:
+                                                  break
+                                             put(y_coord,x_coord)
+                                             
+                                        self.print_to(screen,n[1]+' ('+str(maximum)+')'+ (x_max-10-len(n[1]+' ('+str(maximum)+')'))*' ',length=x_max-10,y_pos=y_max-3,x_pos=1)
+                                        if '[' not in n[1]:
+                                             maximum *= 2
+                                        else:
+                                             maximum = 2
+                                             
+                                   
+                                        self.display_dict = {}
+                                        time.sleep(2)
+                                        
+
+                                        binary = BinaryAbacus(displaydictobject=self.display_dict,
+                                                         y_min=y_coord+1,
+                                                         y_max=y_coord+y_max-10,
+                                                         x_min=x_coord+1,
+                                                         x_max=x_max-3,
+                                                         char='o')
+                                   self.display_dict = backup_dict
+                                   self.print_to(screen,(x_max-10)*' ',length=x_max-10,y_pos=y_max-3,x_pos=1)
+                                   put(y_coord,x_coord)
+                                        
+                                   
+                                   
+                                   
                               elif key == ord('n'):
                                    self.quit_help()
 
@@ -3369,7 +3502,7 @@ class EmptyMovingWindow (MovingWindow):
                                         put(y_coord,x_coord)
 
                                    screen.nodelay(False)
-                              elif key == 3: # to copy object
+                              elif key == 3: # ctrl c to copy object
 
                                    object_to_copy = self.find_object_in(y_coord+self.cursor_y,x_coord+self.cursor_x)
                                    if object_to_copy:
@@ -3380,8 +3513,11 @@ class EmptyMovingWindow (MovingWindow):
                                         elif 'c' in self.object_dict[object_to_copy]:
                                              self.copy_buffer = DrawingObject(displaydictobject = self.display_dict,
                                                                               schema=self.object_dict[object_to_copy]['c'].get_schema())
-                                             
-                              elif key == 22: # to paste objet 
+
+                              elif key == 5: # ctrl e to empty copy buffer
+                                   self.copy_buffer = None
+                                   
+                              elif key == 22: # ctrl v paste object 
 
                                    if self.copy_buffer:
                                         copy_object,draw_obj_ind = self.assign_drawing_object(y_coord+self.cursor_y,
@@ -3475,10 +3611,15 @@ class EmptyMovingWindow (MovingWindow):
                                    
                               elif key == ord('~'):
                                    key = screen.getch()
-                                   if key == curses.KEY_ENTER or key == 10 or key == 13:
+                                   if key in [curses.KEY_ENTER,10,13]:
                                         if not self.dictionary_mode:     
                                              self.textlist = [' '*self.x_dim]*self.y_dim
+                                        del self.object_dict
+                                        del self.display_dict 
                                         self.object_dict = {}
+                                        self.display_dict = {}
+
+                                        
                                    
                               elif key == 282:
 

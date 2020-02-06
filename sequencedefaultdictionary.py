@@ -1,3 +1,6 @@
+# For keeping track of the default values of sequences
+
+
 from globalconstants import ATSIGN,EMPTYCHAR 
 
 def split(phrase):
