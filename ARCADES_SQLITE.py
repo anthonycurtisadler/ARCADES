@@ -8776,16 +8776,16 @@ class histogram:
 
                     value_tuple = (notebookname,)
                     db_cursor.execute("SELECT word "
-                                      *"FROM word_to_indexes "
-                                      *"WHERE notebook=?;",
+                                      +"FROM word_to_indexes "
+                                      +"WHERE notebook=?;",
                                       value_tuple)
                     fetched = db_cursor.fetchall()
                     for word in fetched:
 
                         value_tuple = (notebookname,word[0],)
                         db_cursor.execute("SELECT note_index "
-                                          *"FROM word_to_indexes "
-                                          *"WHERE notebook=? and word=?;",
+                                          +"FROM word_to_indexes "
+                                          +"WHERE notebook=? and word=?;",
                                           value_tuple)
 
                         fetched = db_cursor.fetchall()
