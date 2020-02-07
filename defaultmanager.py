@@ -3,6 +3,9 @@
 
 from complexobjecttransformindexes import transform
 import datetime
+from display import Display
+
+display = Display()
 
 
 
@@ -198,6 +201,7 @@ class DefaultManager:
 
      def restore_from_backup (self,
                               label):
+  
 
           if label not in self.default_dictionary:
                return False
@@ -231,9 +235,14 @@ class DefaultManager:
                          'indextable',
                          'projects']:
 
+               
+               display.noteprint(('','RESTORING '+label))       
+
                value = self.get(label)
 
                self.default_dictionary[label].import_string(value)
+               
+               display.noteprint(('',label+' RESTORED'))       
          
 
      def activate_database(self):

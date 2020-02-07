@@ -1652,33 +1652,34 @@ class Note_Shelf:
         self.default_dict['macros'].purge_connection()
         self.default_dict['keymacros'].purge_connection()
         self.default_dict['commands'].purge_connection()
-        
-        
-        if not self.divide_no_query:
-            q_temp = input(queries.DIVIDE_PICKLE)
-            if self.divided or q_temp in YESTERMS:
-                for suffix in ('d','k','w','t'):
-                    with open(self.directoryname
-                                    +SLASH+self.filename
-                                    +suffix.upper()+'.pkl','wb') as tempfile:
-                        pickle.dump(self.pickle_dictionary[suffix],
-                                    tempfile)
-                        #globaldirectoryname+SLASH+self.filename+'PIC'
-                        nprint(suffix,'saved')
-            if q_temp in ['R','r']:
-                self.divide_no_query = True
-                
-        else:
-            
-            with open(self.directoryname
-                            +SLASH+self.filename
-                            +'.pkl',
-                            'wb') as tempfile:
-                pickle.dump(self.pickle_dictionary,
-                            tempfile)
-                #globaldirectoryname+SLASH+self.filename+'PIC'
 
+        if self.using_shelf: 
+        
+            if not self.divide_no_query:
+                q_temp = input(queries.DIVIDE_PICKLE)
+                if self.divided or q_temp in YESTERMS:
+                    for suffix in ('d','k','w','t'):
+                        with open(self.directoryname
+                                        +SLASH+self.filename
+                                        +suffix.upper()+'.pkl','wb') as tempfile:
+                            pickle.dump(self.pickle_dictionary[suffix],
+                                        tempfile)
+                            #globaldirectoryname+SLASH+self.filename+'PIC'
+                            nprint(suffix,'saved')
+                if q_temp in ['R','r']:
+                    self.divide_no_query = True
+                    
+            else:
                 
+                with open(self.directoryname
+                                +SLASH+self.filename
+                                +'.pkl',
+                                'wb') as tempfile:
+                    pickle.dump(self.pickle_dictionary,
+                                tempfile)
+                    #globaldirectoryname+SLASH+self.filename+'PIC'
+
+                    
     def default_save(self,suffix=EMPTYCHAR,extra=EMPTYCHAR):
         """saves default dictionary etc."""
 
@@ -9197,8 +9198,8 @@ class Console (Note_Shelf):
                  flagvalue='c',
                  tempobject=temporary):
         
-
         self.read_only = True
+        auto_db = True 
 
         if flagvalue in ['c','w']:
             self.read_only = False 
@@ -9256,77 +9257,102 @@ class Console (Note_Shelf):
         loaded = EMPTYCHAR
         failed = False
         display_temp = EMPTYCHAR
-        for suffix in ('d','k','t','w'):
-            if not failed:
+
+        self.key_dict = {}
+        self.tag_dict = {}
+        self.word_dict = {}
+        self.default_dict = {}
+
+        auto_database = False
+
+        if self.using_shelf:
+            for suffix in ('d','k','t','w'):
+                if not failed:
+                    try:
+                        tempfile = open(self.directoryname
+                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'rb')
+                        self.pickle_dictionary[suffix] = pickle.load(tempfile)
+                        tempfile.close()
+                        display_temp+={'d':'DEFAULT DICTIONARY',
+                                       'k':'KEY DICTIONARY',
+                                       't':'TAG DICTIONARY',
+                                       'w':'WORD DICTIONARY'}[suffix]+' LOADED'+'\n'
+                        loaded += suffix
+                        
+                        
+                    except:
+                        display_temp+={'d':'DEFAULT DICTIONARY',
+                                       'k':'KEY DICTIONARY','t':'TAG DICTIONARY',
+                                       'w':'WORD DICTIONARY'}[suffix]+' FAILED'+'\n'+'\n'+\
+                                       ' WILL LOAD AS SINGLE PICKLE FILE!'
+                        self.pickle_dictionary[suffix] = {}
+                        failed = True
+            display.noteprint((alerts.ATTENTION,display_temp))    
+
+            if failed:
                 try:
+                    self.divided = False
                     tempfile = open(self.directoryname
-                                +SLASH+self.filename+suffix.upper()+'.pkl', 'rb')
-                    self.pickle_dictionary[suffix] = pickle.load(tempfile)
+                                    +SLASH+self.filename+'.pkl', 'rb')
+              
+                    self.pickle_dictionary = pickle.load(tempfile)
+                    display.noteprint((alerts.ATTENTION,
+                                       'PICKLE DICTIONARY OPENED'))
                     tempfile.close()
-                    display_temp+={'d':'DEFAULT DICTIONARY',
-                                   'k':'KEY DICTIONARY',
-                                   't':'TAG DICTIONARY',
-                                   'w':'WORD DICTIONARY'}[suffix]+' LOADED'+'\n'
-                    loaded += suffix
-                    
-                    
-                except:
-                    display_temp+={'d':'DEFAULT DICTIONARY',
-                                   'k':'KEY DICTIONARY','t':'TAG DICTIONARY',
-                                   'w':'WORD DICTIONARY'}[suffix]+' FAILED'+'\n'+'\n'+\
-                                   ' WILL LOAD AS SINGLE PICKLE FILE!'
-                    self.pickle_dictionary[suffix] = {}
-                    failed = True
-        display.noteprint((alerts.ATTENTION,display_temp))    
 
-        if failed:
-            try:
-                self.divided = False
-                tempfile = open(self.directoryname
-                                +SLASH+self.filename+'.pkl', 'rb')
-          
-                self.pickle_dictionary = pickle.load(tempfile)
-                display.noteprint((alerts.ATTENTION,
-                                   'PICKLE DICTIONARY OPENED'))
-                tempfile.close()
+                    
+                except OSError:
 
+                    auto_database = True
+                    if not auto_db:
+                        
+                    
                 
-            except OSError:
-                display.noteprint((alerts.ATTENTION,
-                                   'CREATING NEW PICKLE DICTIONARY'))
-                display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
-                self.pickle_dictionary = {'k':{},
-                                          't':{},
-                                          'w':{},
-                                          'd':{}}
-                tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
-                pickle.dump(self.pickle_dictionary, tempfile)
-                tempfile.close()
-        display.noteprint(('DIVIDED',str(self.divided)))
+                        display.noteprint((alerts.ATTENTION,
+                                           'CREATING NEW PICKLE DICTIONARY'))
+                        display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
+                        self.pickle_dictionary = {'k':{},
+                                                  't':{},
+                                                  'w':{},
+                                                  'd':{}}
+                        tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
+                        pickle.dump(self.pickle_dictionary, tempfile)
+                        tempfile.close()
+                    else:
+                        self.using_shelf = False 
 
-        self.key_dict = self.pickle_dictionary['k']
-            # keeps track of keys
-        self.tag_dict = self.pickle_dictionary['t']
-            # keeps track of tags
-        self.word_dict = self.pickle_dictionary['w']
-            # keeps track of words to facilitate quick searches
-        self.default_dict = self.pickle_dictionary['d']
-            # persistent default date
+            if self.using_shelf:
+                display.noteprint(('DIVIDED',str(self.divided)))
+                
+
+                self.key_dict = self.pickle_dictionary['k']
+                    # keeps track of keys
+                self.tag_dict = self.pickle_dictionary['t']
+                    # keeps track of tags
+                self.word_dict = self.pickle_dictionary['w']
+                    # keeps track of words to facilitate quick searches
+                self.default_dict = self.pickle_dictionary['d']
+                    # persistent default date
+
+
+            
         self.by_line = Convert()
+        self.purge_objects = False
         
 
         self.defaults = DefaultManager(default_dictionary=self.default_dict,
                                        notebookname=notebookname,
-                                       using_shelf=self.using_shelf,
+                                       using_shelf=True,
                                        using_database=self.using_database,
                                        connection=db_connection,
                                        cursor=db_cursor)
                                        
                                        
         
-        if not self.defaults.contains('usedatabase'):
-            self.defaults.set('usedatabase',
+        if self.using_shelf and not self.defaults.contains('usedatabase'):
+            self.defaults.set('usedatabase',auto_database or
                               input('Use database?') in YESTERMS)
+            self.purge_objects = True 
         if not self.defaults.get('usedatabase'):
             try:
                 self.note_dict = shelve.open(self.directoryname
@@ -9340,6 +9366,7 @@ class Console (Note_Shelf):
                                    'OPENING AS DATABASE'))
                 self.using_shelf = False
                 self.using_database = True
+                
                 del self.tag_dict
                 del self.word_dict
                 self.defaults.set('usedatabase',
@@ -9362,6 +9389,7 @@ class Console (Note_Shelf):
                     self.defaults.set(label,predicate)
 
         def backup_defaults(label):
+            nprint('BACKING UP ',label)
             #Generic routine for backing up defaults
             if not self.defaults.database_contains(label):
                 self.defaults.backup(label)
@@ -9429,20 +9457,28 @@ class Console (Note_Shelf):
         #FOR THE COMPLEX DEFAULTS
 
 
-        if not self.defaults.contains('projects'):
+        if self.purge_objects or not self.defaults.contains('projects'):
             if not self.using_database:
                 self.default_dict['projects'] = ProjectManager()
             else:
-                self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
-                                                               connection=db_connection,
-                                                               cursor=db_cursor)
+                try:
+                    self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
+                                                                   project_dictionary=self.default_dict['projects'],
+                                                                   connection=db_connection,
+                                                                   cursor=db_cursor)
+                except:
+                    self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
+                                                                   project_dictionary=None,
+                                                                   connection=db_connection,
+                                                                   cursor=db_cursor)
+        
         else:
             try:
                 self.default_dict['projects'].restore_connection(connection=db_connection,
                                                                  cursor=db_cursor)
             except:
                 display.noteprint(('ATTENTION','RESTORE FAILED'))
-           
+        print('done')
         if not self.defaults.contains('convert'):
             self.default_dict['convert'] = {'default':Convert()}
         if  not isinstance(self.default_dict['convert'],dict):
@@ -9457,7 +9493,8 @@ class Console (Note_Shelf):
         if  not self.defaults.contains('purge'):
             self.default_dict['purge'] = PurgeKeys(),
         
-        if 'generalknowledge' not in self.default_dict:
+        if self.purge_objects or 'generalknowledge' not in self.default_dict:
+            print('general knowledge')
             while True:
                 i_temp = input('GENERAL KNOWLEDGE \n (1)  IN COMMON SHELF '*self.using_shelf
                                +'(2) IN UNIQUE SHELF'*self.using_shelf 
@@ -9486,7 +9523,7 @@ class Console (Note_Shelf):
        
 
             
-        if 'macros' not in self.default_dict:
+        if self.purge_objects or 'macros' not in self.default_dict:
             self.default_dict['macros'] = Abbreviate(displayobject=display,
                                                      use_presets=False,
                                                      headings=defaultheadings,
@@ -9501,18 +9538,17 @@ class Console (Note_Shelf):
                 
 
 
-        if 'keymacros' not in self.default_dict:
+        if self.purge_objects or'keymacros' not in self.default_dict:
             self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display,
                                                                  headings=defaultheadings,
                                                                  terms=defaultterms,
-                                                                 presets=presets.keymacro,
-                                                                 using_database=self.using_database)
+                                                                 presets=presets.keymacro)
             if not self.defaults.database_contains('keymacros'):
                 self.defaults.backup('keymacros')
             else:
                 self.defaults.restore_from_backup('keymacros')
 
-        if 'definitions' not in self.default_dict:
+        if self.purge_objects or 'definitions' not in self.default_dict:
             self.default_dict['definitions'] = KeyDefinitions(displayobject=display,
                                                               headings=defaultheadings,
                                                               terms=defaultterms,
@@ -9522,7 +9558,7 @@ class Console (Note_Shelf):
             else:
                 self.defaults.restore_from_backup('definitions')
 
-        if 'abbreviations' not in self.default_dict:
+        if self.purge_objects or 'abbreviations' not in self.default_dict:
             self.default_dict['abbreviations'] = Abbreviate(displayobject=display,
                                                             headings=defaultheadings,
                                                             terms=defaultterms,
@@ -9536,18 +9572,17 @@ class Console (Note_Shelf):
 
 
 
-        if not self.defaults.contains('commands'):
+        if self.purge_objects or not self.defaults.contains('commands'):
             self.default_dict['commands'] = Abbreviate(displayobject=display,
                                                        use_presets=False,
                                                        headings=defaultheadings,
                                                        terms=defaultterms,
-                                                       objectname='commands.db',
-                                                       using_database=self.using_database)
+                                                       objectname='commands.db')
             if not self.defaults.database_contains('commands'):
                 self.defaults.backup('commands')
             else:
                 self.defaults.restore_from_backup('commands')
-        if not self.defaults.contains('knower'):
+        if self.purge_objects or not self.defaults.contains('knower'):
             self.default_dict['knower'] = KnowledgeBase(displayobject=display,
                                                         headings=defaultheadings,
                                                         terms=defaultterms,
@@ -9606,10 +9641,11 @@ class Console (Note_Shelf):
 ##            self.default_dict['indexlist'] = OrderedList(self.indexes(),indexstrings=True)
 ##            
 
-        if not self.defaults.contains('indextable'):
+        if self.purge_objects or not self.defaults.contains('indextable'):
+            nprint('LOADING INDEXES INTO TRANSPOSITION TABLE')
             if self.using_database:
                 self.default_dict['indextable'] = TranspositionTable(self.indexes(),
-                                                                     using_dict=True,
+                                                                     using_dict=self.using_shelf,
                                                                      connection=db_connection,
                                                                      cursor=db_cursor,
                                                                      notebookname=notebookname)
@@ -9621,18 +9657,28 @@ class Console (Note_Shelf):
         else:
             self.default_dict['indextable'].restore_connection(connection=db_connection,
                                                                cursor=db_cursor)
+        nprint('TRANSPOSITION TABLE DONE')
             
         if not self.defaults.database_contains('indextable'):
+            nprint('BACKING UP INDEXTABLE')
             self.defaults.backup('indextable')
         else:
+            nprint('RESTORING INDEXTABLE FROM BACKUP')
             self.defaults.restore_from_backup('indextable')
         
+        nprint('OPENING CONNECTION FOR GENERAL KNOWLEDGE')
         self.default_dict['generalknowledge'].open_connection()
+        nprint('OPENING CONNECTION FOR KNOWLEDGE')
         self.default_dict['knower'].open_connection()
+        nprint('OPENING CONNECTION FOR DEFINITIONS')
         self.default_dict['definitions'].open_connection()
+        nprint('OPENING CONNECTION FOR ABBREVIATIONS')
         self.default_dict['abbreviations'].open_connection()
+        nprint('OPENING CONNECTION FOR MACROS')
         self.default_dict['macros'].open_connection()
+        nprint('OPENING CONNECTION FOR KEYMACROS')
         self.default_dict['keymacros'].open_connection()
+        nprint('OPENING CONNECTION FOR COMMANDS')
         self.default_dict['commands'].open_connection()                
         
         for l_temp in ['projects',
@@ -10138,7 +10184,8 @@ class Console (Note_Shelf):
             self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display,
                                                                  headings=defaultheadings,
                                                                  terms=defaultterms,
-                                                                 presets=presets.keymacro)  
+                                                                 presets=presets.keymacro,
+                                                                 using_database=self.using_database)  
             self.dd_changed=True
             self.defaults.backup('keymacros')
         elif mainterm in ['defaultcommandmacros']:
@@ -10234,7 +10281,8 @@ class Console (Note_Shelf):
                 self.default_dict['commands'] = Abbreviate(displayobject=display,
                                                            use_presets=False,
                                                            headings=defaultheadings,
-                                                           terms=defaultterms)
+                                                           terms=defaultterms,
+                                                           using_database=self.using_database)
                 self.default_dict['commands'].console()
                 self.dd_changed=True
                 self.defaults.backup('commands')
@@ -12429,7 +12477,8 @@ class Console (Note_Shelf):
                                rangelist.range_find([Index(a_temp)
                                                      for a_temp in sr_temp[1]
                                                      if a_temp!=0],
-                                                    reduce=True).replace(LONGDASH,SLASH)))
+                                                    reduce=True,
+                                                    compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
             #formkeys(sorted(list(sr_temp[2])))
 
             if predicate[0]:
@@ -13978,7 +14027,7 @@ add_new_notebook = True
 ##
 ##
 
-db_connection = sqlite3.connect('notebooks'+SLASH+'nb2.db')
+db_connection = sqlite3.connect('notebooks'+SLASH+'notebook.db')
 db_cursor = db_connection.cursor()
 
 # DATA BASE DEFINITION

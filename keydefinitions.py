@@ -22,8 +22,10 @@ class KeyDefinitions:
 
     def __init__(self, displayobject=None, headings=None, terms=None, using_database=True):
 
+
         self.key_definitions = {}
         self.definition_keys = {}
+        self.define_objects()
         if not displayobject:
             displayobject = Display()
         self.displayobject = displayobject
@@ -60,6 +62,8 @@ class KeyDefinitions:
             self.SHOWTERMS = terms[2]
             self.QUITTERMS = terms[3]
             self.CLEARTERMS = terms[4]
+
+    def define_objects (self):
 
         self.dict_object_dict= {'kd':self.key_definitions,
                        'dk':self.definition_keys}

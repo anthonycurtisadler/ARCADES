@@ -4,6 +4,7 @@
 from complexobjecttransformindexes import transform
 from orderedlist import OrderedList
 from indexclass import Index
+import datetime
 
 class ProjectManager:
 
@@ -96,9 +97,11 @@ class ProjectManager:
                     self.clear_database()
                     self.load_into_database(all_projects=project_dictionary)
                     print('loaded into database')
+
           else:
                self.projects = {}
                self.current = None
+ 
 
           
                
@@ -393,6 +396,7 @@ class ProjectManager:
      def initiate_project (self,
                            project_name=None,
                            defaultkeys=None,
+                           indexes=None,
                            lastup=None,
                            uptohere=None,
                            mainterm=None,
@@ -406,7 +410,7 @@ class ProjectManager:
                self.projects[project_name]['position'] = (lastup,uptohere)
                self.projects[project_name]['going'] = (mainterm,series_enter)
                self.projects[project_name]['date'] = [str(date)]
-               self.projects[project_name]['indexes'] = OrderedList()
+               self.projects[project_name]['indexes'] = indexes
                self.projects[project_name]['status'] = {'started':str(date),
                                                         'open':opened,
                                                         'lastmodified':[]}
@@ -428,6 +432,8 @@ class ProjectManager:
                                     key=key)
                self.add_date_DB(project=project_name,
                                 date=str(date))
+               self.set_indexes(project=project_name,
+                                indexes=indexes)
                
 
      def clear_indexes (self,
@@ -500,6 +506,7 @@ class ProjectManager:
                
                self.initiate_project (project_name=project,
                                       defaultkeys=dk_temp,
+                                      indexes=indexes_temp,
                                       lastup=lastup,
                                       uptohere=uptohere,
                                       mainterm=mainterm,
@@ -850,15 +857,57 @@ class ProjectManager:
                                project=None,
                                all_projects=None):
 
+          try:
+               defaultkeys = all_projects[project]['defaultkeys']
+          except:
+               print(project,':','defaultkeys FAILED')
+               defaultkeys = []
+          try:
+               indexes = all_projects[project]['indexes']
+          except:
+               print(project,':','index FAILED')
+               indexes = OrderedList()
+          try:
+          
+               lastup = all_projects[project]['position'][0]
+          except:
+               print(project,':','lastup FAILED')
+               lastup = Index(2)
+               
+          try:     
+               uptohere = uptohere=all_projects[project]['position'][1]
+          except:
+               print(project,':','uptohere FAILED')
+               uptohere = Index(2)
+          try:
+               mainterm = mainterm=all_projects[project]['going'][0]
+          except:
+               print(project,':','mainterm FAILED')
+               mainterm = 'quit'
+
+          try:
+               
+               series_enter = series_enter=all_projects[project]['going'][1]
+          except:
+               print(project,':','series enter FAILED')
+               series_enter = ''
+          try:
+               date= all_projects[project]['date']
+          except:
+               date = [str(str(datetime.datetime.now()))]
+
           self.initiate_project (project_name=project,
-                                 defaultkeys=all_projects[project]['defaultkeys'],
-                                 lastup=all_projects[project]['position'][0],
-                                 uptohere=all_projects[project]['position'][1],
-                                 mainterm=all_projects[project]['going'][0],
-                                 series_enter=all_projects[project]['going'][1],
-                                 date=all_projects[project]['date'],
-                                 opened=False)                  
-         
+                                 defaultkeys=defaultkeys,
+                                 lastup=lastup,
+                                 indexes=indexes,
+                                 uptohere=uptohere,
+                                 mainterm=mainterm,
+                                 series_enter=series_enter,
+                                 date=date,
+                                 opened=False)
+          
+               
+              
 
      def clear_database (self):
 

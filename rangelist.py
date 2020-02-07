@@ -41,14 +41,14 @@ def range_set(entrystring):
         rangeset = rangeset.union(set(de_range(e_temp)))
     return rangeset
 
-def range_find(pageset,reduce=False):
+def range_find(pageset,reduce=True,compact=True):
 
     """Tranforms a list of pages into a formatted range
     Reduce to give indexes in a reduced form!
     """
 
 
-    if reduce:
+    if compact:
 
         def integer_part (x):
 

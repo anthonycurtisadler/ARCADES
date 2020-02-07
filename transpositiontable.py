@@ -244,11 +244,17 @@ class TranspositionTable:
                     
         if self.using_database:
             if enter_string:
+                self.cursor.execute("SELECT * FROM indextable")
+                temp_results = self.cursor.fetchall()
+                if len(temp_results) < len(enter_string.split(',')):
+                
 
-                for x_temp in enter_string.split(','):
-                    key, value = x_temp.split('/')[0],x_temp.split('/')[1]
-                    self.add_to_db(index_from=key,index_to=value)
-            
+                    for x_temp in enter_string.split(','):
+                        
+                        key, value = x_temp.split('/')[0],x_temp.split('/')[1]
+                        self.add_to_db(index_from=key,index_to=value)
+                
+                
         
         
                 

@@ -30,12 +30,13 @@ class Abbreviate:
                  headings=None,
                  terms=None,
                  presets=None,
-                 using_database=True,
+                 using_database=False,
                  objectname=None):
 
 
         self.default_debreviations = {}
         self.default_abbreviations = {}
+        self.create_objects()
         #displayobject must be passed in
         if objectname is None:
             objectname = 'macros.db'
@@ -103,30 +104,10 @@ class Abbreviate:
 
                 self.query(term1='db',term2=x,term3=newdefaults[x],action='set')
                 self.query(term1='ab',term2=newdefaults[x],term3=x,action='set')
-                
-    def load_presets (self,presets):
 
 
-        if 'o' in self.db_flag:
 
-            self.default_debreviations.update(presets)
-            self.default_abbreviations = {value:key for  key,
-                                          value in self.default_debreviations.items()}
-        if 'd' in self.db_flag:
-
-            self.db_cursor.execute("SELECT * FROM debreviations")
-            if len(self.db_cursor.fetchall()) < 10:
-                self.displayobject.noteprint(('ATTENTION!','LOADING PRESETS'))
-
-                for x in presets:
-
-                        self.query(term1='db',term2=x,term3=presets[x],action='set')
-                        self.query(term1='ab',term2=presets[x],term3=x,action='set')
-            else:
-                self.displayobject.noteprint(('ATTENTION!','PRESETS ALREADY LOADED'))
-                    
-                
-    def create_database (self):
+    def create_objects (self):
 
         self.dict_object_dict= {'ab':self.default_abbreviations,
                        'db':self.default_debreviations}
@@ -152,6 +133,31 @@ class Abbreviate:
         self.delete_script_none_dict = {'ab':"DELETE FROM abbreviations WHERE notebook=?",
                              'db':"DELETE FROM debreviations WHERE notebook=?"}
 
+
+
+    def load_presets (self,presets):
+
+
+        if 'o' in self.db_flag:
+
+            self.default_debreviations.update(presets)
+            self.default_abbreviations = {value:key for  key,
+                                          value in self.default_debreviations.items()}
+        if 'd' in self.db_flag:
+
+            self.db_cursor.execute("SELECT * FROM debreviations")
+            if len(self.db_cursor.fetchall()) < 10:
+                self.displayobject.noteprint(('ATTENTION!','LOADING PRESETS'))
+
+                for x in presets:
+
+                        self.query(term1='db',term2=x,term3=presets[x],action='set')
+                        self.query(term1='ab',term2=presets[x],term3=x,action='set')
+            else:
+                self.displayobject.noteprint(('ATTENTION!','PRESETS ALREADY LOADED'))
+                    
+                
+    def create_database (self):
 
         self.db_cursor.executescript("""
 

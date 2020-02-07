@@ -20,15 +20,19 @@ class KeyMacroDefinitions(KeyDefinitions):
 
     """
     
-    def __init__(self, displayobject=None, headings=None, terms=None, using_database=True,presets=None):
+    def __init__(self, displayobject=None, headings=None, terms=None, using_database=True, presets=None):
 
 
         self.key_definitions = {}
-        self.definition_keys = None 
+        self.definition_keys = None
+        self.define_objects()
         if not displayobject:
             displayobject = Display()
         self.displayobject = displayobject
         self.using_database = using_database
+        self.dict_object_dict= {'kd':self.key_definitions,
+               'dk':self.definition_keys}
+
         if self.using_database:
             self.notebookname = 'GENERAL'
             self.open_connection()
@@ -64,6 +68,28 @@ class KeyMacroDefinitions(KeyDefinitions):
             self.QUITTERMS = terms[3]
             self.CLEARTERMS = terms[4]
 
+
+    def define_objects (self):
+
+        self.get_script_two_dict = {'kd':"SELECT definition FROM key_macro_definitions WHERE notebook=? AND key=?",
+                                    'dk':""}
+
+        self.get_script_one_dict = {'kd':"SELECT key FROM key_macro_definitions WHERE notebook=?",
+                                    'dk':""}
+
+        self.set_script_dict = {'kd':"INSERT OR REPLACE INTO key_macro_definitions (notebook, key, definition) VALUES (?,?,?);",
+                                'dk':""}
+
+        self.delete_script_two_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=? AND key=? AND definition=?",
+                                       'dk':""}
+
+        self.delete_script_one_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=? AND key=?",
+                                       'dk':""}
+
+        self.delete_script_none_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=?",
+                                        'dk':""}
+
+        
     def create_database (self):
 
 
@@ -86,26 +112,9 @@ class KeyMacroDefinitions(KeyDefinitions):
               );
               """)
 
-        self.dict_object_dict= {'kd':self.key_definitions,
-                       'dk':self.definition_keys}
 
-        self.get_script_two_dict = {'kd':"SELECT definition FROM key_macro_definitions WHERE notebook=? AND key=?",
-                                    'dk':""}
 
-        self.get_script_one_dict = {'kd':"SELECT key FROM key_macro_definitions WHERE notebook=?",
-                                    'dk':""}
 
-        self.set_script_dict = {'kd':"INSERT OR REPLACE INTO key_macro_definitions (notebook, key, definition) VALUES (?,?,?);",
-                                'dk':""}
-
-        self.delete_script_two_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=? AND key=? AND definition=?",
-                                       'dk':""}
-
-        self.delete_script_one_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=? AND key=?",
-                                       'dk':""}
-
-        self.delete_script_none_dict = {'kd':"DELETE FROM key_macro_definitions WHERE notebook=?",
-                                        'dk':""}
 
     def expose (self):
 
