@@ -9199,7 +9199,6 @@ class Console (Note_Shelf):
                  tempobject=temporary):
         
         self.read_only = True
-        auto_db = True 
 
         if flagvalue in ['c','w']:
             self.read_only = False 
@@ -9303,11 +9302,15 @@ class Console (Note_Shelf):
                     
                 except OSError:
 
-                    auto_database = True
-                    if not auto_db:
-                        
-                    
-                
+                    db_cursor.execute("SELECT notebook FROM notebooks")
+                    filelist = list([i[0] for i in db_cursor.fetchall()])
+                    if self.filename in filelist:
+                        nprint(self.filename+'ALREADY OPENED AS DATABASE')
+                        auto_database = True
+                        self.using_shelf = False 
+
+                    else:
+               
                         display.noteprint((alerts.ATTENTION,
                                            'CREATING NEW PICKLE DICTIONARY'))
                         display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
@@ -9318,8 +9321,8 @@ class Console (Note_Shelf):
                         tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
                         pickle.dump(self.pickle_dictionary, tempfile)
                         tempfile.close()
-                    else:
-                        self.using_shelf = False 
+
+                       
 
             if self.using_shelf:
                 display.noteprint(('DIVIDED',str(self.divided)))
@@ -14218,12 +14221,12 @@ while bigloop:
 
             if not register.is_open(notebookname) or inp_temp == 'o':
 
-                if add_new_notebook:
-                    try:
-                        db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
-                        db_connection.commit()
-                    except:
-                        pass
+##                if add_new_notebook:
+##                    try:
+##                        db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
+##                        db_connection.commit()
+##                    except:
+##                        pass
 
                 if bigloop and add_new_notebook:
                     if command_stack.size() > 0:
@@ -14382,6 +14385,13 @@ while bigloop:
         if not allnotebooks[notebookname].defaults.get('usedatabase') and \
            input('DO YOU WANT TO MOVE SHELF TO DATABASE?') in YESTERMS:
             if input('ARE YOU SURE?') in YESTERMS:
+                try:
+                    db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
+                    db_connection.commit()
+                    nprint(notebookname," ADDED TO DATABASE REGISTER")
+                except:
+                    pass
+            
                  
                 allnotebooks[notebookname].defaults.set('usedatabase',True)
                 allnotebooks[notebookname].using_shelf = False
