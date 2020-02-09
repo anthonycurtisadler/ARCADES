@@ -63,7 +63,7 @@ def is_date(entry,returndate=False):
     return True 
 
 
-def transform(complexobject,start=True):
+def transform(complexobject,start=True,indexstrings=True):
 
      """ copies dictionary, and applies tranformations
      """
@@ -104,12 +104,19 @@ def transform(complexobject,start=True):
                elif isinstance(complexobject,str) and len(complexobject)>4\
                     and complexobject[0:2] == '<<'\
                     and complexobject[-2:] == '>>':
-                    return OrderedList(eval(complexobject[2:-2]),indexstrings=True)
+                    return OrderedList(eval(complexobject[2:-2]),indexstrings=indexstrings)
                    
                elif isinstance(complexobject,str) and len(complexobject)>2\
                     and complexobject[0] == '<' \
                     and complexobject[-1] == '>':
                     return Index(complexobject[1:-1])
+               elif isinstance(complexobject,str) and len(complexobject)>6\
+                    and complexobject[0:3] == '###'\
+                    and complexobject[-3:] == '###'\
+                    and complexobject[3:-3] in ['float','str','date']:
+                   return {'float':type(1.2),
+                           'str':type('st'),
+                           'date':type(datetime.datetime.now())}[complexobject[3:-3]]
                elif type(complexobject) == type(datetime.datetime.now()):
                     return str(complexobject)
                elif isinstance(complexobject,str) and COLON in complexobject and DASH in complexobject and PERIOD in complexobject and \

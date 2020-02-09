@@ -13,7 +13,8 @@ class ProjectManager:
                    connection=None,
                    cursor=None,
                    notebookname=None,
-                   archive=False):
+                   archive=False,
+                   db_only=False):
 
           if connection and cursor:
                self.connection = connection
@@ -28,6 +29,7 @@ class ProjectManager:
           else:
                self.project_suffix = ''
           self.notebookname = notebookname
+          self.db_only=db_only
 
           if self.using_database:
 
@@ -107,6 +109,10 @@ class ProjectManager:
                
      
      # methods for accessing the database
+
+     def set_db_only (self,status):
+
+          self.db_only = status 
 
      def add_new_project_DB (self,project=None):
 
@@ -442,7 +448,7 @@ class ProjectManager:
 
           if not project:
                project=self.current
-          if not db_only:
+          if not db_only and not self.db_only :
                self.projects[project]['indexes'] = OrderedList()
 
           if self.using_database:
@@ -539,10 +545,12 @@ class ProjectManager:
           
           
      def delete_project (self,
-                         project_name=None):
+                         project_name=None,
+                         db_only=False):
 
           if project_name  in self.projects:
-               del self.projects[project_name]
+               if not db_only and not self.db_only :
+                    del self.projects[project_name]
 
                if self.using_database:
                     self.delete_project_DB(project=project_name)
@@ -552,12 +560,12 @@ class ProjectManager:
      def set_default_keys (self,
                            new_defaultkeys,
                            project=None,
-                      db_only=False):
+                           db_only=False):
           if not project:
                project=self.current
 
           if isinstance(new_defaultkeys,list):
-               if not db_only:
+               if not db_only and not self.db_only :
                     self.projects[project]['defaultkeys'] = new_defaultkeys
 
                if self.using_database:
@@ -580,15 +588,17 @@ class ProjectManager:
      
      def add_default_keys (self,
                            new_defaultkeys=None,
-                           project=None):
+                           project=None,
+                           db_only=False):
 
           if not project:
                project=self.current
 
           if not isinstance(new_defaultkeys,(set,list)):
                new_defaultkeys = [new_defaultkeys]
-          for k_temp in new_defaultkeys:              
-               self.projects[project]['defaultkeys'].append(str(k_temp))
+          for k_temp in new_defaultkeys:
+               if not db_only and not self.db_only :
+                    self.projects[project]['defaultkeys'].append(str(k_temp))
 
           if self.using_database:
                for k_temp in new_defaultkeys:
@@ -604,7 +614,7 @@ class ProjectManager:
           if not project:
                project=self.current
 
-          if not db_only:
+          if not db_only and not self.db_only :
 
                self.projects[project]['date'].append(str(new_date))
 
@@ -621,7 +631,7 @@ class ProjectManager:
           
           if not project:
                project=self.current
-          if not db_only:
+          if not db_only and not self.db_only :
                self.projects[project]['position'] = (lastup,
                                                          uptohere)
           if self.using_database:
@@ -641,7 +651,7 @@ class ProjectManager:
           if not project:
                project=self.current
 
-          if not db_only:
+          if not db_only and not self.db_only :
                self.projects[project]['going'] = (mainterm,
                                                   series_enter)
           if self.using_database:
@@ -657,7 +667,7 @@ class ProjectManager:
           if not project:
                project=self.current
 
-          if not db_only:     
+          if not db_only and not self.db_only :     
                if status:
                     self.projects[project]['status']['open'] = True
                else:
@@ -681,24 +691,29 @@ class ProjectManager:
 
      def add_last_modified (self,
                             date=None,
-                            project=None):
+                            project=None,
+                            db_only=False):
           if not project:
                project=self.current
+
+          if not db_only and not self.db_only :
                
-          self.projects[project]['status']['lastmodified'].append(str(date))
+               self.projects[project]['status']['lastmodified'].append(str(date))
 
      def reset_indexes (self,
                         indexes=None,
-                        project=None):
+                        project=None,
+                        db_only=False):
 
 
           if not project:
                project=self.current
-          if not indexes:
-               self.projects[project]['indexes'] = OrderedList()
-          elif isinstance(indexes,list):
-               self.projects[project]['indexes'] = OrderedList(sorted(indexes,
-                                                                          key=lambda x_temp:Index(x_temp)))
+          if not db_only and not self.db_only :
+               if not indexes:
+                    self.projects[project]['indexes'] = OrderedList()
+               elif isinstance(indexes,list):
+                    self.projects[project]['indexes'] = OrderedList(sorted(indexes,
+                                                                               key=lambda x_temp:Index(x_temp)))
           if self.using_database:
                self.delete_all_indexes_DB(project=project)
                for temp_index in sorted(indexes,
@@ -708,11 +723,13 @@ class ProjectManager:
 
      def add_index (self,
                     index,
-                    project=None):
+                    project=None,
+                    db_only=False):
           
           if not project:
                project=self.current
-          self.projects[project]['indexes'].add(index)
+          if not db_only and not self.db_only :
+               self.projects[project]['indexes'].add(index)
 
           if self.using_database:
                self.add_index_DB(project=project,
@@ -720,11 +737,13 @@ class ProjectManager:
 
      def delete_index (self,
                        index,
-                       project=None):
+                       project=None,
+                       db_only=False):
           
           if not project:
                project=self.current
-          self.projects[project]['indexes'].delete(index)
+          if not db_only and not self.db_only :
+               self.projects[project]['indexes'].delete(index)
           if self.using_database:
                self.delete_index_DB(project=project,
                                     index=index)

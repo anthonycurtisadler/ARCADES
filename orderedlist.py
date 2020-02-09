@@ -3,7 +3,8 @@ from indexclass import Index
 import datetime
 
 
-### UTILITIES 
+### UTILITIES
+
 
 def is_date(entry,returndate=False):
 
@@ -63,6 +64,13 @@ def isindex(entry):
 
     return False
 
+def all_indexes(entrylist):
+
+    for x in entrylist:
+        if not isindex(x):
+            return False
+    return True 
+
 ### CLASS DEFINITION
 
 
@@ -71,7 +79,8 @@ class OrderedList:
     def __init__(self,entrylist=None,indexstrings=False):
 
         if entrylist and indexstrings:
-            self.indexstrings = True
+
+            self.indexstrings = True 
             self.list = sorted([str(x_temp) for x_temp in entrylist],
                                key=lambda x_temp: Index(str(x_temp)))
             

@@ -18,6 +18,8 @@ def aprint(x):
     return
     print(x)
 
+sequences = None 
+
 
 
 
@@ -75,6 +77,7 @@ from projectmanager import ProjectManager
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
 from registry import Registry
+from sequences import Sequences
 from sequencedefaultdictionary import SequenceDefaultDictionary
 try:
     from spellcheck import SpellCheck                                       #pylint 8.83/10
@@ -1628,6 +1631,7 @@ class Note_Shelf:
     def close(self):
         """closes database"""
 
+
         for t_temp in ['commands',
                        'knower',
                        'projects',
@@ -1636,13 +1640,16 @@ class Note_Shelf:
                        'abbreviations',
                        'macros',
                        'indextable']:
-            self.defaults.backup(t_temp)
+            self.defaults.backup(t_temp) 
+
+        
             
 
         if not self.using_database:
             self.note_dict.close()
         else:
             self.dumpprojects()
+        self.default_dict['sequences'].purge_connection()
         self.default_dict['indextable'].purge_connection()
         self.default_dict['projects'].purge_connection()
         self.default_dict['generalknowledge'].purge_connection()
@@ -1901,27 +1908,53 @@ class Note_Shelf:
                     seq_value = key.split(ATSIGN)[1]
                     
 ##                        is_sequence = True
+                    if 'date' in identifier and POUND not in seq_value:
+                        seq_value = POUND + seq_value
 
                     seq_mark, seq_value, seq_type = self.parse_sequence_key(seq_value)
                 
-                    if identifier not in self.default_dict['sequences']:
-                        if identifier not in self.default_dict['sequences']['#TYPE#']:
+                    if not self.default_dict['sequences'].query(term1=identifier,action='in'):
+                        if not self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                    term2=identifier,
+                                                                    action='in'):
                             # Initiates a new sequence 
-                            self.default_dict['sequences']['#TYPE#'][identifier] = seq_type
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 term3=seq_type,
+                                                                 action='set')
+                            self.default_dict['sequences'].query(term1=identifier,
+                                                                 term2=seq_value,
+                                                                 action='set')
                             print()
                             display.noteprint((alerts.ATTENTION,alerts.NEW_SEQUENCE+str(seq_type)))
                         else:
-                            # For existing sequences 
-                            del self.default_dict['sequences']['#TYPE#'][identifier]
-                            self.default_dict['sequences']['#TYPE#'][identifier] = type(seq_value)
+                            # For existing sequences
+
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 action='delete')
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 term3=seq_type,
+                                                                 action='set')
                             display.noteprint((alerts.ATTENTION,alerts.OVERWRITTEN+str(seq_type)))
-                        self.default_dict['sequences'][identifier] = OrderedList()
-                        self.default_dict['sequences'][identifier].add(seq_value)
+                            self.default_dict['sequences'].query(term1=identifier,
+                                                                 term2=seq_value,
+                                                                 action='set')
 
                     else:
-                        if seq_type == self.default_dict['sequences']['#TYPE#'][identifier]:
-                            self.default_dict['sequences'][identifier].add(seq_value)
-                         
+                        x = self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 action='get')
+                        print('SEQUENCE TYPE ',seq_type,'SEQUENCE VALUE ',seq_value,'X ',x,'TYPE X ',type(x))
+                        if str(seq_type) == self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                            term2=identifier,
+                                                                            action='get'):
+                            self.default_dict['sequences'].query(term1=identifier,
+                                                                 term2=seq_value,
+                                                                 action='set')
+                        else:
+                            print('TYPE ERROR')
         return newkeyset
     
 
@@ -5067,8 +5100,6 @@ class Note_Shelf:
                                              indexto=0)]
 
         for u in undeletelist:
-            print(u)
-
             nprint(PERIOD,end=EMPTYCHAR)
             
             self.move(u,
@@ -5292,11 +5323,18 @@ class Note_Shelf:
                             break
                     if not found_temp:
 
-                        self.default_dict['sequences']['#TYPE#'][p_temp] = float
-                        self.default_dict['sequences'][p_temp] =  OrderedList()
+                        self.default_dict['sequences'].query(term1='#TYPE#',
+                                                             term2=p_temp,
+                                                             term3=float,
+                                                             action='set')
+                        self.default_dict['sequences'].query(term1=p_temp,
+                                                             action='initiate')
+                        
                         next_temp = float(input('start from?'))
                     else:
-                        next_temp = self.default_dict['sequences'][p_temp].next()
+                        next_temp = self.default_dict['sequences'].query(term1=p_temp,
+                                                                         action='get').next()
+                        
                         
                         
                             
@@ -5859,9 +5897,9 @@ class Note_Shelf:
         """ Reconstitutes sequences """
         if input('Clear sequences?') in YESTERMS and input('Are you sure?') in YESTERMS:
 
-            del self.default_dict['sequences']
-            self.default_dict['sequences'] = {}
-            self.default_dict['sequences']['#TYPE#'] = {}
+            del self.sequence_dict_copy
+            sequence_dict_copy = {'#TYPE#':{}}
+            self.default_dict['sequences'].empty()
             nprint('Sequences purged!')
 
             
@@ -5885,7 +5923,9 @@ class Note_Shelf:
                                 sequencedictionary['i'][identifier] = {key.split(ATSIGN+UNDERLINE)[1]}
                             else:
                                 sequencedictionary['i'][identifier].add(key.split(ATSIGN+UNDERLINE)[1])
-                        elif ATSIGN + POUND in key:
+                        elif ATSIGN + POUND in key or 'date' in key.split(ATSIGN)[0]:
+                            if ATSIGN + POUND not in key:
+                                key = key.replace(ATSIGN,ATSIGN+POUND)
                             identifier = key.split(ATSIGN)[0]
                             if identifier not in sequencedictionary['d']:
                                 sequencedictionary['d'][identifier] = {key.split(ATSIGN+POUND)[1]}
@@ -5914,7 +5954,7 @@ class Note_Shelf:
                     all_float = True
                     for x_temp in sequencedictionary['o'][identifier]:
                         if (x_temp.count(PERIOD)>1
-                            or x_temp[-1]==PERIOD
+                            or len(x_temp)>0 and x_temp[-1]==PERIOD
                             or not x_temp.replace(PERIOD,EMPTYCHAR).isnumeric()):
                             all_float = False
                     if all_float:
@@ -6003,30 +6043,41 @@ class Note_Shelf:
                         
                     
                 if seq_value and not isinstance(seq_value,bool):
-                    if identifier not in self.default_dict['sequences']:
+                    if not self.default_dict['sequences'].query(term1=identifier,
+                                                                action='in'):
 
-                        if identifier not in self.default_dict['sequences']['#TYPE#']:
-                            self.default_dict['sequences']['#TYPE#'][identifier] = seq_type
+                        if not self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                    term2=identifier,
+                                                                    action='in'):
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 term3=seq_type,
+                                                                 action='set')
+                        
                             display.noteprint((alerts.ATTENTION,alerts.NEW_SEQUENCE+str(seq_type)))
                         else:
-                            del self.default_dict['sequences']['#TYPE#'][identifier]
-                            self.default_dict['sequences']['#TYPE#'][identifier] = type(seq_value)
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 action='delete')
+                        
+                            self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                 term2=identifier,
+                                                                 term3=type(seq_value))
+                            
                             display.noteprint((alerts.ATTENTION,alerts.OVERWRITTEN+str(seq_type)))
-                        self.default_dict['sequences'][identifier] = OrderedList()
-                        try:
-                            self.default_dict['sequences'][identifier].add(seq_value)
-                        except:
-                            nprint('SEQUENCE ERROR')
-
+                        self.default_dict['sequences'].query(term1=identifier,
+                                                             term2=seq_value,
+                                                             action='set')
+                            #NEED TO DEAL WITH ERRORS 
                                             
 
                     else:
-                        if seq_type == self.default_dict['sequences']['#TYPE#'][identifier]:
-                            try:
-                                self.default_dict['sequences'][identifier].add(seq_value)                       
-                            except:
-                                nprint('SEQUENCE ERROR')
-
+                        if seq_type == self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                            term2=identifier,
+                                                                            action='get'):
+                            self.default_dict['sequences'].query(term1=identifier,
+                                                                 term2=seq_value,
+                                                                 action='set')
             print(PERIOD,end=EMPTYCHAR)
         print()
                         
@@ -6034,13 +6085,16 @@ class Note_Shelf:
 
         found_projects = set()
 
-        for identifier in self.default_dict['sequences']['#TYPE#']:
+        for identifier in self.default_dict['sequences'].query(term1='#TYPE#',action='get'):
             is_project = False
-            if self.default_dict['sequences']['#TYPE#'][identifier] == float:
+            if self.default_dict['sequences'].query(term1='#TYPE#',
+                                                    term2=identifier,
+                                                    action='get') == float:
                 if 'page' not in identifier:
-                    if identifier in self.default_dict['sequences']:
-                        lowest = self.default_dict['sequences'][identifier].list[0]
-                        highest = self.default_dict['sequences'][identifier].list[-1]
+                    if self.default_dict['sequences'].query(term1=identifier,
+                                                                          action='in'):
+                        lowest = self.default_dict['sequences'].query(term1=identifier,action='get').list[0]
+                        highest = self.default_dict['sequences'].query(term1=identifier,action='get').list[-1]
                         try:
                             lowest = float(lowest)
                             highest = float(highest)
@@ -6048,7 +6102,9 @@ class Note_Shelf:
                             pass
                         if isinstance(lowest,float) and isinstance(highest,float):
                                 
-                            length = len(self.default_dict['sequences'][identifier])
+                            length = len(self.default_dict['sequences'].query(term1=identifier,
+                                                                              action='get'))
+                                         
 
                             if highest-lowest + 1 == length:
                                 is_project = True
@@ -6059,7 +6115,8 @@ class Note_Shelf:
                                         nprint(identifier)
                                         nprint(', '.join([str(x_temp)
                                                           for x_temp
-                                                          in self.default_dict['sequences'][identifier].list]))
+                                                          in self.default_dict['sequences'].query(term1=identifier,
+                                                                                                  action='get').list]))
                                         if not query or input('Is this a project?') in YESTERMS:
                                             is_project = True
                                 else:
@@ -6073,10 +6130,10 @@ class Note_Shelf:
 
     def get_project (self,identifier):
         
-        if identifier in self.default_dict['sequences']:
+        if identifier in self.default_dict['sequences'].query(action='get'):
 
             found_indexes = set()
-            for x_temp in self.default_dict['sequences'][identifier].list:
+            for x_temp in self.default_dict['sequences'].query(term1=identifier,action='get').list:
                 key_temp = identifier+ATSIGN+str(x_temp)
                 if  self.key_dict_contains(key_temp):
                     found_indexes.update(self.get_indexes_for_key(key_temp))
@@ -7053,14 +7110,17 @@ class Note_Shelf:
         key_mark, key_value, key_type = self.parse_sequence_key(key_value)
 
 
-        if identifier not in self.default_dict['sequences']:
+        if not self.default_dict['sequences'].query(term1=identifier,action='in'):
                 return returnvalue
         sub_sequence = []
 
 
-        if key_type == self.default_dict['sequences']['#TYPE#'][identifier]:
+        if key_type == self.default_dict['sequences'].query(term1='#TYPE#',
+                                                            term2=identifier,
+                                                            action='get'):
 
-            sequence = self.default_dict['sequences'][identifier]
+            sequence = self.default_dict['sequences'].query(term1=identifier,
+                                                            action='get')
 
             sub_sequence = sequence.get(func=func_pred,
                                         item=key_value,
@@ -8097,6 +8157,7 @@ class Note_Shelf:
                 #display counter for embedded notes 
                 print()
                 print(str(a_temp)+'/'+emb_len)
+            
 
             
 
@@ -8134,6 +8195,7 @@ class Note_Shelf:
                                               depth,
                                               re_entering=re_entering,
                                               newindex=newindex)
+        print()
         return newindex
 
     def dictionaryload(self,filename):
@@ -9387,9 +9449,9 @@ class Console (Note_Shelf):
             #Generic routine for initiating defaults   
             if not self.defaults.contains(label):
                 if not isinstance(predicate,(bool,str,int)):
-                    self.defaults.set(label,predicate)
+                    self.defaults.set(label,predicate,not_db=True)
                 else:
-                    self.defaults.set(label,predicate)
+                    self.defaults.set(label,predicate,not_db=True)
 
         def backup_defaults(label):
             nprint('BACKING UP ',label)
@@ -9449,7 +9511,6 @@ class Console (Note_Shelf):
                     'returnquit':3,
                     'returnquiton':False,
                     'indentmultiplier':4,
-                    'sequences':{'#TYPE#':{}},
                     'smallsize':50}
 
 
@@ -9457,23 +9518,53 @@ class Console (Note_Shelf):
         for temp_label in def_dict:
             initiate_defaults(temp_label,def_dict[temp_label])
 
-        #FOR THE COMPLEX DEFAULTS
+        self.sequence_dict_copy = {'#TYPE#':{}}
+        if 'sequences' in self.default_dict and isinstance(self.default_dict['sequences'],dict):
+            self.sequence_dict_copy = copy.deepcopy(self.default_dict['sequences'])
+            self.default_dict['sequences'] = Sequences(using_database=False,
+                                                      using_shelf=True,
+                                                      sequence_dictionary=self.sequence_dict_copy)
 
+        else:
+            self.default_dict['sequences'] = Sequences(using_database=self.using_database,
+                                           using_shelf=self.using_shelf,
+                                           notebookname=notebookname,
+                                           db_cursor=db_cursor,
+                                           db_connection=db_connection,
+                                           sequence_dictionary={'#TYPE#':{}})
+
+        if self.purge_objects or not self.defaults.contains('sequences'):
+
+            if not self.using_database:
+                self.default_dict['sequences'] = Sequences(using_database=False,
+                                                          using_shelf=True,
+                                                          sequence_dictionary={'#TYPE#':{}})
+            else:
+                self.default_dict['sequences'] = Sequences(using_database=self.using_database,
+                                                           using_shelf=self.using_shelf,
+                                                           notebookname=notebookname,
+                                                           db_cursor=db_cursor,
+                                                           db_connection=db_connection,
+                                                           sequence_dictionary={'#TYPE#':{}})
+
+                
 
         if self.purge_objects or not self.defaults.contains('projects'):
             if not self.using_database:
-                self.default_dict['projects'] = ProjectManager()
+                self.default_dict['projects'] = ProjectManager(db_only=False)
             else:
                 try:
                     self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
                                                                    project_dictionary=self.default_dict['projects'],
                                                                    connection=db_connection,
-                                                                   cursor=db_cursor)
+                                                                   cursor=db_cursor,
+                                                                   db_only=True)
                 except:
                     self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
                                                                    project_dictionary=None,
                                                                    connection=db_connection,
-                                                                   cursor=db_cursor)
+                                                                   cursor=db_cursor,
+                                                                   db_only=True)
         
         else:
             try:
@@ -9481,7 +9572,7 @@ class Console (Note_Shelf):
                                                                  cursor=db_cursor)
             except:
                 display.noteprint(('ATTENTION','RESTORE FAILED'))
-        print('done')
+
         if not self.defaults.contains('convert'):
             self.default_dict['convert'] = {'default':Convert()}
         if  not isinstance(self.default_dict['convert'],dict):
@@ -9497,7 +9588,7 @@ class Console (Note_Shelf):
             self.default_dict['purge'] = PurgeKeys(),
         
         if self.purge_objects or 'generalknowledge' not in self.default_dict:
-            print('general knowledge')
+
             while True:
                 i_temp = input('GENERAL KNOWLEDGE \n (1)  IN COMMON SHELF '*self.using_shelf
                                +'(2) IN UNIQUE SHELF'*self.using_shelf 
@@ -9513,7 +9604,7 @@ class Console (Note_Shelf):
             elif i_temp in ('3'):
 
                 self.default_dict['generalknowledge'] = GeneralizedKnowledge(using_shelf=False,using_database=False)
-                print('LOCAL')
+
             else:
                                
                 self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
@@ -9682,24 +9773,24 @@ class Console (Note_Shelf):
         nprint('OPENING CONNECTION FOR KEYMACROS')
         self.default_dict['keymacros'].open_connection()
         nprint('OPENING CONNECTION FOR COMMANDS')
-        self.default_dict['commands'].open_connection()                
-        
-        for l_temp in ['projects',
-                       'knower',
-                       'commands',
-                       'keymacros',
-                       'definitions',
-                       'abbreviations',
-                       'macros']:
-        
-            backup_defaults(l_temp)
+        self.default_dict['commands'].open_connection()
 
+
+        #FOR THE COMPLEX DEFAULTS
+##        for l_temp in ['projects',
+##                       'knower',
+##                       'commands',
+##                       'keymacros',
+##                       'definitions',
+##                       'abbreviations',
+##                       'macros']:
+##        
+##            backup_defaults(l_temp)
+##
 ##        for l_temp in self.default_dict:
 ##            self.defaults.get(l_temp,show=True)
-
-        
-##         
 ##
+
 
           #Non-persistent attributes
         
@@ -9775,7 +9866,11 @@ class Console (Note_Shelf):
         self.keyauto = KeyAuto()
         self.sheetshelf = None
         self.sheetname = None
-        self.usesequence = True 
+        self.usesequence = True
+
+        if (self.using_database and len(self.default_dict['sequences'].query(term1='#TYPE#',action='get')) == 0) and input('RECONSTITUTE SEQUENCES') in YESTERMS:
+            self.reconstitute_sequences()
+
         
 
 
@@ -12233,22 +12328,29 @@ class Console (Note_Shelf):
         elif mainterm in ['showsequences']:
             seqlist= DisplayList(displayobject=display)
             temp_text = []
-            for counter, seq in enumerate(self.default_dict['sequences']):
+            for counter, seq in enumerate(self.default_dict['sequences'].query(action='get')):
                 if seq != '#TYPE#':
-                    temp_line = str(counter) + VERTLINE + seq + VERTLINE
-                    from_to_temp = abridge(str(self.default_dict['sequences'][seq].ends()[0]),11,overmark=EMPTYCHAR) + DASH + \
-                                   abridge(str(self.default_dict['sequences'][seq].ends()[1]),11,overmark=EMPTYCHAR) 
+                    try:
+                        temp_line = str(counter) + VERTLINE + seq + VERTLINE
 
-                    from_to_temp += (25 - len(from_to_temp))*BLANK 
-                    temp_line += from_to_temp + BLANK + SLASH + BLANK
-                    len_temp = str(len(self.default_dict['sequences'][seq])) 
-                    temp_line += len_temp + (5 - max([4,len(len_temp)])) * BLANK + BLANK + SLASH
-                    temp_line += str(type(self.default_dict['sequences'][seq].ends()[0])) 
-                    if predicate[0]:
-                        temp_line += self.default_dict['sequences'][seq].convert_to_dates()
-                    temp_line += VERTLINE 
-                    
-                    temp_text.append(temp_line)
+
+                        from_to_temp = abridge(str(self.default_dict['sequences'].query(term1=seq,action='get').ends()[0]),11,overmark=EMPTYCHAR) + SLASH + \
+                                       abridge(str(self.default_dict['sequences'].query(term1=seq,action='get').ends()[1]),11,overmark=EMPTYCHAR)
+
+
+
+                        from_to_temp += (25 - len(from_to_temp))*BLANK 
+                        temp_line += from_to_temp + BLANK + SLASH + BLANK
+                        len_temp = str(len(self.default_dict['sequences'].query(term1=seq,action='get'))) 
+                        temp_line += len_temp + (5 - max([4,len(len_temp)])) * BLANK + BLANK + SLASH
+                        temp_line += str(self.default_dict['sequences'].query(term1='#TYPE#',term2=seq,action='get')) 
+                        if predicate[0]:
+                            temp_line += self.default_dict['sequences'].query(term1=seq,action='get').convert_to_dates()
+                        temp_line += VERTLINE 
+                        
+                        temp_text.append(temp_line)
+                    except:
+                        nprint('ERROR '+str(seq))
                 
             nformat.columns(EOL.join(temp_text),listobject=seqlist,columnwidth=(4,10,15))
             seqlist.present()
@@ -12256,11 +12358,13 @@ class Console (Note_Shelf):
             if input('CORRECT?') in YESTERMS:
                 while True:
                     cor_seq = input('Sequence?')
-                    if cor_seq == EMPTYCHAR or cor_seq in self.default_dict['sequences']:
+                    if cor_seq == EMPTYCHAR or self.default_dict['sequences'].query(term1=cor_seq,action='in'):
                         break
                 if cor_seq:
-                    del self.default_dict['sequences'][cor_seq]
-                    del self.default_dict['sequences']['#TYPE#'][cor_seq]
+                    self.default_dict['sequences'].query(term1=cor_seq,action='delete')
+                    self.default_dict['sequences'].query(term1='#TYPE#',term2=cor_seq,action='delete')
+                    
+        
                     self.dd_changed=True
                     temp_keys = self.new_search('<'+cor_seq+STAR+'>')
                     print(str(temp_keys))
@@ -14384,6 +14488,8 @@ while bigloop:
         
         if not allnotebooks[notebookname].defaults.get('usedatabase') and \
            input('DO YOU WANT TO MOVE SHELF TO DATABASE?') in YESTERMS:
+
+            
             if input('ARE YOU SURE?') in YESTERMS:
                 try:
                     db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
@@ -14391,11 +14497,40 @@ while bigloop:
                     nprint(notebookname," ADDED TO DATABASE REGISTER")
                 except:
                     pass
-            
+
+
                  
                 allnotebooks[notebookname].defaults.set('usedatabase',True)
                 allnotebooks[notebookname].using_shelf = False
                 allnotebooks[notebookname].using_database = True
+
+                
+                temp_sequences =  Sequences(using_database=True,
+                                           using_shelf=False,
+                                           notebookname=notebookname,
+                                           db_cursor=db_cursor,
+                                           db_connection=db_connection,
+                                           sequence_dictionary={'#TYPE#':{}})
+                print(allnotebooks[notebookname].sequence_dict_copy)
+                if allnotebooks[notebookname].sequence_dict_copy != {'#TYPE#':{}} and isinstance(allnotebooks[notebookname].sequence_dict_copy,dict):
+                    
+                    if '#TYPE#' in allnotebooks[notebookname].sequence_dict_copy:
+                        for name in allnotebooks[notebookname].sequence_dict_copy['#TYPE#']:
+                            seq_type = allnotebooks[notebookname].sequence_dict_copy['#TYPE#'][name]
+                            temp_sequences.query(term1='#TYPE#',term2=name,term3=seq_type,action='set')
+                            print('.',end='')
+                            
+                        for name in allnotebooks[notebookname].sequence_dict_copy:
+                            if name != '#TYPE#':
+                                values =  allnotebooks[notebookname].sequence_dict_copy[name].list
+                                for value in values:
+                                    temp_sequences.query(term1=name,term2=value,action='set')
+                                    print('.',end='')
+                    print()
+                    
+                                    
+                                
+                        
                 temp_counter = 0
                 total_count = '/' + str(len(allnotebooks[notebookname].note_dict))
                 display.noteprint(('ATTENTION!','MOVING NOTE DICTIONARY FROM SHELF!'))
@@ -14463,6 +14598,8 @@ while bigloop:
                     if temp_counter % 1000 == 0:
                             print(str(temp_counter) + total_count)
                     db_connection.commit()
+
+            
 
                 try:
 

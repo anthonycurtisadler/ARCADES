@@ -65,7 +65,8 @@ class DefaultManager:
      def set (self,
               label,
               value,
-              override=False):
+              override=False,
+              not_db=False):
 
           """Inserts values into database
           """
@@ -74,14 +75,14 @@ class DefaultManager:
                self.default_dictionary[label] = value
                if label == 'projects':
                     pass
-          if self.using_database:
-               if label == 'projects':
+          if not not_db and self.using_database:
+               if label in ['projects','sequences']:
                     if not isinstance(value,str):
-                         value = str(transform(value))
+                         value = str(transform(value),indexstrings=False)
                else:
                     value = convert(value)
 
-          
+               
                value_tuple = (self.notebookname,label,value,)
                self.cursor.execute("INSERT OR REPLACE INTO"
                                    +" defaults (notebook,attribute,content)"
@@ -125,7 +126,7 @@ class DefaultManager:
                                    +" FROM defaults WHERE notebook=?"
                                    +"  AND attribute=?;",value_tuple)
                fetched = self.cursor.fetchone()
-               if label != 'projects':
+               if label not in ['projects','sequences']:
                     if fetched:
                          
                          return convert(fetched[0])
@@ -135,6 +136,8 @@ class DefaultManager:
                          except:
                               return None
                else:
+                    if fetched:
+                         return fetched[0]
 
                     return self.default_dictionary[label]
 ##                    if fetched:
@@ -176,11 +179,13 @@ class DefaultManager:
           if label not in self.default_dictionary:
                return False
 
-          elif label == 'projects':
+          elif label in ['projects','sequences']:
                if self.default_dictionary['projects']:
                     value = self.default_dictionary['projects'].return_dict()
                     value = str(transform(value))
                     self.set(label,value,override=True)
+                    
+                    
 
 ##          elif isinstance(self.default_dictionary[label],[list,dict,set]):
 ##
@@ -207,18 +212,32 @@ class DefaultManager:
                return False
 
           
-##          elif label == 'projects':
-##
-##               value = self.get(label)
-##
-##               if not isinstance(value,dict):
-##
-##                    value = eval(transform(value))
-##
-##               
-##
-##               self.default_dictionary['projects'] = value
-##
+          elif label == 'sequences':
+
+               value = self.get(label)
+               
+
+               if not isinstance(value,dict):
+                    table = {"<class 'float'>":"'###float###'",
+                              "<class 'str'>":"'###STR###'",
+                              "<class 'datetime.date'>":"'###date###'"}
+                    for x in table:
+                         value = value.replace(x,table[x])
+
+                         
+                    
+                    
+                    
+                    
+                              
+
+                    value = transform(eval(value),indexstrings=False)
+
+
+               
+
+               self.default_dictionary['sequences'] = value
+
 ####          elif isinstance(self.default_dictionary[label],[list,dict,set]):
 ####
 ####               value = self.get(label)
