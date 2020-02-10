@@ -148,7 +148,7 @@ class Sequences:
      def empty(self):
 
           if self.using_shelf:
-               pass
+               self.sequence_dictionary.clear()
 
           if self.using_database:
 
@@ -579,7 +579,7 @@ def expose():
                          
 if __name__ == "__main__":
 
-     db_connection = sqlite3.connect('notebooks'+SLASH+'notebook.db')
+     db_connection = sqlite3.connect('notebooks'+SLASH+'girin.db')
      db_cursor = db_connection.cursor()
      shelf = {'#TYPE#':{}}
      

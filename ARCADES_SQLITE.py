@@ -141,7 +141,7 @@ command_stack = stack.Stack()
 
 ## global variables ##
 
-override = True #Overrides exception handling on main loop
+override = False #Overrides exception handling on main loop
 multi_dict = {}#Dictionary for story display outputs
 #For copyto/copyfrom -- holds notes for transfer from one notebase to another.
 temporary = TemporaryHolder()
@@ -5897,7 +5897,6 @@ class Note_Shelf:
         """ Reconstitutes sequences """
         if input('Clear sequences?') in YESTERMS and input('Are you sure?') in YESTERMS:
 
-            del self.sequence_dict_copy
             sequence_dict_copy = {'#TYPE#':{}}
             self.default_dict['sequences'].empty()
             nprint('Sequences purged!')
@@ -7477,6 +7476,11 @@ class Note_Shelf:
                 word = word[1:]
                 if QUESTIONMARK  in word:
                     node,relation = word.split(QUESTIONMARK)
+                if relation.endswith(STAR):
+                    relation = relation[0:-1]
+                    relation_suffix = STAR
+                else:
+                    relation_suffix = EMPTYCHAR
                     
 
             ## to convert word based on general knowledge
@@ -7486,7 +7490,7 @@ class Note_Shelf:
                 newwords = [rebracket(x, is_bracketed)
                             for x in self.default_dict['generalknowledge'].text_interpret(DOLLAR
                                                                                           +DOLLAR+node
-                                                                                          +COLON+relation)[1].split('//')[0].split(',')]
+                                                                                          +COLON+relation+relation_suffix)[1].split('//')[0].split(',')]
                 querycopy = querycopy.replace(originalword,
                                               '|'.join(newwords))
             else:
@@ -13228,8 +13232,23 @@ class Console (Note_Shelf):
         biginputterm,continuelooping,close_notebook = self.biginputterm_imp(lastup,
                                                                             command_stack,
                                                                             series_enter=series_enter)
+
+        if biginputterm.startswith('(*)'):
+            while True:
+                biginputterm = biginputterm[3:]
+                if '(*)' in biginputterm:
+                    knowledge_phrase, biginputterm = biginputterm.split('(*)')[0],biginputterm.split('(*)')[1]
+                else:
+                    knowledge_phrase, biginputterm = biginputterm, ''
+                    
+                nprint('///'.join(self.default_dict['generalknowledge'].text_interpret(knowledge_phrase)))
+                
+                biginputterm = input('?')
+                if not biginputterm:
+                    break
+                biginputterm = '(*)' + biginputterm + '(*)'
         
-        if biginputterm and biginputterm[0] == VERTLINE:
+        if biginputterm and biginputterm[0] == VERTLINE:  #vertical line to suspend defaults 
             self.suspend_default_keys = False
             biginputterm = biginputterm[1:]
         else:
@@ -13247,6 +13266,8 @@ class Console (Note_Shelf):
         # if a command has been sent forward
         if not biginputterm  and self.next_term:
 
+
+            
 
             if '=>' in self.next_term: # if refeeding 
                 afterterm = '=>'.join(self.next_term.split('=>')[1:])

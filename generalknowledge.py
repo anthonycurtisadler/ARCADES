@@ -78,8 +78,7 @@ class GeneralizedKnowledge:
                          self.shelf['relations'] = shelve.open(directoryname+SLASH+filename +'GKR',flag)
                          self.shelf['converses'] = shelve.open(directoryname+SLASH+filename +'GKC',flag)
                          self.shelf['complexes'] = shelve.open(directoryname+SLASH+filename +'GKX',flag)
-                         print(flag)
-                         print(self.shelf['knowledge'])
+
 
                     except:
 
@@ -89,8 +88,7 @@ class GeneralizedKnowledge:
                          self.shelf['relations'] = shelve.open(directoryname+SLASH+filename +'GKR',flag)
                          self.shelf['converses'] = shelve.open(directoryname+SLASH+filename +'GKC',flag)
                          self.shelf['complexes'] = shelve.open(directoryname+SLASH+filename +'GKX',flag)
-                         print(flag)
-                         print(self.shelf['knowledge'])
+     
 
                     
 
@@ -1616,13 +1614,12 @@ class GeneralizedKnowledge:
                relation = self.unpack_complex_relation(','.join(all_relations))
                if not relation:
                     pass
-               print('Relation/NODE',relation,nodes)
+
                 
                for node in nodes:
                     header = str(relation) + '(s) of '+node+ ''
                     results = self.find_all_relations(relation,node)
-                    print('RESULTS',results)
-                    
+
                     returntext += ','.join(results[0])
                     returntext += '// \n'
                     returntext += listprint(list(set(results[1])))
@@ -1739,7 +1736,6 @@ class GeneralizedKnowledge:
                                              if not contents:
                                                   contents = ['none']
                                              for content in contents:
-                                                  print('CONTENT',content)
                                                   
                                                   if relation in ('DIRECTED',
                                                                   'NONDIRECTED',
