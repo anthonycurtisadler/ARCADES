@@ -1709,7 +1709,8 @@ class Note_Shelf:
     ## TAG and KEY METHODS ##
 
     def parse_sequence_key(self,
-                           seq_value):
+                           seq_value,
+                           seq_value2=None):
 
             """ takes the value of a sequence, following
             the identifier, and returns a tuple indicating
@@ -1722,13 +1723,13 @@ class Note_Shelf:
             seq_type = str
             seq_mark = EMPTYCHAR
 
-            if seq_value in [DOLLAR,PLUS,POUND,UNDERLINE,CARET]:
+            if seq_value and seq_value in [DOLLAR,PLUS,POUND,UNDERLINE,CARET]:
                 seq_type,seq_mark,seq_value = {DOLLAR:(str,EMPTYCHAR,EMPTYCHAR),
                             PLUS:(int,EMPTYCHAR,EMPTYCHAR),
                             POUND:(type(datetime.date(1972,3,13)),POUND,EMPTYCHAR),
                             UNDERLINE:(type(Index(0)),UNDERLINE,EMPTYCHAR),
                             CARET:(float,EMPTYCHAR,EMPTYCHAR)}[seq_value]
-                return seq_mark,seq_value,seq_type
+                return seq_mark,seq_value,seq_type, seq_value2
                             
 
 
@@ -1744,12 +1745,16 @@ class Note_Shelf:
 
                     if is_date(seq_value):
                         seq_value = is_date(seq_value,returndate=True)
+                        if seq_value2:
+                            seq_value2 = is_date(seq_value,returndate=True)
                         
                         seq_type = type(datetime.date(1972,3,13))
 
                     
                 elif seq_mark == UNDERLINE:
                     seq_value = Index(seq_value)
+                    if seq_value2:
+                        seq_value2 = Index(seq_value2)
                     seq_type = type(Index(0))
                     
 
@@ -1769,8 +1774,10 @@ class Note_Shelf:
                 seq_type = float
             if seq_type == float:
                 seq_value = float(seq_value)
+                if seq_value2:
+                    seq_value2 = float(seq_value2)
 
-            return seq_mark, seq_value, seq_type
+            return seq_mark, seq_value, seq_type, seq_value2
         
 
     def add_keys_tags(self,
@@ -1911,7 +1918,7 @@ class Note_Shelf:
                     if 'date' in identifier and POUND not in seq_value:
                         seq_value = POUND + seq_value
 
-                    seq_mark, seq_value, seq_type = self.parse_sequence_key(seq_value)
+                    seq_mark, seq_value, seq_type, seq_value2 = self.parse_sequence_key(seq_value)
                 
                     if not self.default_dict['sequences'].query(term1=identifier,action='in'):
                         if not self.default_dict['sequences'].query(term1='#TYPE#',
@@ -1947,7 +1954,7 @@ class Note_Shelf:
                                                                  term2=identifier,
                                                                  action='get')
                         print('SEQUENCE TYPE ',seq_type,'SEQUENCE VALUE ',seq_value,'X ',x,'TYPE X ',type(x))
-                        if str(seq_type) == self.default_dict['sequences'].query(term1='#TYPE#',
+                        if seq_type == self.default_dict['sequences'].query(term1='#TYPE#',
                                                                             term2=identifier,
                                                                             action='get'):
                             self.default_dict['sequences'].query(term1=identifier,
@@ -7087,8 +7094,6 @@ class Note_Shelf:
 
         key = key[pred_len:]
 
- 
-
         if ATSIGN not in key:
             return returnvalue 
         else:
@@ -7102,36 +7107,48 @@ class Note_Shelf:
                 afterslash = EMPTYCHAR
             identifier = key.split(ATSIGN)[0]
             key_value = key.split(ATSIGN)[1]
-            
-            
 
-
-        key_mark, key_value, key_type = self.parse_sequence_key(key_value)
-
+        key_mark, key_value, key_type, key_value2 = self.parse_sequence_key(key_value,afterslash)
 
         if not self.default_dict['sequences'].query(term1=identifier,action='in'):
                 return returnvalue
         sub_sequence = []
 
 
+
         if key_type == self.default_dict['sequences'].query(term1='#TYPE#',
                                                             term2=identifier,
                                                             action='get'):
-
+   
             sequence = self.default_dict['sequences'].query(term1=identifier,
-                                                            action='get')
+                                                                action='get')
+            if not key_value2:
 
-            sub_sequence = sequence.get(func=func_pred,
-                                        item=key_value,
-                                        item2=afterslash)
+                #If only one value entered
 
+                sub_sequence = sequence.get(func_name=func_pred,item=key_value)
+                                
+            else:
 
+                # for a range of values
 
+                if func_pred == '/':
+                    func_pred = '>='
 
+                left_func = func_pred
+                
+                right_func = {'>=':'<=',
+                              '>':'<'}[left_func]
+
+                from_left_sequence = sequence.get(func_name=left_func,item=key_value)
+                from_right_sequence = sequence.get(func_name=right_func,item=key_value2)
+                sub_sequence = [x for x in from_left_sequence+from_right_sequence if x in from_left_sequence and x in from_right_sequence]
+
+  
         returnset = set()
         returnfound = set()
 
-
+        # Collate search terms 
         for x_temp in sub_sequence:
             x_temp = identifier+ATSIGN+key_mark+str(x_temp)
 
@@ -9522,12 +9539,13 @@ class Console (Note_Shelf):
         for temp_label in def_dict:
             initiate_defaults(temp_label,def_dict[temp_label])
 
-        self.sequence_dict_copy = {'#TYPE#':{}}
-        if 'sequences' in self.default_dict and isinstance(self.default_dict['sequences'],dict):
-            self.sequence_dict_copy = copy.deepcopy(self.default_dict['sequences'])
-            self.default_dict['sequences'] = Sequences(using_database=False,
-                                                      using_shelf=True,
-                                                      sequence_dictionary=self.sequence_dict_copy)
+        if 'sequences' in self.default_dict:
+            if isinstance(self.default_dict['sequences'],dict):
+                self.default_dict['sequences'] = Sequences(using_database=False,
+                                                          using_shelf=True,
+                                                          sequence_dictionary=self.default_dict['sequences'])
+            else:
+                pass
 
         else:
             self.default_dict['sequences'] = Sequences(using_database=self.using_database,
@@ -9872,9 +9890,11 @@ class Console (Note_Shelf):
         self.sheetname = None
         self.usesequence = True
 
-        if (self.using_database and len(self.default_dict['sequences'].query(term1='#TYPE#',action='get')) == 0) and input('RECONSTITUTE SEQUENCES') in YESTERMS:
-            self.reconstitute_sequences()
-
+        try:
+            if (self.using_database and len(self.default_dict['sequences'].query(term1='#TYPE#',action='get')) == 0) and input('RECONSTITUTE SEQUENCES') in YESTERMS:
+                self.reconstitute_sequences()
+        except:
+            pass
         
 
 

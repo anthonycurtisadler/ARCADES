@@ -40,9 +40,11 @@ def is_date(entry,returndate=False):
             return False
     if returndate:
 
-        if len(entry) == 3:
+        if len(entry) <=3:
+            entry += [1,1]
             return datetime.date(entry[0],entry[1],entry[2])
-        elif len(entry) == 5:
+        elif len(entry) <=5:
+            entry += [1,1]
             return datetime.datetime(entry[0],entry[1],entry[2],entry[3],entry[4])
     
     return True 
@@ -64,12 +66,55 @@ def isindex(entry):
 
     return False
 
+def isfloat(x):
+	if x.startswith('-'):
+		x=x[1:]
+	if x.isnumeric():
+		return True
+	if x.count('.') == 1:
+		if x.replace('.','').isnumeric() and x[-1]!='.':
+			return True
+	return False
+
+
 def all_indexes(entrylist):
 
     for x in entrylist:
         if not isindex(x):
             return False
-    return True 
+    return True
+
+def get_type(entrylist):
+
+
+    type_set = {type(x) for x in entrylist}
+    if len(type_set) == 1:
+        return list(type_set)[0]
+    elif len(type_set) == 0:
+        return None
+    else:
+        if len(type_set) == 2:
+            if float in type_set and int in type_set:
+                return float      
+        return 'INCONSISTENT'
+
+def convert_to_type(item,is_type):
+    return_item = None
+    if type(item) == is_type:
+        return_item = item
+    elif is_type == str:
+        return_item = str(item)
+    elif is_type == type(datetime.date(1972,3,13)) and isinstance(item,str):
+        return_item =is_date(item,returndate=True)
+    elif is_type == float and isinstance(item,str) and isfloat(item):
+        return_item = float(item)
+    elif is_type == int and isinstance(item,str) and item.isnumeric():
+        return_item = int(item)
+    elif is_type == type(Index(0)) and isinstance(item,str) and isindex(item):
+        return_item = Index(item)
+    elif is_type == float and isinstance(item,int):
+        return_item = float(item)
+    return return_item
 
 ### CLASS DEFINITION
 
@@ -93,6 +138,7 @@ class OrderedList:
         else:
             self.list = []
             self.indexstrings = indexstrings
+        self.sequence_type = None
 
     def __str__(self):
         if len(self.list)>0:
@@ -142,28 +188,28 @@ class OrderedList:
                 if not isinstance(item,str):
                     item = str(item)
 
-                if not self.list:
+                if not self.list: # if the list is empty
                     return False,-1
 
-                if len(self.list) == 1:
+                if len(self.list) == 1: #if only one value in list which is equal to item
                     if Index(self.list[0]) == Index(item):
                         return True, 0
                     else:
                         if Index(item) > Index(self.list[0]):
 
-                            return False, -2
+                            return False, -2 # if one value in list, greater than item
                         else:
 
-                            return False, -1
-                if Index(item) < Index(self.list[0]):
+                            return False, -1 #... less than item 
+                elif Index(item) < Index(self.list[0]):
 
-                    return False,-1
+                    return False,-1 # if the item is smaller than the least value of the list
                 elif Index(item) > Index(self.list[-1]):
 
-                    return False,-2
-                else:
-
-                    lowest = 0
+                    return False,-2 # if the item is greater than the least value of the list 
+                else: # is the item is within the list 
+                    # search algorithm 
+                    lowest = 0 
                     highest = len(self.list)
 
                     middle = int((lowest+highest)/2)
@@ -184,33 +230,33 @@ class OrderedList:
                             highest = middle               
                         middle = int((lowest+highest)/2)
                     
-                    return False,middle+1
+                    return False,middle+1 # if the item is not found 
 
  
 
-        except:
+        except: # if the ordered list does not in fact consist in indexstrings 
             self.indexstrings = False
 
         if not self.list:
-            return False,-1
+            return False,-1 # if the list is entry
 
-        if len(self.list) == 1:
+        if len(self.list) == 1: # for a list with one item
             if self.list[0] == item:
-                return True, 0
-            else:
+                return True, 0 
+            else: 
                 if item > self.list[0]:
 
-                    return False, -2
+                    return False, -2 # if item is greater than
                 else:
 
-                    return False, -1
+                    return False, -1 # is less then 
         if item < self.list[0]:
 
-            return False,-1
+            return False,-1 # it item is less than 
         elif item > self.list[-1]:
 
-            return False,-2
-        else:
+            return False,-2 # if great then
+        else: # search algorithm
 
             lowest = 0
             highest = len(self.list)
@@ -233,47 +279,56 @@ class OrderedList:
                     highest = middle               
                 middle = int((lowest+highest)/2)
 
-            return False,middle+1
+            return False,middle+1 # if not found 
 
 
 
 
     def add(self,item):
+        if not self.sequence_type or type(item) != self.sequence_type:
+            self.sequence_type = get_type(self.list+[item])
+        if self.sequence_type == "INCONSISTENT":
+            self.sequence_type = get_type(self.list)
+        if self.sequence_type is None:
+            self.sequence_type = type(item)
 
 
-        try:
-            if self.indexstrings:
-                if not isinstance(item,str):
-                    item = str(item)
+        item = convert_to_type(item,self.sequence_type)
+        if item:
+
+            try:
+                if self.indexstrings:
+                    if not isinstance(item,str):
+                        item = str(item)
+
+                    if not self.list:
+                        self.list  = [item]
+                    
+                    elif not self.find(item)[0]:
+                        if Index(item) < Index(self.list[0]):
+                            self.list = [item]+self.list
+                        elif Index(item) > Index(self.list[-1]):
+                            self.list = self.list+[item]
+                        else:
+                            index = self.find(item)[1]
+                            self.list = self.list[0:index]+[item]+self.list[index:]
+                        
+            except:
+                self.indexstrings =False
+
+            if not self.indexstrings:
 
                 if not self.list:
                     self.list  = [item]
                 
                 elif not self.find(item)[0]:
-                    if Index(item) < Index(self.list[0]):
+                    if item < self.list[0]:
                         self.list = [item]+self.list
-                    elif Index(item) > Index(self.list[-1]):
+                    elif item > self.list[-1]:
                         self.list = self.list+[item]
                     else:
                         index = self.find(item)[1]
                         self.list = self.list[0:index]+[item]+self.list[index:]
-                    
-        except:
-            self.indexstrings =False
-
-        if not self.indexstrings:
-
-            if not self.list:
-                self.list  = [item]
-            
-            elif not self.find(item)[0]:
-                if item < self.list[0]:
-                    self.list = [item]+self.list
-                elif item > self.list[-1]:
-                    self.list = self.list+[item]
-                else:
-                    index = self.find(item)[1]
-                    self.list = self.list[0:index]+[item]+self.list[index:]
 
     def delete(self,item):
 
@@ -343,9 +398,11 @@ class OrderedList:
             if self.list:
                 if self.indexstrings:
                     if Index(item) < Item(self.list[0]):
+                        #for when the entire list is greater than the item
                         if splitonly:
                             return 0
                         return self.list
+                    return [x for x in self.list if Index(x) >= Index(item)]
                 
                 else:
                     if item < self.list[0]:
@@ -355,11 +412,15 @@ class OrderedList:
             if splitonly:
                 return 0
             return []
-        splitpoint = self.find(item)[1]
-        if not splitonly:
-            return self.list[splitpoint:]
 
+
+        splitpoint = self.find(item)[1]
+
+        
+        if not splitonly:
+            return  self.list[splitpoint:]
         return splitpoint
+        
 
     def lesser_than_equal(self,item,splitonly=False):
 
@@ -380,11 +441,13 @@ class OrderedList:
                         if splitonly:
                             return 0
                         return self.list
+                    return [x for x in self.list if Index(x) <= Index(item)]
                 else:
                     if item > self.list[-1]:
                         if splitonly:
                             return 0
                         return self.list
+                    return [x for x in self.list if x <= item]
             if splitonly:
                 return 0
             return []
@@ -392,7 +455,8 @@ class OrderedList:
         if not splitonly:
             return self.list[0:splitpoint+1]
 
-        return splitpoint+1
+        return splitpoint
+
 
     def greater_than(self,item,splitonly=False):
 
@@ -410,19 +474,24 @@ class OrderedList:
                         if splitonly:
                             return 0
                         return self.list
+                    return [x for x in self.list if Index(x) > Index(item)]
                 else:
                         if item < self.list[0]:
                             if splitonly:
                                 return 0
                             return self.list
+                        return [x for x in self.list if x > item]
+                            
             if splitonly:
                 return 0
             return []
             
         splitpoint = self.find(item)[1]
+
         if not splitonly:
             return self.list[splitpoint+1:]
         return splitpoint+1
+       
 
     def next(self):
         if isinstance(self.list[-1],(int,float)):
@@ -447,12 +516,16 @@ class OrderedList:
                         if splitonly:
                             return 0
                         return self.list
+                    else:
+                        return [x for x in self.list if Index(x) < Index(item)]
                     
                 else:
                     if item > self.list[-1]:
                         if splitonly:
                             return 0
                         return self.list
+                    else:
+                        return [x for x in self.list if x < item]
             if splitonly:
                 return 0
             return []
@@ -460,6 +533,7 @@ class OrderedList:
         if not splitonly:
             return self.list[0:splitpoint]
         return splitpoint
+       
 
     def ends (self):
         return self.list[0],self.list[-1]
@@ -515,8 +589,7 @@ class OrderedList:
         
 
         
-    def get(self,func=None,item=None,item2=None):
-
+    def get(self,func_name=None,item=None,item2=None):
 
         try:
 
@@ -528,35 +601,46 @@ class OrderedList:
         except:
             pass
 
-        if func == '?':
-            return self.list        
-        if not func or not item:
-            return []
-        if func == '=':
-            return [item]
-        
-        if item2:
+        # For a single item
 
-            if isinstance(item,int):
-                item2 = int(item2)
-            if isinstance(item,float):
-                item2 = float(item2)
-            if type(item) == type(Index(0)):
-                item2 = Index(item2)
-            if type(item) == type(datetime.date(1970,1,7)):
-                item2 = item2.split('-')
-                item2 = datetime.date(int(item2[0]),int(item2[1]),int(item2[2]))
+        if func_name == '?': #to return all values 
+            return self.list        
+        if not func_name or not item:
+            return []
+        if func_name== '=': #to return one value 
+            return [item]
+
+        # With two items
+        if item2:
+            # to get a range
+
+            item2 = convert_to_type(item2,type(item))
 
             return [x_temp for x_temp in self.greater_than_equal(item) if x_temp <=item2]
+            
 
-        
-        
-        func = {'>=':self.greater_than_equal,
-                '<=':self.lesser_than_equal,
-                '<':self.lesser_than,
-                '>':self.greater_than}[func]
+        if func_name == '>=':
+            if not self.indexstrings:
+                return [x for x in self.list if x >= item]
+            else:
+                return [x for x in self.list if Index(x) >= Index(item)]
+        elif func_name == '<=':
+            if not self.indexstrings:
+                return [x for x in self.list if x <= item]
+            else:
+                return [x for x in self.list if Index(x) <= Index(item)]
+        elif func_name == '>':
+            if not self.indexstrings:
+                return [x for x in self.list if x > item]
+            else:
+                return [x for x in self.list if Index(x) > Index(item)]
+        elif func_name == '<':
+            if not self.indexstrings:
+                return [x for x in self.list if x < item]
+            else:
+                return [x for x in self.list if Index(x) < Index(item)]
 
-        return func(item)
+
                 
 
 

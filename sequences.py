@@ -5,7 +5,8 @@ from indexclass import Index
 SLASH = '/'
 type_table = {str(str):str,
              str(float):float,
-             str(datetime.datetime):datetime.datetime}
+             str(datetime.date):datetime.date,
+             str(Index):Index}
 
 from globalconstants import DASH, COLON, PERIOD, BLANK, PLUS 
 
@@ -344,10 +345,12 @@ class Sequences:
           self.db_cursor.execute("SELECT value FROM sequence_values "+
                                       " WHERE notebook=? AND name=?",
                                       (self.notebookname, name))
-          values = [deconvert(x[0]) for x in self.db_cursor.fetchall()]
-          if self.get_type_db(name) == str(type(datetime.datetime.now)):
+          fetched = self.db_cursor.fetchall()
+          values = [deconvert(x[0]) for x in fetched]
+
+          if self.get_type_db(name) == "<class 'datetime.date'>":
               
-              values = [is_date(x) for x in self.db_cursor.fetchall()]
+              values = [is_date(x) for x in values]
               
 
           if values:           
@@ -356,7 +359,6 @@ class Sequences:
 
                     self.temp_sequences['###type###'][name] = self.get_type_db(name)
                     self.temp_sequences[name] = OrderedList(values)
-
 
                     return self.temp_sequences[name]
                if not self.temp_sequences[name]:
