@@ -312,6 +312,49 @@ _ to separate columns on the line.
 """
 
 
+SEARCHSCRIPT = """
+┎────────────────────────────────────────────────────────────────────────────────────┒
+┃                                                                                    ┃
+┃                                SEARCH COMMANDS                                     ┃
+┃                                                                                    ┃
+┃                                     BASIC                                          ┃
+┃                                                                                    ┃
+┃!                                 //                                                ┃
+┃&                                 // and                                            ┃
+┃~                                 // not                                            ┃ 
+┃*                                 //wildcard                                        ┃ 
+┃()                                //                                                ┃  
+┃                                                                                    ┃     
+┃ALLCAPS                           // CASE INSENSITIVE                               ┃
+┃textword                                                                            ┃  
+┃<keyword>                                                                           ┃
+┃<#tag>                                                                              ┃
+┃<##genus>                                                                           ┃
+┃                                                                                    ┃
+┃                                 SEQUENCE KEYS                                      ┃
+┃                                                                                    ┃
+┃<stringsequence@value>             // >= value                                      ┃
+┃<floatsequence@value>              //                                               ┃
+┃<datesequence@#value>              //                                               ┃
+┃<indexsequence@_value              //                                               ┃ 
+┃                                                                                    ┃
+┃<sequence@value/sequence@value>    // for a range                                   ┃
+┃<[sequence@value]>                 // for a single value                            ┃
+┃<sequence@^>                       // all floating point values                     ┃
+┃<sequence@$>                       // all string values                             ┃
+┃<sequence@#>                       // all date values                               ┃
+┃<sequence@_>                       // all index values                              ┃
+┃                                                                                    ┃
+┃                                   KNOWLEDGE                                        ┃
+┃                                                                                    ┃
+┃?node?relation                     //all immediate relations of a node              ┃ 
+┃?node?relation*                    //all mediate and immediate relations of a node  ┃
+┃<?node?relation>                   // for a keyword                                 ┃
+┃<?node?relation*>                                                                   ┃
+┖────────────────────────────────────────────────────────────────────────────────────┚
+"""
+
+
 
 
 

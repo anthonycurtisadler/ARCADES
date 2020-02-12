@@ -245,7 +245,7 @@ class Sequences:
 
           if name in self.temp_sequences:
 
-               self.temp_sequences.delete(value)
+               self.temp_sequences[name].delete(value)
 
      def delete_all_values_db (self,name):
 
@@ -494,7 +494,7 @@ class Sequences:
 
                     if self.using_database:
 
-                         if term3 in [type(float),type('string'),type(datetime.datetime.now())]:
+                         if term3 in [float,str,datetime.date,Index]:
                               term = str(term3)
                          
                          self.add_sequence_name_db (term2)

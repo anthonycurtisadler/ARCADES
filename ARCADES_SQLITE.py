@@ -28,7 +28,7 @@ import _pickle as pickle
 
 from abbreviate import Abbreviate                                       #pylint 9.63/10
 from globalconstants import BOX_CHAR,\
-     INTROSCRIPT, ENTERSCRIPT, FORMATTINGSCRIPT, OPENING_WIDTH, DASH, SLASH,\
+     INTROSCRIPT, ENTERSCRIPT, FORMATTINGSCRIPT, SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
      SMALLWORDS, LEFTNOTE, RIGHTNOTE, EOL, TAB,\
      BLANK, VERTLINE, DOLLAR, PERCENTAGE, EMPTYCHAR, EXCLAMATION,\
      COMMA, EQUAL, QUESTIONMARK, PERIOD, COLON, SEMICOLON, VOIDTERM, PLUS, \
@@ -67,7 +67,7 @@ from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
-from orderedlist import OrderedList
+from orderedlist import OrderedList, convert_to_type
 import pointerclass                                                     #pylint 9.62/10
 from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      BREAKTERMS, NEWTERMS, QUITALLTERMS, QUITTERMS, YESTERMS, NOTERMS, ADDTERMS,\
@@ -12347,7 +12347,57 @@ class Console (Note_Shelf):
                         counter -= 1
                     if i_temp in QUITTERMS + (BLANK, SLASH):
                         see_more = False
+        elif mainterm in ['showsequence']:
+            if otherterms[0] in self.default_dict['sequences'].query(action='get'):
+                seq_values = self.default_dict['sequences'].query(term1=otherterms[0],action='get')
+                registered_type = self.default_dict['sequences'].query(term1='#TYPE#',term2=otherterms[0],action='get')
+                values_with_types = []
+                for x in seq_values.list:
+                    values_with_types.append(str(x)+'['+str(type(x))+']')
+                values_with_types = ', '.join(values_with_types)
 
+                display.noteprint((otherterms[0]+' : '+str(registered_type),values_with_types))
+
+                if predicate[0]:
+
+                    if input('Correct sequence?') in YESTERMS:
+                        while True:
+                            new_type =  input('New sequence type: (f)loat, (s)tr, (i)ndex, or (d)ate?')
+                            if new_type:
+                                new_type = new_type[0].lower()
+                            if new_type in ['f','s','i','d']:
+                                break
+                        new_type = {'f':float,
+                                    's':str,
+                                    'i':Index,
+                                    'd':datetime.date}[new_type]
+                        self.default_dict['sequences'].query(term1='#TYPE#',term2=otherterms[0],term3=new_type,action='set')
+                        temp_finished = True
+                        problem_vals = set()
+                        for val in seq_values.list:
+                            if convert_to_type(val,new_type) is None:
+                                temp_finished = False
+                                problem_vals.add(val)
+
+                        
+                        if not temp_finished:
+                            nprint(', '.join(problem_vals)+ 'cannot be converted to '+str(new_type))
+                            temp_finished = input('Conversion will result in a loss of some values! Continue?') in YESTERMS
+                        if temp_finished:
+                            
+                            for val in seq_values.list:
+                                new_val = convert_to_type(val,new_type)
+                                print('.',end='')
+                                self.default_dict['sequences'].query(term1=otherterms[0],term2=val,action='delete')
+                                self.default_dict['sequences'].query(term1=otherterms[0],term2=new_val,action='set')
+                            print()
+                            nprint('SEQUENCE VALUES CONVERTED TO ',str(new_type))
+                            
+                     
+        elif mainterm in ['reconstitutesequences']:
+            if input('ARE YOU SURE?') in YESTERMS:
+                self.reconstitute_sequences()
+            
 
         elif mainterm in ['showsequences']:
             seqlist= DisplayList(displayobject=display)
@@ -12590,6 +12640,8 @@ class Console (Note_Shelf):
                                    withchildren=withchildren,
                                    copy=copy_temp)
         elif mainterm in ['search', QUESTIONMARK]:
+            if not otherterms[0]:
+                print(SEARCHSCRIPT)
             sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
                                               otherterms[0])))
             display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))

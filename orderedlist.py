@@ -98,22 +98,47 @@ def get_type(entrylist):
                 return float      
         return 'INCONSISTENT'
 
+def get_majority_type(entrylist):
+    if  not entrylist:
+        return False
+
+    histogram = {}
+    flipped_histo = {}
+    length = len(entrylist)
+    fractional = 1/(length+1)
+
+    
+    for x in entrylist:
+        if type(x) not in histogram:
+            histogram[type(x)] = 1.0 - fractional
+        else:
+            histogram[type(x)] += 1
+    for x in histogram:
+        flipped_histo[histogram[x]]=x
+    most_frequent_type = flipped_histo[sorted(flipped_histo.keys())[-1]]
+    return most_frequent_type 
+        
+    
+
 def convert_to_type(item,is_type):
     return_item = None
-    if type(item) == is_type:
-        return_item = item
-    elif is_type == str:
-        return_item = str(item)
-    elif is_type == type(datetime.date(1972,3,13)) and isinstance(item,str):
-        return_item =is_date(item,returndate=True)
-    elif is_type == float and isinstance(item,str) and isfloat(item):
-        return_item = float(item)
-    elif is_type == int and isinstance(item,str) and item.isnumeric():
-        return_item = int(item)
-    elif is_type == type(Index(0)) and isinstance(item,str) and isindex(item):
-        return_item = Index(item)
-    elif is_type == float and isinstance(item,int):
-        return_item = float(item)
+    try:
+        if type(item) == is_type:
+            return_item = item
+        elif is_type == str:
+            return_item = str(item)
+        elif is_type == type(datetime.date(1972,3,13)) and isinstance(item,str):
+            return_item =is_date(item,returndate=True)
+        elif is_type == float and isinstance(item,str) and isfloat(item):
+            return_item = float(item)
+        elif is_type == int and isinstance(item,str) and item.isnumeric():
+            return_item = int(item)
+        elif is_type == type(Index(0)) and isinstance(item,str) and isindex(item):
+            return_item = Index(item)
+        elif is_type == float and isinstance(item,int):
+            return_item = float(item)
+    except:
+        pass
     return return_item
 
 ### CLASS DEFINITION
@@ -289,6 +314,8 @@ class OrderedList:
             self.sequence_type = get_type(self.list+[item])
         if self.sequence_type == "INCONSISTENT":
             self.sequence_type = get_type(self.list)
+        if self.sequence_type == "INCONSISTENT":
+            self.sequence_type = get_majority_type(self.list)
         if self.sequence_type is None:
             self.sequence_type = type(item)
 
@@ -617,28 +644,29 @@ class OrderedList:
             item2 = convert_to_type(item2,type(item))
 
             return [x_temp for x_temp in self.greater_than_equal(item) if x_temp <=item2]
-            
 
+
+        temp_list = [convert_to_type(x,type(item)) for x in self.list if convert_to_type(x,type(item))]
         if func_name == '>=':
             if not self.indexstrings:
-                return [x for x in self.list if x >= item]
+                return [x for x in temp_list if x >= item]
             else:
-                return [x for x in self.list if Index(x) >= Index(item)]
+                return [x for x in temp_list if Index(x) >= Index(item)]
         elif func_name == '<=':
             if not self.indexstrings:
-                return [x for x in self.list if x <= item]
+                return [x for x in temp_list if x <= item]
             else:
-                return [x for x in self.list if Index(x) <= Index(item)]
+                return [x for x in stemp_list if Index(x) <= Index(item)]
         elif func_name == '>':
             if not self.indexstrings:
-                return [x for x in self.list if x > item]
+                return [x for x in temp_list if x > item]
             else:
-                return [x for x in self.list if Index(x) > Index(item)]
+                return [x for x in temp_list if Index(x) > Index(item)]
         elif func_name == '<':
             if not self.indexstrings:
-                return [x for x in self.list if x < item]
+                return [x for x in temp_list if x < item]
             else:
-                return [x for x in self.list if Index(x) < Index(item)]
+                return [x for x in temp_list if Index(x) < Index(item)]
 
 
                 
