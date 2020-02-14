@@ -62,7 +62,7 @@ import nformat                                                          #pylint 
 from ninput import q_input, s_input                                     #pylint 10.0/10
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
-from knowledgebase_ns_db import KnowledgeBase                              #pylint  8.62/10
+from knowledgebase_ns import KnowledgeBase                              #pylint  8.62/10
 from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
@@ -9538,6 +9538,8 @@ class Console (Note_Shelf):
         #FOR THE SIMPLE DEFAULTS
         for temp_label in def_dict:
             initiate_defaults(temp_label,def_dict[temp_label])
+        if 'sequences' in self.default_dict:
+            self.sequence_dict_copy = copy.deepcopy(self.default_dict['sequences'])
 
         if 'sequences' in self.default_dict:
             if isinstance(self.default_dict['sequences'],dict):
@@ -9569,11 +9571,17 @@ class Console (Note_Shelf):
                                                            db_connection=db_connection,
                                                            sequence_dictionary={'#TYPE#':{}})
 
-                
-
+               
+        if  'projects' in self.default_dict and isinstance(self.default_dict['projects'],dict):
+            nprint('PROJECTS COPIED')
+            self.project_dict_copy = copy.deepcopy(self.default_dict['projects'])
+            
         if self.purge_objects or not self.defaults.contains('projects'):
             if not self.using_database:
-                self.default_dict['projects'] = ProjectManager(db_only=False)
+            
+                self.default_dict['projects'] = ProjectManager(db_only=False,
+                                                               project_dictionary=self.default_dict['projects'])
+                
             else:
                 try:
                     self.default_dict['projects'] = ProjectManager(notebookname=notebookname,
@@ -9611,28 +9619,7 @@ class Console (Note_Shelf):
         
         if self.purge_objects or 'generalknowledge' not in self.default_dict:
 
-            while True:
-                i_temp = input('GENERAL KNOWLEDGE \n (1)  IN COMMON SHELF '*self.using_shelf
-                               +'(2) IN UNIQUE SHELF'*self.using_shelf 
-                               +'(3) NO SHELF '
-                               +'(4) IN SPECIFIC DATABASE '*self.using_database
-                               +'(5) IN GENERAL DATABASE'*self.using_database)
-                if i_temp in ('1','2')*self.using_shelf + ('3',) + ('4','5')*self.using_database:
-                    break
-            if i_temp in ('1','2'):
-                self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
-                                                                                     filename={2:self.filename,
-                                                                                               1:'GENERALKNOWLEDGE'}[int(i_temp)],using_shelf=True,using_database=False)
-            elif i_temp in ('3'):
-
-                self.default_dict['generalknowledge'] = GeneralizedKnowledge(using_shelf=False,using_database=False)
-
-            else:
-                               
-                self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
-                                                                     filename={4:self.filename,
-                                                                               5:'GENERALKNOWLEDGE'}[int(i_temp)],using_shelf=False,using_database=True)
-                               
+            self.choose_general_knowledge()                               
                 
         else:
             self.default_dict['generalknowledge'].restart(directoryname=None,filename=None)
@@ -9892,11 +9879,52 @@ class Console (Note_Shelf):
 
         try:
             if (self.using_database and len(self.default_dict['sequences'].query(term1='#TYPE#',action='get')) == 0) and input('RECONSTITUTE SEQUENCES') in YESTERMS:
+                nprint('SEQUENCES RECONSTITUTED')
                 self.reconstitute_sequences()
         except:
             pass
+
+    def create_work_pad (self,padname=None):
+
+            if not padname:
+                padname = 'default'
+            c_temp = 1
+            suffix = ''
+            while True:
+                if padname+suffix not in self.pad_dict:
+                    break
+                suffix = str(c_temp)
+                c_temp += 1
+            self.pad_dict[padname+suffix] = emptymovingwindow.EmptyMovingWindow()
+            display.noteprint(('NEW PAD CREATED!',padname+suffix))
+            display.noteprint(('ALL PADS',', '.join(self.pad_dict.keys())))
+            return padname+suffix
+
+    def choose_general_knowledge (self):
         
 
+        while True:
+            i_temp = input('GENERAL KNOWLEDGE \n (1)  IN COMMON SHELF '*self.using_shelf
+                           +'(2) IN UNIQUE SHELF'*self.using_shelf 
+                           +'(3) NO SHELF '
+                           +'(4) IN SPECIFIC DATABASE '*self.using_database
+                           +'(5) IN GENERAL DATABASE'*self.using_database)
+            if i_temp in ('1','2')*self.using_shelf + ('3',) + ('4','5')*self.using_database:
+                break
+        if i_temp in ('1','2'):
+            self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
+                                                                                 filename={2:self.filename,
+                                                                                           1:'GENERALKNOWLEDGE'}[int(i_temp)],
+                                                                         using_shelf=True,using_database=False)
+        elif i_temp in ('3'):
+
+            self.default_dict['generalknowledge'] = GeneralizedKnowledge(using_shelf=False,using_database=False)
+
+        else:
+                           
+            self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
+                                                                 filename={4:self.filename,
+                                                                           5:'GENERALKNOWLEDGE'}[int(i_temp)],using_shelf=False,using_database=True)
 
     ## functions called from within command line ##
 
@@ -10563,8 +10591,9 @@ class Console (Note_Shelf):
             if predicate[3]:
                 l_temp = 'es'
                 
-            self.defaults_from_notes(identifying_key='SPELLING'+s_input(queries.LANGUAGE_SUFFIX,
-                                                                        otherterms[0]),
+            self.defaults_from_notes(identifying_key='SPELLING'
+                                     +s_input(queries.LANGUAGE_SUFFIX,
+                                              otherterms[0]),
                                      mark=EQUAL,
                                      obj=self.speller,
                                      directtext=True,
@@ -10584,7 +10613,8 @@ class Console (Note_Shelf):
                 self.parent = EMPTYCHAR
                 self.show_full_top, self.children_too = self.display_attributes[0],self.display_attributes[1]
             elif totalterms == 1:
-                temp_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
+                temp_entry = s_input(queries.RANGE_TO_FROM,
+                                     otherterms[0])
 
                 if SLASH not in temp_entry \
                    and DASH not in temp_entry\
@@ -10730,7 +10760,20 @@ class Console (Note_Shelf):
 
         if mainterm in ['test']:
 
-            animals = ['pig','sloth','giraffe','ant','bee','cat','dog','tiger','emu','aardvark','ferkel','mammoth','hippo','rhino']
+            animals = ['pig',
+                       'sloth',
+                       'giraffe',
+                       'ant',
+                       'bee',
+                       'cat',
+                       'dog',
+                       'tiger',
+                       'emu',
+                       'aardvark',
+                       'ferkel',
+                       'mammoth',
+                       'hippo',
+                       'rhino']
 
             test_iterations = int(input('Test iterations>'))
 
@@ -10763,20 +10806,7 @@ class Console (Note_Shelf):
 
             if input('DO YOU WANT TO CREATE A NEW GENERAL KNOWLEDGE SHELF??') in ['yes']:
 
-                while True:
-                    i_temp = input('(1) GENERAL KNOWLEDGE IN COMMON SHELF (2) GENERAL KNOWLEDGE IN UNIQUE SHELF (3) NO SHELF')
-                    if i_temp in ('1','2','3'):
-                        break
-                if i_temp in ('1','2'):
-                    self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
-                                                                                         filename={2:self.filename,
-                                                                                                   1:'GENERALKNOWLEDGE'}[int(i_temp)])
-
-                else:
-                    self.default_dict['generalknowledge'] = GeneralizedKnowledge()
-
-                
-
+              self.choose_general_knowledge()
         if mainterm in ['general','generalknowledge','gk']:
 
             while True:
@@ -10791,16 +10821,7 @@ class Console (Note_Shelf):
         if mainterm in ['switchgeneralknowledge']:
             
             while True:
-                i_temp = input('(1) GENERAL KNOWLEDGE IN COMMON SHELF (2) GENERAL KNOWLEDGE IN UNIQUE SHELF (3) NO SHELF')
-                if i_temp in ('1','2','3'):
-                    break
-            if i_temp in ('1','2'):
-                self.default_dict['generalknowledge'] = GeneralizedKnowledge(directoryname=self.directoryname,
-                                                                                     filename={2:self.filename,
-                                                                                               1:'GENERALKNOWLEDGE'}[int(i_temp)])
-
-            else:
-                self.default_dict['generalknowledge'] = GeneralizedKnowledge()
+                self.choose_general_knowledge()                                                                           
     
 
         if mainterm in ['convertdefinitions']:
@@ -10827,7 +10848,9 @@ class Console (Note_Shelf):
             self.restore_projects(query=not predicate[0])
 
         if mainterm in ['restoreproject']:
-            self.restore_project(project=s_input('Name of project?',otherterms[0]),query=not predicate[0])
+            self.restore_project(project=s_input('Name of project?',
+                                                 otherterms[0]),
+                                 query=not predicate[0])
 
                 
         if mainterm in ['newconvertmode']:
@@ -11914,14 +11937,21 @@ class Console (Note_Shelf):
                 try:
                     x_max = int(x_max)
                     y_max = int(y_max)
-                    display.noteprint(('','SHEET SIZE = '+str(y_max)+'/'+str(x_max)))
+                    display.noteprint(('',
+                                       'SHEET SIZE = '+str(y_max)
+                                       +'/'+str(x_max)))
                 except:
                     pass
-            display.noteprint(('STARTING LOCATION', str(self.y_pos)+'/'+str(self.x_pos)))
+            display.noteprint(('STARTING LOCATION',
+                               str(self.y_pos)+'/'
+                               +str(self.x_pos)))
 
             self.window = movingwindow.MovingWindow(self.text_result.split(EOL))
             try:
-                self.y_pos,self.x_pos,dummy1,dummy3 = self.window.activate(y_max=y_max,x_max=x_max,y_pos=self.y_pos,x_pos=self.x_pos)
+                self.y_pos,self.x_pos,dummy1,dummy3 = self.window.activate(y_max=y_max,
+                                                                           x_max=x_max,
+                                                                           y_pos=self.y_pos,
+                                                                           x_pos=self.x_pos)
             except:
                 self.window.restore()
                 
@@ -11933,21 +11963,10 @@ class Console (Note_Shelf):
                 except:
                     self.window.restore()
         elif mainterm in ['createworkpad']:
+            padname = None
             if otherterms[0] and otherterms[0] not in self.pad_dict:
                 padname = otherterms[0]
-            else:
-                padname = 'default'
-                c_temp = 1
-                suffix = ''
-                while True:
-                    if padname+suffix not in self.pad_dict:
-                        break
-                    suffix = str(c_temp)
-                    c_temp += 1
-                self.pad_dict[padname+suffix] = emptymovingwindow.EmptyMovingWindow()
-                display.noteprint(('NEW PAD CREATED!',padname+suffix))
-                display.noteprint(('ALL PADS',', '.join(self.pad_dict.keys())))
-                self.currentpad = padname+suffix
+            self.currentpad = self.create_work_pad(padname)
 
         elif mainterm in ['emptypadstack']:
 
@@ -11974,17 +11993,18 @@ class Console (Note_Shelf):
                 
             self.currentpad = bufferpad
 
-
-            
-            
-            
+       
         
-        elif mainterm in ['addtopad','a']:
+        elif mainterm in ['addtopad','a','padshow']:
+
             bufferpad = self.currentpad
             if otherterms[1] and otherterms[1] in self.pad_dict.keys():
                 self.currentpad = otherterms[1]
                 
             if otherterms[0]:
+                if mainterm == 'padshow':
+                    if not predicate[0] or self.currentpad not in self.pad_dict:
+                        self.currentpad = self.create_work_pad(self.currentpad)
 
                 for i_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True):
                     
@@ -12054,102 +12074,7 @@ class Console (Note_Shelf):
                         
                         self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
             self.defaults.set('size',size_old)
-        elif mainterm in ['showpad']:
 
-            def reduce_blanks (x,starting=True):
-                if starting:
-                    while '  ' in x:
-                        x = x.replace('  ',' ')
-                    return x
-                else:
-                    for position, xx in enumerate(x):
-                        if xx != ' ':
-                            break
-                    if len(x) > position:
-
-                        while '  ' in x[position:]:
-                            x = x[:position]+x[position:].replace('  ',' ')
-                        return x
-                return x        
-                        
-                    
-
-            
-            bufferpad = self.currentpad
-            if otherterms[0] in self.pad_dict.keys():
-                self.currentpad = otherterms[0]
-            
-            
-            if self.pad_dict[self.currentpad]:
-                try:
-                    display.noteprint(('ACTIVATING',self.currentpad))
-                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist, self.text_result = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,
-                                                                                                                                                x_pos=self.pad_x_pos)
-                except:
-                    self.pad_dict[self.currentpad].restore()
-
-            for obj_identifier in sorted(returnedobjects.keys()):
-
-                
-
-                if obj_identifier.startswith('$$$') and obj_identifier.count('$') == 3:
-                    if 'oo' in returnedobjects[obj_identifier]:
-                        newobject_text = ''
-
-                        # The following needed to return to original formatting...
-                        # Probably should have conceived the text editor differently -- not breaking up into lines 
-                        for line in returnedobjects[obj_identifier]['oo']:
-                            if line.startswith('  '):
-                                newobject_text += '\n' + reduce_blanks(line,starting=False)
-                            elif len(line.strip()) == 0:
-                                newobject_text += '\n'                          
-                            else:
-                                newobject_text += reduce_blanks(' ' + line + ' ')
-
-                        if newobject_text.startswith('\n'):
-                            newobject_text = nextobject_text[1:].replace('     ','!@#$%').replace('  ',' ').replace('!@#$%','     ')
-                            
- 
-                        if 'l' in returnedobjects[obj_identifier]:
-                            newobject_keyset = returnedobjects[obj_identifier]['l']
-                        obj_identifier = obj_identifier.lstrip('$$$')
-                        self.edit(index=Index(obj_identifier),
-                                  newkeyset=newobject_keyset,
-                                  newtext=newobject_text,
-                                  changekeys=False,
-                                  changetext=False)                    
-
-                if obj_identifier.startswith('$') and obj_identifier.count('$') == 1:
-                    if 'oo' in returnedobjects[obj_identifier]:
-                        newobject_text = '\n'.join(returnedobjects[obj_identifier]['oo'])
-
-                        if 'l' in returnedobjects[obj_identifier]:
-                            newobject_keyset = returnedobjects[obj_identifier]['l']
-                        obj_identifier = obj_identifier.lstrip('$')
-                        self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
-            if input('Do you want to reclassify uploaded objects?') in YESTERMS:
-                
-                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$',toprefix='$$')
-                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$$$',toprefix='$$')
-            if input('Do you want to update sheetshelf?') in YESTERMS:
-                if not self.sheetshelf:
-                    self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
-                    if not self.sheetname:
-                        self.sheetname = notebookname + self.currentpad
-                    
-                print(self.sheetname)
-                self.sheetshelf.add(notebookname='',
-                                    objectname=self.sheetname,
-                                    textlist = returnedtextlist,
-                                    object_dict = returnedobjects,override=True)
-
-                    
-                
-                        
-                    
-            self.currentpad = bufferpad
-            display.noteprint(('',self.pad_dict[self.currentpad].show_notes()))
-            
         elif mainterm in ['showstream']:
             if not longphrase:
                 display_stream = 'standard'
@@ -12442,6 +12367,104 @@ class Console (Note_Shelf):
                     self.dd_changed=True
                     temp_keys = self.new_search('<'+cor_seq+STAR+'>')
                     print(str(temp_keys))
+                    
+        if mainterm in ['showpad','padshow']:
+
+            def reduce_blanks (x,starting=True):
+                if starting:
+                    while '  ' in x:
+                        x = x.replace('  ',' ')
+                    return x
+                else:
+                    for position, xx in enumerate(x):
+                        if xx != ' ':
+                            break
+                    if len(x) > position:
+
+                        while '  ' in x[position:]:
+                            x = x[:position]+x[position:].replace('  ',' ')
+                        return x
+                return x        
+                        
+                    
+
+            
+            bufferpad = self.currentpad
+            if otherterms[0] in self.pad_dict.keys():
+                self.currentpad = otherterms[0]
+            
+            
+            if self.pad_dict[self.currentpad]:
+                try:
+                    display.noteprint(('ACTIVATING',self.currentpad))
+                    self.pad_y_pos, self.pad_x_pos,returnedobjects,returnedtextlist, self.text_result = self.pad_dict[self.currentpad].activate(y_pos=self.pad_y_pos,
+                                                                                                                                                x_pos=self.pad_x_pos)
+                except:
+                    self.pad_dict[self.currentpad].restore()
+
+            for obj_identifier in sorted(returnedobjects.keys()):
+
+                
+
+                if obj_identifier.startswith('$$$') and obj_identifier.count('$') == 3:
+                    if 'oo' in returnedobjects[obj_identifier]:
+                        newobject_text = ''
+
+                        # The following needed to return to original formatting...
+                        # Probably should have conceived the text editor differently -- not breaking up into lines 
+                        for line in returnedobjects[obj_identifier]['oo']:
+                            if line.startswith('  '):
+                                newobject_text += '\n' + reduce_blanks(line,starting=False)
+                            elif len(line.strip()) == 0:
+                                newobject_text += '\n'                          
+                            else:
+                                newobject_text += reduce_blanks(' ' + line + ' ')
+
+                        if newobject_text.startswith('\n'):
+                            newobject_text = nextobject_text[1:].replace('     ','!@#$%').replace('  ',' ').replace('!@#$%','     ')
+                            
+ 
+                        if 'l' in returnedobjects[obj_identifier]:
+                            newobject_keyset = returnedobjects[obj_identifier]['l']
+                        obj_identifier = obj_identifier.lstrip('$$$')
+                        self.edit(index=Index(obj_identifier),
+                                  newkeyset=newobject_keyset,
+                                  newtext=newobject_text,
+                                  changekeys=False,
+                                  changetext=False)                    
+
+                if obj_identifier.startswith('$') and obj_identifier.count('$') == 1:
+                    if 'oo' in returnedobjects[obj_identifier]:
+                        newobject_text = '\n'.join(returnedobjects[obj_identifier]['oo'])
+
+                        if 'l' in returnedobjects[obj_identifier]:
+                            newobject_keyset = returnedobjects[obj_identifier]['l']
+                        obj_identifier = obj_identifier.lstrip('$')
+                        self.enter(ind=Index(obj_identifier),ek=newobject_keyset,et=newobject_text,right_at=True)
+            if input('Do you want to reclassify uploaded objects?') in YESTERMS:
+                
+                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$',toprefix='$$')
+                self.pad_dict[self.currentpad].transform_dictionary(fromprefix='$$$',toprefix='$$')
+            if input('Do you want to update sheetshelf?') in YESTERMS:
+                if not self.sheetshelf:
+                    self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
+                    if not self.sheetname:
+                        self.sheetname = notebookname + self.currentpad
+                    
+                print(self.sheetname)
+                self.sheetshelf.add(notebookname='',
+                                    objectname=self.sheetname,
+                                    textlist = returnedtextlist,
+                                    object_dict = returnedobjects,override=True)
+
+                    
+                
+                        
+                    
+            self.currentpad = bufferpad
+            display.noteprint(('',self.pad_dict[self.currentpad].show_notes()))
+            
+
                 
 
                         
@@ -14579,11 +14602,13 @@ while bigloop:
         # TO MOVE SHELF TO DATABASE
 
         
-        if not allnotebooks[notebookname].defaults.get('usedatabase') and \
-           input('DO YOU WANT TO MOVE SHELF TO DATABASE?') in YESTERMS:
+        if not allnotebooks[notebookname].defaults.get('usedatabase'):
+            temp_input = input('DO YOU WANT TO MOVE (S)HELF,SE(Q)UENCES, AND (P)ROJECTS TO DATABASE? ENTER ALL THAT APPLY')
+            temp_input = ''.join(x.lower() for x in temp_input)
+            
 
             
-            if input('ARE YOU SURE?') in YESTERMS:
+            if 's' in temp_input or 'q' in temp_input or 'p' in temp_input and input('ARE YOU SURE?') in YESTERMS:
                 try:
                     db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
                     db_connection.commit()
@@ -14591,12 +14616,13 @@ while bigloop:
                 except:
                     pass
 
-
+            
                  
                 allnotebooks[notebookname].defaults.set('usedatabase',True)
                 allnotebooks[notebookname].using_shelf = False
                 allnotebooks[notebookname].using_database = True
 
+            if 'q' in temp_input:
                 
                 temp_sequences =  Sequences(using_database=True,
                                            using_shelf=False,
@@ -14604,7 +14630,8 @@ while bigloop:
                                            db_cursor=db_cursor,
                                            db_connection=db_connection,
                                            sequence_dictionary={'#TYPE#':{}})
-                print(allnotebooks[notebookname].sequence_dict_copy)
+                
+                print('SEQUENCES',allnotebooks[notebookname].sequence_dict_copy)
                 if allnotebooks[notebookname].sequence_dict_copy != {'#TYPE#':{}} and isinstance(allnotebooks[notebookname].sequence_dict_copy,dict):
                     
                     if '#TYPE#' in allnotebooks[notebookname].sequence_dict_copy:
@@ -14620,10 +14647,11 @@ while bigloop:
                                     temp_sequences.query(term1=name,term2=value,action='set')
                                     print('.',end='')
                     print()
-                    
-                                    
-                                
-                        
+
+            if 's' in temp_input:
+
+                 
+  
                 temp_counter = 0
                 total_count = '/' + str(len(allnotebooks[notebookname].note_dict))
                 display.noteprint(('ATTENTION!','MOVING NOTE DICTIONARY FROM SHELF!'))
@@ -14718,10 +14746,11 @@ while bigloop:
                 except:
                     print('WORDDICT NOT CLOSED')
 
+            if 'p' in temp_input:
                 
                 # to migrate the projects 
                 allnotebooks[notebookname].default_dict['projects'] = ProjectManager(notebookname=notebookname,
-                                                                                     project_dictionary=allnotebooks[notebookname].default_dict['projects'].return_dict(),
+                                                                                     project_dictionary=allnotebooks[notebookname].project_dict_copy,
                                                                                      connection=db_connection,
                                                                                      cursor=db_cursor)
 

@@ -2,6 +2,7 @@ from orderedlist import OrderedList
 import datetime
 import sqlite3
 from indexclass import Index
+
 SLASH = '/'
 type_table = {str(str):str,
              str(float):float,

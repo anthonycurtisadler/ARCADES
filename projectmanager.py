@@ -93,6 +93,7 @@ class ProjectManager:
                     );""")
           if project_dictionary:
                if self.using_database:
+                    print('here')
                
                     self.projects = project_dictionary
                     self.current = None
@@ -351,8 +352,9 @@ class ProjectManager:
                     project_temp[proj] = self.get_project(project=proj)
                return project_temp
           
+          if self.projects:
 
-          return self.projects
+               return self.projects
 
      def is_empty (self):
 
@@ -935,6 +937,9 @@ class ProjectManager:
 
      def load_into_database (self,
                              all_projects=None):
+
+          if not isinstance(all_projects,dict):
+               all_projects = self.projects
 
           for proj_temp in all_projects:
                
