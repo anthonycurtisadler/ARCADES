@@ -199,6 +199,12 @@ def is_date(entry,returndate=False,maxlen=0):
     """Utility to test if a string constitutes a date, returning either
     a boolean value or a converted date """
 
+    if type(entry) == datetime.date:
+        if not returndate:
+            return True
+        
+        return entry
+
     date_constraints = {0:(-800000000000,+80000000000),
                         1:(1,12),
                         2:(1,31),
@@ -251,16 +257,19 @@ def is_date(entry,returndate=False,maxlen=0):
     if returndate:
 
         if len(entry) == 3 or maxlen <= 3:
+            entry+=[1,1]
             return datetime.date(entry[0],
                                  entry[1],
                                  entry[2])
         elif len(entry) == 5 or maxlen <= 5:
+            entry+=[1,1,1,1]
             return datetime.datetime(entry[0],
                                      entry[1],
                                      entry[2],
                                      entry[3],
                                      entry[4])
         elif len(entry) == 7:
+            entry+=[1,1,1,1,1,1]
             return datetime.datetime(entry[0],
                                      entry[1],
                                      entry[2],
@@ -1746,7 +1755,7 @@ class Note_Shelf:
                     if is_date(seq_value):
                         seq_value = is_date(seq_value,returndate=True)
                         if seq_value2:
-                            seq_value2 = is_date(seq_value,returndate=True)
+                            seq_value2 = is_date(seq_value2,returndate=True)
                         
                         seq_type = type(datetime.date(1972,3,13))
 
@@ -1953,7 +1962,6 @@ class Note_Shelf:
                         x = self.default_dict['sequences'].query(term1='#TYPE#',
                                                                  term2=identifier,
                                                                  action='get')
-                        print('SEQUENCE TYPE ',seq_type,'SEQUENCE VALUE ',seq_value,'X ',x,'TYPE X ',type(x))
                         if seq_type == self.default_dict['sequences'].query(term1='#TYPE#',
                                                                             term2=identifier,
                                                                             action='get'):
@@ -1961,7 +1969,10 @@ class Note_Shelf:
                                                                  term2=seq_value,
                                                                  action='set')
                         else:
-                            print('TYPE ERROR')
+                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + self.default_dict['sequences'].query(term1='#TYPE#',
+                                                                                                                             action='get')
+                            nprint(temp_label)
+                            
         return newkeyset
     
 
@@ -8290,7 +8301,7 @@ class Note_Shelf:
                 display.noteprint(('ATTENTION!',"Can't display PROJECT TEXT"))
         if loadproject and projecttext:
 
-            if self.default_dict['projects'].is_empty():
+            if not self.default_dict['projects']  or self.default_dict['projects'].is_empty():
                 
                 self.default_dict['projects'].import_string(projecttext)
                 if self.default_dict['projects'].is_empty():
@@ -9423,7 +9434,7 @@ class Console (Note_Shelf):
 
             
         self.by_line = Convert()
-        self.purge_objects = False
+        self.purge_objects = False 
         
 
         self.defaults = DefaultManager(default_dictionary=self.default_dict,
@@ -9578,9 +9589,12 @@ class Console (Note_Shelf):
             
         if self.purge_objects or not self.defaults.contains('projects'):
             if not self.using_database:
-            
-                self.default_dict['projects'] = ProjectManager(db_only=False,
-                                                               project_dictionary=self.default_dict['projects'])
+                try:
+                    self.default_dict['projects'] = ProjectManager(db_only=False,
+                                                                   project_dictionary=self.default_dict['projects'])
+                except:
+                    nprint('PROJECTS NOT ALREADY IN THE DEFAULT DICT')
+                    
                 
             else:
                 try:
@@ -10728,14 +10742,20 @@ class Console (Note_Shelf):
         if mainterm in ['loadprojects']:
 
             if self.default_dict['projects'].is_empty():
-                filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
-                                              file_suffix='.txt',
-                                              file_prefix=EMPTYCHAR,
-                                              get_filename=otherterms[0])[0].rstrip()
-                display.noteprint((alerts.LOADING_FILE,filename_temp))
-                project_text = get_text_file(filename_temp)
-
-                self.default_dict['projects'].import_string(project_text)
+                project_text = None
+                if predicate[0] or (not predicate[1] and input('FROM DATABASE?')in YESTERMS):
+                    db_cursor.execute("SELECT projectfile FROM projects WHERE notebook=?;",(notebookname,))
+                    project_text = db_cursor.fetchone()[0]
+                                    
+                if predicate[1] or otherterms[0] or (not predicate[0] and input('FROM TEXTFILE?') in YESTERMS):
+                    filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                                                  file_suffix='.txt',
+                                                  file_prefix=EMPTYCHAR,
+                                                  get_filename=otherterms[0])[0].rstrip()
+                    display.noteprint((alerts.LOADING_FILE,filename_temp))
+                    project_text = get_text_file(filename_temp)
+                if project_text:
+                    self.default_dict['projects'].import_string(project_text)
                 if not self.default_dict['projects'].is_empty():
                     display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                 self.dd_changed=True
