@@ -93,17 +93,17 @@ class ProjectManager:
                     );""")
           if project_dictionary:
                if self.using_database:
-                    print('here')
                
                     self.projects = project_dictionary
                     self.current = None
                     self.clear_database()
                     self.load_into_database(all_projects=project_dictionary)
-                    print('loaded into database')
+
 
           else:
                self.projects = {}
                self.current = None
+               print(self.projects)
  
 
           
@@ -346,15 +346,12 @@ class ProjectManager:
      def return_dict (self):
 
           if self.using_database:
-
                project_temp = {}
                for proj in self.get_projects_DB():
                     project_temp[proj] = self.get_project(project=proj)
                return project_temp
-          
-          if self.projects:
 
-               return self.projects
+          return self.projects
 
      def is_empty (self):
 
@@ -411,6 +408,8 @@ class ProjectManager:
                            series_enter=None,
                            date=None,
                            opened=True):
+          if indexes is None:
+               indexes = OrderedList()
 
           if project_name not in self.projects:
                self.projects[project_name] = {}
@@ -530,6 +529,9 @@ class ProjectManager:
                       project=None,
                       indexes=None,
                       db_only=False):
+
+          if indexes is None:
+               indexes = OrderedList()
 
           if not project:
                project=self.current

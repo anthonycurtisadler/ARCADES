@@ -40,6 +40,7 @@ class TranspositionTable:
                 FOREIGN KEY (notebook, index_to) REFERENCES notebooks (notebook, note_index) ON DELETE CASCADE
                 );""")
             self.using_database = True
+            self.using_dict = False
 
     def restore_connection (self,
                          connection=None,
@@ -65,6 +66,15 @@ class TranspositionTable:
                             (self.notebookname,index_from,index_to))
         self.connection.commit()
 
+
+    def purge_old (self):
+
+        self.cursor.execute("DELETE FROM"
+                              +" indextable"
+                              +" WHERE notebook=?;",
+                              (self.notebookname,))
+        self.connection.commit()
+        
     def delete_from_db (self,index_from=None,index_to=None):
         
         
@@ -121,12 +131,29 @@ class TranspositionTable:
 
         self.cursor.execute("SELECT index_to FROM indextable WHERE notebook=? and index_from=?",
                             (self.notebookname,index_from))
-        return self.cursor.fetchone()[0]
+        try:
+            return self.cursor.fetchone()[0]
+        except:
+            return None
 
     def db_get_from (self,index_to):
         self.cursor.execute("SELECT index_from FROM indextable WHERE notebook=? and index_to=?",
                             (self.notebookname,index_to))
-        return self.cursor.fetchone()[0]
+        try:
+            return self.cursor.fetchone()[0]
+        except:
+            return None
+
+    def db_all_from (self):
+        self.cursor.execute("SELECT index_from FROM indextable WHERE notebook=?",
+                            (self.notebookname,))
+        return [x[0] for x in self.cursor.fetchall()]
+
+    def db_all_to (self):
+        self.cursor.execute("SELECT index_to FROM indextable WHERE notebook=?",
+                            (self.notebookname,))
+        return [x[0] for x in self.cursor.fetchall()]
+        
 
 
         
@@ -197,6 +224,59 @@ class TranspositionTable:
                 self.add_to_db(index_from=new_index,index_to=new_index)
             
 
+    def all_from (self):
+        if self.using_dict:
+            return self.table.keys()
+        return self.db_all_from()
+        
+    
+    def assign(self,new_index):
+        new_index = str(new_index)
+        
+        if self.using_dict:
+            all_registers = self.table.keys()
+        if self.using_database:
+            all_registers = self.db_all_from()
+        if not all_registers:
+            all_registers = ['#0']
+        if '#1' not in all_registers:
+            all_registers = list(all_registers)
+            all_registers.append('#0')
+            
+            
+        
+        register = '#'+str(max([int(x[1:]) for x in all_registers if x[0]=='#'])+1)
+    
+        
+        if self.using_dict:
+            if new_index not in self.table.values():
+##            if register not in self.table and new_index not in self.table.values()
+                self.table[register]=new_index
+            else:
+                return self.get_assigned(new_index)
+        
+        if self.using_database:
+            if new_index not in self.db_all_to():
+##            if not self.db_contains(index_from=register) and not self.db_contains(index_to=new_index):
+                self.add_to_db(index_from=register,index_to=new_index)
+            else:
+                return self.get_assigned(new_index)
+        return register
+    
+    def get_assigned (self,index):
+
+        if self.using_database:
+            x  = self.db_get_from(index)
+            if isinstance(x,str) and '#' in x:
+                return x
+            
+            
+        for x in self.table:
+            if self.table[x] == index:
+                if isinstance(x,str) and '#' in x:
+                    return x
+        
+    
     def delete(self,to_delete):
         to_delete = str(to_delete)
         if self.using_dict:
@@ -219,14 +299,25 @@ class TranspositionTable:
             return '<<'*surround+index_reduce(self.table[new_index])+'>>'*surround
         return new_index
 
-    def export_string(self):
-        #for exporting the content of the table as a string
+    def expose(self):
 
+        if self.using_database:
+            self.cursor.execute("SELECT * FROM indextable WHERE notebook=?;",(self.notebookname,))
+            print(self.cursor.fetchall())
+        if self.using_dict:
+            print(self.table)
+            
+            
+            
+
+    def export_string(self):
+        #for exporting the content of the table as a string)
         returnstring = ''
 
         for x_temp in self.table:
             returnstring+=x_temp+'/'+self.table[x_temp]+','
         return returnstring[:-1]
+
     
 
     def import_string(self,enter_string):
@@ -262,17 +353,22 @@ class TranspositionTable:
     
 
 
-##starting_list = index_list=input('?').split(',')
-##xtable = TranspositionTable(starting_list)
+
+##xtable = TranspositionTable()
 ##print(str(xtable))
 ##while True:
-##    xtable.change(input('?'),input('??'))
-##    print(str(xtable))
-##    print(', '.join(xtable.transpose(starting_list)))
+##    print(xtable.assign(input('?')))
+##    xtable.move(input('?'),input('??'))
+##    
+##    print(xtable.table)
+##    
+####    xtable.change(input('?'),input('??'))
+####    print(str(xtable))
+####    print(', '.join(xtable.transpose(starting_list)))
 ##    if input('delete?') in ['y']:
 ##        xtable.delete(input('?'))
 ##    print(str(xtable))
 ##    if input('add') in ['y']:
-##        xtable.add(input('?'))
+##        xtable.assing (input('?'))
         
     

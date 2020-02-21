@@ -54,6 +54,7 @@ import emptymovingwindow
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
+from generalutilities import side_note, split_into_columns 
 from generalknowledge import GeneralizedKnowledge 
 from lexical import English_frequent_words
 from keydefinitions import KeyDefinitions                               #pylint 10.0/10
@@ -305,10 +306,22 @@ def isindex(entry):
 def check_hyperlinks(entry=[],purge=False):
 
     """Checks to see if hyperlinks
-    are contained in notebook"""
+    are contained in notebook; assigns new if not"""
+
+    
 
     if not entry:
         return []
+    if isinstance(entry,set):
+        is_set = True
+        entry = list(entry)
+
+    else:
+        is_set = False
+
+   
+    
+
 
     if isinstance(entry,list):
         returning = []
@@ -321,26 +334,25 @@ def check_hyperlinks(entry=[],purge=False):
                                        alerts.INDEX + x_temp
                                        + alerts.NOT_FOUND_IN_NOTEBASE))
                 else:
+                    if x_temp not in notebook.default_dict['indextable'].all_from():
+                        x_temp = notebook.default_dict['indextable'].assign(x_temp)
+                        
+                    else:
+                        x_temp = notebook.default_dict['indextable'].get_assigned(x_temp)
                     returning.append(x_temp)
+            
+            elif x_temp[0] == '#':
+                if x_temp in notebook.default_dict['indextable'].all_from():
+                    returning.append(x_temp)
+
             else:
                 if not purge:
                     
                     returning.append(x_temp)
-                    
-    if isinstance(entry,set):
-        returning = set()
-        for x_temp in entry:
-            x_temp = str(x_temp)
-            if isindex(x_temp):
-                if x_temp not in notebook.indexes():
-                    display.noteprint((alerts.ATTENTION,
-                                       'Index ' + x_temp
-                                       + ' not found in notebase!'))
-                else:
-                    returning.add(x_temp)
-            else:
-                if not purge:
-                    returning.add(x_temp)
+
+                
+    if is_set:
+        returning = set(returning)
     return returning
 
 
@@ -508,57 +520,6 @@ def dummy(x_temp):
     return x_temp
 
 
-def side_note(texts,
-              widths=[30]+[20]*10,
-              counters=False,
-              columnchar=UNDERLINE):
-
-    """Joinds texts together into columns
-    """
-
-    def divide_into_lines(entrytext,width,splitchar=BLANK):
-
-
-        """Takes entrytext and returns a
-        list of lines less than width, unless
-        the word runs over.
-        """
-        
-        returnlist = []
-        line = EMPTYCHAR
-        for word in entrytext.split(splitchar):
-            if len(line+word) <= width and not word.endswith(PERIOD):
-                line += word + BLANK
-            else:
-                if word.endswith(PERIOD+PERIOD):
-                    word = word[:-2]
-                returnlist.append(line + word)
-                line = EMPTYCHAR
-        if line:
-            returnlist.append(line)
-        return returnlist
-
-    linelists = []
-    for column in range(len(texts)):
-        linelists.append(divide_into_lines(texts[column],widths[column]))
-    maxrows = max(len(l_temp)
-                  for l_temp in linelists)
-    for column in range(len(texts)):
-        linelists[column].extend([EMPTYCHAR]*(maxrows-len(linelists[column])))
-
-
-    returntext =  EOL + '/COL/' + EOL 
-        
-    for counter in range(0,maxrows):
-        returntext += (str(counter)
-                       + COLON + BLANK
-                       + columnchar)*counters 
-        for column in range(len(texts)):
-            returntext += linelists[column][counter] \
-                          + BLANK + columnchar * (column < len(texts)-1)
-        returntext += EOL
-
-    return returntext + '/ENDCOL/'
 
 def split_up_string(string,
                     line_length=30):
@@ -610,34 +571,7 @@ def split_up_string(string,
     return returnlist
 
 
-def split_into_columns (t_temp,
-                        breaker=BLANK,
-                        width=80,
-                        columns=3):
 
-    """ splits text into columns.
-    """
-
-    t_temp = nformat.purgeformatting(t_temp)
-    
-    t_temp = t_temp.split(breaker)
-
-    columnwords = int(len(t_temp)/columns)
-    columnwidth = int(width/columns)
-    columnlist =  [columnwidth]*(columns-1) \
-                 + [width-columnwidth*(columns-1)]
-
-    textlist = []
-    for c_temp in range(columns):
-        if c_temp != columns-1:
-            textlist.append(breaker.join(t_temp[c_temp*columnwords:
-                                                (c_temp+1)*columnwords])
-                            .replace(POUND*5,UNDERLINE))
-        else:
-            textlist.append(breaker.join(t_temp[c_temp*columnwords:])
-                            .replace(POUND*5,UNDERLINE))
-
-    return side_note(textlist,columnlist)
 
 def abridge (string,
              maxlength=60,
@@ -3438,6 +3372,9 @@ class Note_Shelf:
                 return index
             keyset = {index_expand(x_temp) for x_temp in keyset}
             newkeyset = self.add_keys_tags(index, keyset)
+            newkeyset = check_hyperlinks(newkeyset)
+
+            
 
             if metadata == {}:
 
@@ -3478,11 +3415,11 @@ class Note_Shelf:
 
             self.lastindex = index
             self.iterator.add(index)
-            if update_table:
-                self.default_dict['indextable'].add(index)
-                self.default_dict['indexlist'].add(index)
-                self.default_dict['indexlist_indexes'].add(Index(index))
-                self.changed = True
+##            if update_table:
+##                self.default_dict['indextable'].add(index)
+            self.default_dict['indexlist'].add(index)
+            self.default_dict['indexlist_indexes'].add(Index(index))
+            self.changed = True
             if self.project:
                 for p_temp in self.project:
                     self.default_dict['projects'].add_index(index,
@@ -3541,9 +3478,9 @@ class Note_Shelf:
 
             if update_table:   
                 self.default_dict['indextable'].delete(index)
-                self.default_dict['indexlist'].delete(index)
-                self.default_dict['indexlist_indexes'].delete(Index(index))
-                self.changed = True
+            self.default_dict['indexlist'].delete(index)
+            self.default_dict['indexlist_indexes'].delete(Index(index))
+            self.changed = True
             if len(str(index)) == self.maxdepth_found:
                 self.deepest(is_string=True,abridged=False)
             if len(index_reduce(str(index))) == self.abr_maxdepth_found:
@@ -3659,12 +3596,12 @@ class Note_Shelf:
         self.iterator.add(indexto)
         if update_table:
             self.default_dict['indextable'].move(indexfrom,indexto)
-            self.default_dict['indexlist'].delete(indexfrom)
-            self.default_dict['indexlist_indexes'].delete(Index(indexfrom))
-            self.default_dict['indexlist'].add(indexto)
-            self.default_dict['indexlist_indexes'].add(Index(indexto))
-            self.changed = True
-            self.indexchanged = True
+        self.default_dict['indexlist'].delete(indexfrom)
+        self.default_dict['indexlist_indexes'].delete(Index(indexfrom))
+        self.default_dict['indexlist'].add(indexto)
+        self.default_dict['indexlist_indexes'].add(Index(indexto))
+        self.changed = True
+        self.indexchanged = True
         return True
 
 
@@ -5218,7 +5155,7 @@ class Note_Shelf:
 
 
             for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
-                if k_temp != EMPTYCHAR:
+                if isinstance(k_temp,str) and len(k_temp) > 0:
                     if k_temp[0] == DOLLAR:
                         keysetobject.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
                     elif k_temp[0] == PLUS and k_temp[1:] in self.default_dict['projects'].get_all_projects():
@@ -8756,9 +8693,9 @@ class Note_Shelf:
 
             keylist_temp = list(self.get_keys_from_note(index))
             keylist_temp = transpose_keys(check_hyperlinks(keylist_temp,purge=True))
-            keylist_temp = [x_temp
+            keylist_temp = sorted([x_temp
                             .replace('<',EMPTYCHAR)
-                            .replace('>',EMPTYCHAR) for x_temp in keylist_temp]
+                            .replace('>',EMPTYCHAR) for x_temp in keylist_temp])
             if not keylist_temp:
                 if isinstance(index,(int,str)):
                     index = Index(index)
@@ -9594,6 +9531,7 @@ class Console (Note_Shelf):
                                                                    project_dictionary=self.default_dict['projects'])
                 except:
                     nprint('PROJECTS NOT ALREADY IN THE DEFAULT DICT')
+                    self.default_dict['projects'] = ProjectManager(db_only=False)
                     
                 
             else:
@@ -9756,8 +9694,10 @@ class Console (Note_Shelf):
 ##        if 'indexlist' in self.default_dict:
 ##            del self.default_dict['indexlist']
 ##            self.default_dict['indexlist'] = OrderedList(self.indexes(),indexstrings=True)
-##            
+##
 
+
+        
         if self.purge_objects or not self.defaults.contains('indextable'):
             nprint('LOADING INDEXES INTO TRANSPOSITION TABLE')
             if self.using_database:
@@ -9768,20 +9708,48 @@ class Console (Note_Shelf):
                                                                      notebookname=notebookname)
             else:
                 self.default_dict['indextable'] = TranspositionTable(self.indexes())
+
+            # CHECK FOR OLD-FORMAT ENTRIES IN THE TRANPOSITION TABLE
+            temp_registers = self.default_dict['indextable'].all_from()
+            old_format = False
+            to_delete = []
+            for x in temp_registers:
+                if POUND not in x:
+                    to_delete.append(x)
+            print(to_delete)
+            if to_delete:
+                if input('DELETE OLD TRANSPOSITION TABLE REGISTERS?') in YESTERMS:
+                    if self.using_database:
+                        self.default_dict['indextable'] = TranspositionTable(self.indexes(),
+                                                                             using_dict=self.using_shelf,
+                                                                             connection=db_connection,
+                                                                             cursor=db_cursor,
+                                                                             notebookname=notebookname)
+                    else:
+                        self.default_dict['indextable'] = TranspositionTable(self.indexes())
+                    for x in to_delete:
+                        self.default_dict['indextable'].delete(to_delete=x)
+
+            
+
 ##        else:
 ##            if reconstitute and input('Renew transposition table?') in YESTERMS:
 ##                self.default_dict['indextable'] = TranspositionTable(self.default_dict['indextable'])
         else:
             self.default_dict['indextable'].restore_connection(connection=db_connection,
                                                                cursor=db_cursor)
+            if not self.defaults.database_contains('indextable'):
+                nprint('BACKING UP INDEXTABLE')
+                self.defaults.backup('indextable')
+            else:
+                nprint('RESTORING INDEXTABLE FROM BACKUP')
+                self.defaults.restore_from_backup('indextable')
+        
         nprint('TRANSPOSITION TABLE DONE')
-            
-        if not self.defaults.database_contains('indextable'):
-            nprint('BACKING UP INDEXTABLE')
-            self.defaults.backup('indextable')
-        else:
-            nprint('RESTORING INDEXTABLE FROM BACKUP')
-            self.defaults.restore_from_backup('indextable')
+
+        
+        
+        
         
         nprint('OPENING CONNECTION FOR GENERAL KNOWLEDGE')
         self.default_dict['generalknowledge'].open_connection()
@@ -9946,7 +9914,7 @@ class Console (Note_Shelf):
 
         display_temp = EMPTYCHAR
         for k_temp in self.default_dict:
-            if isinstance(self.defaults.get(k_temp),(bool,int,str)):
+            if isinstance(self.defaults.get(k_temp),(bool,int,str)) and  (not isinstance(self.defaults.get(k_temp),(str))or len(self.defaults.get(k_temp))<10):
                 display_temp += k_temp + ' : ' + str(self.defaults.get(k_temp)) + EOL
         display.noteprint((labels.SETTINGS,display_temp))
 
@@ -10303,6 +10271,15 @@ class Console (Note_Shelf):
             self.copy_many_from_temp(copy_count)
 
     def default_com (self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR):
+
+        if mainterm in ['branchone','branchtwo','branchthree']:
+            self.hypermovemode = {'branchone':0,
+                                  'branchtwo':1,
+                                  'branchthree':2}[mainterm]
+            nprint('Hypermode changed to '+{0:'branching mode one',
+                                            1:'branching mdode two',
+                                            2:'branching mode three'}[self.hypermovemode])
+            
 
         if mainterm in ['clearcommandmacros']:
             self.default_dict['commands'] = Abbreviate(displayobject=display,
@@ -11221,21 +11198,23 @@ class Console (Note_Shelf):
             
             temp_range = [str(x_temp) for x_temp
                           in get_range(range_entry)]
-
             if len(temp_range) > 1:
                 link_from = temp_range[0]
  
                 for counter, x_temp in enumerate(temp_range):
 
                     if counter == 0:
+                        # for the first note in the chain or loop
                         temp_keys = self.get_keys_from_note(temp_range[0])
                         temp_keys.add(temp_range[1])
+                        temp_keys.add(temp_range[-1])
                         self.edit(Index(x_temp),
                                   newkeyset=temp_keys,newtext=self.get_text_from_note(x_temp),
                                   changekeys=False,
                                   changetext=False,
                                   update_table=False)
                     elif counter == len(temp_range)-1:
+                        # for the last note in the chain or loop
                         temp_keys = self.get_keys_from_note(temp_range[counter])
                         temp_keys.add(temp_range[counter-1])
                         if mainterm in ['loop']:
@@ -11247,6 +11226,7 @@ class Console (Note_Shelf):
                                   changetext=False,
                                   update_table=False)
                     else:
+                        # for the rest of the notes 
                         temp_keys = self.get_keys_from_note(temp_range[counter])
                         temp_keys.add(temp_range[counter-1])
                         temp_keys.add(temp_range[counter+1])
@@ -14022,7 +14002,9 @@ class Console (Note_Shelf):
 
         elif mainterm in ['showprojects']:
 
-            self.show_projects(projectobject=self.default_dict['projects'].return_dict())
+            temp_dict = self.default_dict['projects'].return_dict()
+            print(temp_dict)
+            self.show_projects(projectobject=temp_dict)
 
         elif mainterm in ['showarchivedprojects']:
             self.show_projects(projectobject=self.default_dict['archivedprojects'].return_dict())

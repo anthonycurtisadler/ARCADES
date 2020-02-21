@@ -6,79 +6,10 @@ pylint rated 9.20/10
 from globalconstants import BOX_CHAR, MARGINFACTOR,\
      DASH, BLANK, EOL, EMPTYCHAR, COLON, UNDERLINE, POUND, \
      LEFTBRACKET, RIGHTBRACKET, SLASH
+from generalutilities import side_note, split_into_columns  
 from nformat import columns, purgeformatting 
 from displaylist import DisplayList
 
-
-## UTILIES ALSO IN MAIN PROGRAM
-
-def side_note(texts,
-              widths=[30]+[20]*10,
-              counters=False,
-              columnchar=UNDERLINE):
-
-    """Joinds texts together into columns
-    """
-
-    def divide_into_lines(entrytext,width,splitchar=BLANK):
-
-
-        """Takes entrytext and returns a
-        list of lines less than width, unless
-        the word runs over.
-        """
-        
-        returnlist = []
-        line = EMPTYCHAR
-        for word in entrytext.split(splitchar):
-            if len(line+word) <= width:
-                line += word + BLANK
-            else:
-                returnlist.append(line + word)
-                line = EMPTYCHAR
-        if line:
-            returnlist.append(line)
-        return returnlist
-
-    linelists = []
-    for column in range(len(texts)):
-        linelists.append(divide_into_lines(texts[column],widths[column]))
-    maxrows = max([len(l_temp) for l_temp in linelists])
-    for column in range(len(texts)):
-        linelists[column].extend([EMPTYCHAR]*(maxrows-len(linelists[column])))
-
-
-    returntext = '/COL/' + EOL 
-        
-    for counter in range(0,maxrows):
-        returntext += (str(counter) + COLON + BLANK + columnchar)*counters 
-        for column in range(len(texts)):
-            returntext += linelists[column][counter] + BLANK + columnchar * (column < len(texts)-1)
-        returntext += EOL
-
-    return returntext + '/ENDCOL/'
-
-def split_into_columns (t_temp,breaker=BLANK,width=80,columns=3):
-
-    """ splits text into columns.
-    """
-
-    t_temp = purgeformatting(t_temp)
-    
-    t_temp = t_temp.split(breaker)
-
-    columnwords = int(len(t_temp)/columns)
-    columnwidth = int(width/columns)
-    columnlist =  [columnwidth]*(columns-1) + [width-columnwidth*(columns-1)]
-
-    textlist = []
-    for c_temp in range(columns):
-        if c_temp != columns-1:
-            textlist.append(breaker.join(t_temp[c_temp*columnwords:(c_temp+1)*columnwords]).replace(POUND*5,UNDERLINE))
-        else:
-            textlist.append(breaker.join(t_temp[c_temp*columnwords:]).replace(POUND*5,UNDERLINE))
-
-    return side_note(textlist,columnlist)
     
 ## CLASSES
 
@@ -289,7 +220,9 @@ class Display:
         elif BOX_CHAR['lu'] in textlist[1]:
 
             head = textlist[0]    #head are the keywords
-            body = textlist[1].replace('[BREAK]','/BREAK/').replace('[NEW]','/NEW/') #to deal with different
+            body = textlist[1].replace('[BREAK]',
+                                       '/BREAK/').replace('[NEW]',
+                                                          '/NEW/') #to deal with different
                                                                                      #coding from before 
             #body is the text
             
@@ -371,8 +304,12 @@ class Display:
 
         else:            # For a non-embedded note 
             head = textlist[0]
-            body = textlist[1].replace('[BREAK]','/BREAK/').replace('[NEW]','/NEW/')
-            if rectify and ('/COL/' in body or '/NEW/' in body or '/BREAK/' in body or LEFTBRACKET + SLASH in body):
+            body = textlist[1].replace('[BREAK]',
+                                       '/BREAK/').replace('[NEW]','/NEW/')
+            if rectify and ('/COL/' in body
+                            or '/NEW/' in body
+                            or '/BREAK/' in body
+                            or LEFTBRACKET + SLASH in body):
                 np_temp = True 
             if '/ENDCOL/' in body and '/COL/' not in body:
                 body = body.replace('/ENDCOL/',EMPTYCHAR)
@@ -496,7 +433,9 @@ class Display:
                             columntextlist.append(line[1])
                         
                         
-                    elif not override and line.startswith('/SPLIT/') and not columnate:
+                    elif (not override
+                          and line.startswith('/SPLIT/')
+                          and not columnate):
                         modified = True
                         first_line = True
                         line = line[7:]
@@ -506,7 +445,9 @@ class Display:
                             columntextlist.append(line)
 
                     # For the middle of the columsn.
-                    elif not override and ((columnate and '/ENDCOL/' not in line) or (splitting and '/ENDSPLIT/' not in line)):                                                
+                    elif (not override
+                          and ((columnate and '/ENDCOL/' not in line)
+                               or (splitting and '/ENDSPLIT/' not in line))):                                                
                         columntextlist.append(line)
 
                     # for the end of the columns 
@@ -544,7 +485,10 @@ class Display:
                         param_width =  max([len(x_temp) for x_temp in c_temp.split(EOL)])-1
                         maximum = param_width
 
-                        c_temp = EOL.join([x_temp[0:-1]+(param_width-len(x_temp)+1)*BLANK+x_temp[-1] for x_temp in c_temp.split(EOL) if x_temp])
+                        c_temp = EOL.join([x_temp[0:-1]+(param_width-len(x_temp)+1)*BLANK+x_temp[-1]
+                                           for x_temp
+                                           in c_temp.split(EOL)
+                                           if x_temp])
                         ## add spaces at the end of the lines so then match.
                             
 
@@ -598,7 +542,9 @@ class Display:
                         splitting = False
                     
                         
-                    elif LEFTBRACKET + SLASH in line and SLASH + RIGHTBRACKET in line and line.split(LEFTBRACKET + SLASH)[1].split(SLASH + RIGHTBRACKET)[0].isnumeric():
+                    elif (LEFTBRACKET + SLASH in line
+                          and SLASH + RIGHTBRACKET in line
+                          and line.split(LEFTBRACKET + SLASH)[1].split(SLASH + RIGHTBRACKET)[0].isnumeric()):
                         modified = True
                         param_width_def = param_width
                         maximum_def = maximum
@@ -700,9 +646,16 @@ class Display:
         min_len = min(line_length_list)
         leftstuff = (int(param_indent/50))*']'+(param_indent % 50)*BLANK
         if min_len != max_len:
-            returntext = EOL.join([leftstuff+l_temp[0:-1]+box_or_nothing(l_temp[-2])*(max_len-len(l_temp))+l_temp[-1] for l_temp in returntext.split(EOL) if l_temp])
+            returntext = EOL.join([leftstuff+l_temp[0:-1]
+                                   +box_or_nothing(l_temp[-2])*(max_len-len(l_temp))
+                                   +l_temp[-1]
+                                   for l_temp
+                                   in returntext.split(EOL)
+                                   if l_temp])
         else:
-            returntext = EOL.join([leftstuff+l_temp for l_temp in returntext.split(EOL)])
+            returntext = EOL.join([leftstuff+l_temp
+                                   for l_temp
+                                   in returntext.split(EOL)])
         if not npp_temp:
             print(returntext)
             
@@ -722,9 +675,11 @@ class Display:
                     if rectify:
                         if len(l_temp) > 1:
                             if l_temp[-2] != BOX_CHAR['h']:
-                                l_temp = l_temp[0:-1] + (maxwidth - len(l_temp)) * BLANK + l_temp[-1] 
+                                l_temp = l_temp[0:-1] + (maxwidth - len(l_temp))\
+                                         * BLANK + l_temp[-1] 
                             else:
-                                l_temp = l_temp[0:-1] + (maxwidth - len(l_temp)) * BOX_CHAR['h'] + l_temp[-1] 
+                                l_temp = l_temp[0:-1] + (maxwidth - len(l_temp))\
+                                         * BOX_CHAR['h'] + l_temp[-1] 
                                 
                         else:
                              l_temp += (maxwidth - len(l_temp)) * BLANK  
@@ -765,7 +720,9 @@ class Display:
         if (len(textlist) > 1 and (BOX_CHAR['lu'] in textlist[1]
                                     or p_is_emb)):
 
-            return max([len(temp_x) for temp_x in textlist[1].split(EOL)]+[p_width+leftmargin+2])
+            return max([len(temp_x)
+                        for temp_x
+                        in textlist[1].split(EOL)]+[p_width+leftmargin+2])
         
         
 
