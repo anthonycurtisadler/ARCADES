@@ -1,5 +1,286 @@
-from globalconstants import UNDERLINE, EMPTYCHAR, BLANK, PERIOD, COLON, EOL, POUND
+from globalconstants import UNDERLINE, EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, POUND, STAR, DASH, PLUS
 from nformat import purgeformatting
+from itertools import product
+import datetime
+
+
+
+
+def format_text_output (text):
+
+    return text.replace('//','~!SEP!~').replace(':','~!COLON!~').replace(';','~!SEMICOLON!~').replace('\n','~!EOL!~')
+
+def unformat_text_output (text):
+
+    return text.replace('~!SEP!~','//',).replace('~!COLON!~',':').replace('~!SEMICOLON!~',';').replace('~!EOL!~','\n')
+    
+
+def abridge (string,
+             maxlength=60,
+             overmark=BLANK+PERIOD*3+BLANK,rev=False):
+
+    """abridges a string if it is longer than maxlength"""
+    
+    if len(string) > maxlength:
+
+        if not rev:
+
+            return (string[0:maxlength]+overmark)
+        return overmark + string[-maxlength:]
+    else:
+        return string
+
+def concatenate(lista,
+                listb,
+                infix=EMPTYCHAR):
+
+
+    """Concatenates the strings from two lists,
+    joining them with index
+    """
+
+    return [a_temp+(infix*max([len(b_temp), 1]))
+            +b_temp for a_temp,
+            b_temp in product(lista, listb)]
+
+
+def clip_date(date,include='ymd'):
+
+    """utily for clipping a date string
+    include = 'ymd*mhsx' shows the full date.
+    Even though you can show the year and the microsecond,
+    I can't think of any reason why you would want to!!!
+    """
+
+    if not isinstance(date,str):
+        date = str(date)
+
+    yearmonthday = date.split(BLANK)[0].split(DASH)
+    hourminutesecond = date.split(BLANK)[1].split(COLON)
+
+    leftinclude=include.split(STAR)[0]
+    year = yearmonthday[0]*('y' in leftinclude)
+    month = yearmonthday[1]*('m' in leftinclude)
+    day = yearmonthday[2]*('d' in leftinclude)
+
+    lefthalf = (year+DASH+month+DASH+day).lstrip(DASH).rstrip(DASH)
+    if STAR not in include:
+        return lefthalf 
+    rightinclude = include.split(STAR)[1]
+
+    hour = hourminutesecond[0]*('h' in rightinclude)
+    minute = hourminutesecond[1]*('m' in rightinclude)
+
+    second = hourminutesecond [2]
+    microsecond = EMPTYCHAR
+    if len(second.split(PERIOD)) > 1:
+        microsecond = second.split(PERIOD)[1]*('x' in rightinclude)
+    second = second.split(PERIOD)[0]*('s' in rightinclude)
+
+    return (lefthalf+BLANK+((hour+COLON+minute
+                           +COLON+second).lstrip(COLON).rstrip(COLON)
+                          +PERIOD+microsecond).rstrip(PERIOD)).lstrip()
+
+  
+
+
+def frequency_count(text):
+
+
+    """returns a histogram of the word
+    frequency count of text"""
+
+    returndictionary = {}
+    
+    if isinstance(text,str):
+        word_set = get_words(text)
+    else:
+        word_set = text
+    for word in word_set:
+        if word not in returndictionary:
+            returndictionary[word] = 1
+        else:
+            returndictionary[word] += 1
+    return returndictionary
+
+
+def split_up_string(string,
+                    line_length=30):
+
+    """splits us a string into a series segments of less then line_length.
+    Used for displaying long sequences of keys/indexes in columns
+    """
+
+    if len(string) < line_length:
+        return [string]
+    returnlist = []
+    segments = string.split(COMMA)
+
+    length = 0
+    newline = EMPTYCHAR
+    for segment in segments:
+        if len(segment) > ((line_length * 2)/3):
+            if length > (line_length/3):
+                returnlist.append(newline
+                                  + COMMA
+                                  + BLANK)
+                returnlist.append(segment
+                                  + COMMA
+                                  + BLANK)
+                length = 0
+                newline = EMPTYCHAR
+            else:
+                returnlist.append(newline
+                                  + segment
+                                  + COMMA
+                                  + BLANK)
+                length = 0
+                newline = EMPTYCHAR
+        elif length + len(segment) <= line_length:
+            newline += segment + COMMA + BLANK
+            length += len(segment)
+        else:
+            returnlist.append(newline
+                              + segment
+                              + COMMA
+                              + BLANK)
+            length = 0
+            newline = EMPTYCHAR
+    if newline:
+        returnlist.append(newline)
+    if len(returnlist) > 0 and len(returnlist[-1]) > 2:
+        returnlist[-1] = returnlist[-1][:-2]
+
+    return returnlist
+
+
+
+def dummy(x_temp):
+
+
+    """#dummy function to be passed as argument"""
+
+    return x_temp
+
+
+def isindex(entry):
+
+    """Utility to test if input is the
+    string representation of an index"""
+
+    if not entry:
+        return False
+
+    if isinstance(entry,int):
+        return True
+
+    if isinstance(entry,str):
+        if '..' not in entry and \
+           entry[0] != '.' and \
+           entry[-1] != '.' and \
+           entry.replace('.',EMPTYCHAR).isnumeric():
+            return True
+
+    return False
+
+def is_date(entry,returndate=False,maxlen=0):
+
+
+
+    """tests if a string constitutes a date, returning either
+    a boolean value or a converted date """
+
+    if type(entry) == datetime.date:
+        if not returndate:
+            return True
+        
+        return entry
+
+    date_constraints = {0:(-800000000000,+80000000000),
+                        1:(1,12),
+                        2:(1,31),
+                        3:(0,23),
+                        4:(0,59),
+                        5:(0,59),
+                        6:(0,1000000)}
+
+    if not isinstance(entry,(tuple,list)):
+
+        if entry.count(DASH)>1 \
+           and entry.count(COLON)>1 \
+           and entry.count(PERIOD)==1:
+             entry = entry.replace(DASH,BLANK).\
+                     replace(COLON,BLANK).\
+                     replace(PERIOD,BLANK).split(BLANK)
+             entry = [int(a.strip())
+                      for a in entry]
+             if returndate:
+                    return datetime.datetime(entry[0],
+                                             entry[1],
+                                             entry[2],
+                                             entry[3],
+                                             entry[4],
+                                             entry[5],
+                                             entry[6])
+             
+        else:
+             
+             if entry and entry[0] == DASH:
+                 entry = entry[0].replace(DASH,PLUS)+entry[1:]
+             entry = entry.split(DASH)
+
+             for x_temp in entry:
+                 if not x_temp.isnumeric():
+                     False
+             entry = [int(x_temp.replace(PLUS,DASH))
+                      for x_temp in entry]
+
+               
+    
+
+    for counter,x_temp in enumerate(entry):
+        if not isinstance(x_temp,int):
+            return False
+        if not (date_constraints[counter][0]
+                <= x_temp
+                <= date_constraints[counter][1]):
+            return False
+    if returndate:
+
+        if len(entry) == 3 or maxlen <= 3:
+            entry+=[1,1]
+            return datetime.date(entry[0],
+                                 entry[1],
+                                 entry[2])
+        elif len(entry) == 5 or maxlen <= 5:
+            entry+=[1,1,1,1]
+            return datetime.datetime(entry[0],
+                                     entry[1],
+                                     entry[2],
+                                     entry[3],
+                                     entry[4])
+        elif len(entry) == 7:
+            entry+=[1,1,1,1,1,1]
+            return datetime.datetime(entry[0],
+                                     entry[1],
+                                     entry[2],
+                                     entry[3],
+                                     entry[4],
+                                     entry[5],
+                                     entry[6])
+    
+    return True 
+
+
+def repeat_function_on_set(enterset,function=None):
+
+    if function is None:
+        function = dummy
+
+    returnset = set()
+    for x_temp in enterset:
+        returnset.update(function(x_temp))
+    return returnset 
 
 def split_into_columns (t_temp,
                         breaker=BLANK,

@@ -198,7 +198,10 @@ search, ?	|search phrase  %indexrange..			|keysearch..
                 |* wildcard |
                 |<SEQUENCE@FROM> | to search for sequences
                 |<SEQUENCE@TO> | ADD # and _ as appropriate
-                |<SEQUENCE@FROM/SEQUENCE@TO> 
+                |<SEQUENCE@FROM/SEQUENCE@TO>
+                |{NOTEBOOK1,NOTEBOOK2} |To search over another notebook
+globalsearch    |searchphrase;notebooks |To search over other notebooks
+                |/$ don't query
 terms,???       |return foundterms 
 textsearch, ??	|search phrase %indexrange			|textsearch
 constdates,     |indexrange;f(irst) n(ewest) a(all)..             |make date chart
@@ -351,6 +354,8 @@ startlinking| |Start automatically linking notes
 startlooping| |Start automatically looping notes
 endlooping,endlinking| |End looping or linking notes
 showsequences| |show sequences
+showsequence|sequencename |show a single sequence
+ |/$ correct sequence 
 invert | |Gives opposite of indexes 
 
 """
@@ -363,6 +368,7 @@ changecommandmacros| |change commandmacros
 changekeydefinitions| |change definitions
 | |Used to automatically assign keys with loadbyparagraph
 changeknowledge| |change knowledgebase
+changegeneralknowledge| |change general knowledge
 ||
 defaultcodes| |load codes embedded with kw CODES
 defaultmacros| |load macros embedded with kw MACROS
@@ -457,14 +463,36 @@ convertdefinition | |define parsing information for fromtext
 newconvertmode | |add a new convert mode
 switchconvertmode | |switch to a new convert mode
 showallconvertmodes | |show all convert modes
+createworkpad |padname |create a new work pad
+addtopad |range,padname |add notes to pad
+||add notes to pad, and display 
+padshow |range,padname |create pad if needed
+emptypadstack |padname| clears notes from pad
+renewpad |clears an existing pad 
+sheet|range,display stream,width,save stream, Xmax*Ymax |display as sheet
+| /$ query size  /* vary
+rsheet, resumesheet | resumes existing sheet
+closesheetshelf |close the sheet shelf
+tosheetshelf|frompad,topad|add a pad to the shelf for storage
+selectsheet |resume a pad in the sheetshelf 
+
 ||
 ||"""
 
 KNOWLEDGE = """
-|KNOWLEDGE BASE|
+|SPECIES-GENUS KNOWLEDGE|
 learn|string(species);string(genus)|teach the notebook an ontological fact
 forgetstring(species);string(genus)| |unteach the notebook an ontological fact
 allknowledge| |show what the notebook knows
+|GENERAL KNOWLEDGE|
+dumpknowledge,dumpgeneralknowledge |
+showknowledge |
+loadknowledge,loadgeneralknowledge|filename |load knowledge from textfile
+cleargeneralknowledge|
+reconstitutegeneralknowledge |
+general,generalknowledge,gk|query|interprety a knowledge query
+(*)KNOWLEDGE PHRASE(*) |ALTERNATE FORM OF ABOVE
+switchgeneralknowledge| 
 ||
 |PROJECT MANAGEMENT|
 newproject|projectname |Start a new project
@@ -481,6 +509,7 @@ help|						|
 showsettings| |Show settings
 switch|notebase |switches to a new notebase without quiting
 quit|  {$ to suppress query}			|save and quit
+test| execute test script 
 
 """
 COMMANDSCRIPT.append(COMMANDS.replace(PERIOD+PERIOD,EMPTYCHAR))

@@ -54,7 +54,11 @@ import emptymovingwindow
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
-from generalutilities import side_note, split_into_columns 
+from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
+     is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
+     abridge, format_text_output, unformat_text_output
+
+     
 from generalknowledge import GeneralizedKnowledge 
 from lexical import English_frequent_words
 from keydefinitions import KeyDefinitions                               #pylint 10.0/10
@@ -155,15 +159,7 @@ histo_tag_dict = None
 
 # other utilities
 
-def repeat_function_on_set(enterset,function=None):
 
-    if function is None:
-        function = dummy
-
-    returnset = set()
-    for x_temp in enterset:
-        returnset.update(function(x_temp))
-    return returnset 
 
 def nprint(*entries):
     text = ''
@@ -193,115 +189,11 @@ def si_input (prompt=EMPTYCHAR,
         inputtext = EMPTYCHAR
         display.noteprint(alert)
 
-def is_date(entry,returndate=False,maxlen=0):
 
 
 
-    """Utility to test if a string constitutes a date, returning either
-    a boolean value or a converted date """
-
-    if type(entry) == datetime.date:
-        if not returndate:
-            return True
-        
-        return entry
-
-    date_constraints = {0:(-800000000000,+80000000000),
-                        1:(1,12),
-                        2:(1,31),
-                        3:(0,23),
-                        4:(0,59),
-                        5:(0,59),
-                        6:(0,1000000)}
-
-    if not isinstance(entry,(tuple,list)):
-
-        if entry.count(DASH)>1 \
-           and entry.count(COLON)>1 \
-           and entry.count(PERIOD)==1:
-             entry = entry.replace(DASH,BLANK).\
-                     replace(COLON,BLANK).\
-                     replace(PERIOD,BLANK).split(BLANK)
-             entry = [int(a.strip())
-                      for a in entry]
-             if returndate:
-                    return datetime.datetime(entry[0],
-                                             entry[1],
-                                             entry[2],
-                                             entry[3],
-                                             entry[4],
-                                             entry[5],
-                                             entry[6])
-             
-        else:
-             
-             if entry and entry[0] == DASH:
-                 entry = entry[0].replace(DASH,PLUS)+entry[1:]
-             entry = entry.split(DASH)
-
-             for x_temp in entry:
-                 if not x_temp.isnumeric():
-                     False
-             entry = [int(x_temp.replace(PLUS,DASH))
-                      for x_temp in entry]
-
-               
-    
-
-    for counter,x_temp in enumerate(entry):
-        if not isinstance(x_temp,int):
-            return False
-        if not (date_constraints[counter][0]
-                <= x_temp
-                <= date_constraints[counter][1]):
-            return False
-    if returndate:
-
-        if len(entry) == 3 or maxlen <= 3:
-            entry+=[1,1]
-            return datetime.date(entry[0],
-                                 entry[1],
-                                 entry[2])
-        elif len(entry) == 5 or maxlen <= 5:
-            entry+=[1,1,1,1]
-            return datetime.datetime(entry[0],
-                                     entry[1],
-                                     entry[2],
-                                     entry[3],
-                                     entry[4])
-        elif len(entry) == 7:
-            entry+=[1,1,1,1,1,1]
-            return datetime.datetime(entry[0],
-                                     entry[1],
-                                     entry[2],
-                                     entry[3],
-                                     entry[4],
-                                     entry[5],
-                                     entry[6])
-    
-    return True 
 
 
-
-def isindex(entry):
-
-    """Utility to test if input is the
-    string representation of an index"""
-
-    if not entry:
-        return False
-
-    if isinstance(entry,int):
-        return True
-
-    if isinstance(entry,str):
-        if '..' not in entry and \
-           entry[0] != '.' and \
-           entry[-1] != '.' and \
-           entry.replace('.',EMPTYCHAR).isnumeric():
-            return True
-
-    return False
 
 def check_hyperlinks(entry=[],purge=False):
 
@@ -341,7 +233,7 @@ def check_hyperlinks(entry=[],purge=False):
                         x_temp = notebook.default_dict['indextable'].get_assigned(x_temp)
                     returning.append(x_temp)
             
-            elif x_temp[0] == '#':
+            elif x_temp and x_temp[0] == '#':
                 if x_temp in notebook.default_dict['indextable'].all_from():
                     returning.append(x_temp)
 
@@ -512,81 +404,6 @@ def stack_input(query,stack_object):
     else:
         return input (query)
 
-def dummy(x_temp):
-
-
-    """#dummy function to be passed as argument"""
-
-    return x_temp
-
-
-
-def split_up_string(string,
-                    line_length=30):
-
-    """splits us a string into a series segments of less then line_length.
-    Used for displaying long sequences of keys/indexes in columns
-    """
-
-    if len(string) < line_length:
-        return [string]
-    returnlist = []
-    segments = string.split(COMMA)
-
-    length = 0
-    newline = EMPTYCHAR
-    for segment in segments:
-        if len(segment) > ((line_length * 2)/3):
-            if length > (line_length/3):
-                returnlist.append(newline
-                                  + COMMA
-                                  + BLANK)
-                returnlist.append(segment
-                                  + COMMA
-                                  + BLANK)
-                length = 0
-                newline = EMPTYCHAR
-            else:
-                returnlist.append(newline
-                                  + segment
-                                  + COMMA
-                                  + BLANK)
-                length = 0
-                newline = EMPTYCHAR
-        elif length + len(segment) <= line_length:
-            newline += segment + COMMA + BLANK
-            length += len(segment)
-        else:
-            returnlist.append(newline
-                              + segment
-                              + COMMA
-                              + BLANK)
-            length = 0
-            newline = EMPTYCHAR
-    if newline:
-        returnlist.append(newline)
-    if len(returnlist) > 0 and len(returnlist[-1]) > 2:
-        returnlist[-1] = returnlist[-1][:-2]
-
-    return returnlist
-
-
-
-
-def abridge (string,
-             maxlength=60,
-             overmark=BLANK+PERIOD*3+BLANK,rev=False):
-
-    """abridges a string if it is longer than maxlength"""
-    
-    if len(string) > maxlength:
-
-        if not rev:
-
-            return (string[0:maxlength]+overmark)
-        return overmark + string[-maxlength:]
-    else:
-        return string
 
 
 def split_up_range(string,
@@ -610,44 +427,6 @@ def split_up_range(string,
                               multip*seg_length+rem-1]))
     return returnlist
 
-def clip_date(date,include='ymd'):
-
-    """utily for clipping a date string
-    include = 'ymd*mhsx' shows the full date.
-    Even though you can show the year and the microsecond,
-    I can't think of any reason why you would want to!!!
-    """
-
-    if not isinstance(date,str):
-        date = str(date)
-
-    yearmonthday = date.split(BLANK)[0].split(DASH)
-    hourminutesecond = date.split(BLANK)[1].split(COLON)
-
-    leftinclude=include.split(STAR)[0]
-    year = yearmonthday[0]*('y' in leftinclude)
-    month = yearmonthday[1]*('m' in leftinclude)
-    day = yearmonthday[2]*('d' in leftinclude)
-
-    lefthalf = (year+DASH+month+DASH+day).lstrip(DASH).rstrip(DASH)
-    if STAR not in include:
-        return lefthalf 
-    rightinclude = include.split(STAR)[1]
-
-    hour = hourminutesecond[0]*('h' in rightinclude)
-    minute = hourminutesecond[1]*('m' in rightinclude)
-
-    second = hourminutesecond [2]
-    microsecond = EMPTYCHAR
-    if len(second.split(PERIOD)) > 1:
-        microsecond = second.split(PERIOD)[1]*('x' in rightinclude)
-    second = second.split(PERIOD)[0]*('s' in rightinclude)
-
-    return (lefthalf+BLANK+((hour+COLON+minute
-                           +COLON+second).lstrip(COLON).rstrip(COLON)
-                          +PERIOD+microsecond).rstrip(PERIOD)).lstrip()
-
-  
 
 def get_range(entryterm,
               orequal=True,
@@ -795,38 +574,8 @@ def get_keys_to_add(keys_to_add):
     return list(check_hyperlinks(keyset))
 
 
-def frequency_count(text):
 
 
-    """returns a histogram of the word
-    frequency count of text"""
-
-    returndictionary = {}
-    
-    if isinstance(text,str):
-        word_set = get_words(text)
-    else:
-        word_set = text
-    for word in word_set:
-        if word not in returndictionary:
-            returndictionary[word] = 1
-        else:
-            returndictionary[word] += 1
-    return returndictionary
-
-
-def concatenate(lista,
-                listb,
-                infix=EMPTYCHAR):
-
-
-    """Concatenates the strings from two lists,
-    joining them with index
-    """
-
-    return [a_temp+(infix*max([len(b_temp), 1]))
-            +b_temp for a_temp,
-            b_temp in product(lista, listb)]
 
 
 
@@ -1378,9 +1127,14 @@ def vertical_display (enterlist,
                 display += showlist[x_temp][y_temp] + VERTLINE
         display += '\n'
     return display
-            
-        
 
+def get_all_notebooks ():
+
+    db_cursor.execute("SELECT * FROM notebooks;")
+    temp_list = db_cursor.fetchall()
+    returnlist = [x[0] for x in temp_list]
+    return returnlist 
+ 
 
 def edit_keys (keyobject,
                displayobject=None,
@@ -9336,7 +9090,7 @@ class Console (Note_Shelf):
                     db_cursor.execute("SELECT notebook FROM notebooks")
                     filelist = list([i[0] for i in db_cursor.fetchall()])
                     if self.filename in filelist:
-                        nprint(self.filename+'ALREADY OPENED AS DATABASE')
+                        nprint(self.filename+' ALREADY OPENED AS DATABASE')
                         auto_database = True
                         self.using_shelf = False 
 
@@ -9716,7 +9470,6 @@ class Console (Note_Shelf):
             for x in temp_registers:
                 if POUND not in x:
                     to_delete.append(x)
-            print(to_delete)
             if to_delete:
                 if input('DELETE OLD TRANSPOSITION TABLE REGISTERS?') in YESTERMS:
                     if self.using_database:
@@ -10364,7 +10117,9 @@ class Console (Note_Shelf):
             self.addnew({'COMMANDMACROS'+str(s_input(queries.SUFFIX,
                                                      otherterms[0]))},
                         self.default_dict['commands'].show(returntext=True))
-                
+        elif mainterm in ['changegeneralknowledge']:
+             self.text_result = self.default_dict['generalknowledge'].console(otherterms[0])
+               
         elif mainterm in ['changekeydefinitions']:
             try:
                 self.default_dict['definitions'].console()
@@ -12615,6 +12370,8 @@ class Console (Note_Shelf):
                                                  many=True),keysonly=not predicate[0])
                 
     def copy_move_search_com (self,longphrase=False,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
+
+        global notebookname
         
         if mainterm in ['move','copy']:
                     copy_temp = False
@@ -12662,46 +12419,102 @@ class Console (Note_Shelf):
                                    all_children=all_children,
                                    withchildren=withchildren,
                                    copy=copy_temp)
-        elif mainterm in ['search', QUESTIONMARK]:
-            if not otherterms[0]:
-                print(SEARCHSCRIPT)
-            sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
+
+        elif self.using_database and mainterm in ['globalsearch'] or (mainterm in ['search','?'] and otherterms[0] and otherterms[0][0] == '{'):
+            
+            notebooks_to_search = []
+            old_usesequence  = self.usesequence
+            self.usesequence = False 
+            
+            
+            default_notebook = notebookname
+            display.noteprint(('NOTEBOOKS',','.join(get_all_notebooks())))
+
+            if mainterm in ['search','?']:
+
+                
+                notebooks_to_search = [x for x in otherterms[0][1:].split('}')[0].split(',') if x in get_all_notebooks()]
+                otherterms[0] = '}'.join(otherterms[0][1:].split('}')[1:])
+                
+                
+                
+            else:
+                if not otherterms[1]:
+                    notebooks_to_search = get_all_notebooks()
+                else:
+                    notebooks_to_search = [x for x in otherterms[1].split(',') if x in get_all_notebooks()]
+
+            display.noteprint(('SEARCH RANGE='+','.join(notebooks_to_search),'SEARCH PHRASE='+otherterms[0]))
+
+            for temp_notebook in notebooks_to_search:
+
+                
+
+                notebookname = temp_notebook
+                sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
                                               otherterms[0])))
-            display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))
-            if self.flipout:
-                self.default_dict['flipbook'] = [Index(a_temp)
-                                                     for a_temp in sr_temp[1] if a_temp!=0]
-                self.dd_changed=True
-                self.set_iterator(self.default_dict['flipbook'],flag=self.defaults.get('setitflag'))
+                
+                display.noteprint(('TOTAL RESULTS for '+temp_notebook+'!',str(len(sr_temp[1]))))
+
+                if predicate[0] or input('SHOW RESULTS?') in YESTERMS:
+
+                    self.last_results = rangelist.range_find([Index(a_temp)
+                                             for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+
+                    display.noteprint((labels.RESULT_FOR
+                                       +formkeys(sorted(list(sr_temp[2]))),
+                                       rangelist.range_find([Index(a_temp)
+                                                             for a_temp in sr_temp[1]
+                                                             if a_temp!=0],
+                                                            reduce=True,
+                                                            compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
+            notebookname = default_notebook
+            self.usesequence = old_usesequence
+                           
+        elif mainterm in ['search', QUESTIONMARK]:
 
             
-            self.last_results = rangelist.range_find([Index(a_temp)
-                                                     for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
-
-            display.noteprint((labels.RESULT_FOR
-                               +formkeys(sorted(list(sr_temp[2]))),
-                               rangelist.range_find([Index(a_temp)
-                                                     for a_temp in sr_temp[1]
-                                                     if a_temp!=0],
-                                                    reduce=True,
-                                                    compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
-            #formkeys(sorted(list(sr_temp[2])))
-
-            if predicate[0]:
-                self.showall(sr_temp[1], highlight=sr_temp[2],show_date=self.defaults.get('showdate'))
-            if predicate[1]:
                 
-                determinant = self.defaults.get('determinant')
-                
-                if not predicate[2] and determinant in self.default_dict['date_dict']:
-                    self.default_dict['date_dict'][determinant].clear()
+                if not otherterms[0]:
+                    print(SEARCHSCRIPT)
+                sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
+                                                  otherterms[0])))
+                display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))
+                if self.flipout:
+                    self.default_dict['flipbook'] = [Index(a_temp)
+                                                         for a_temp in sr_temp[1] if a_temp!=0]
                     self.dd_changed=True
+                    self.set_iterator(self.default_dict['flipbook'],flag=self.defaults.get('setitflag'))
+
                 
-                self.find_dates_for_keys_in_indexes(entrylist=sr_temp[1],
-                                                    determinant=determinant,
-                                                    flag='i'*predicate[3])
-                self.show_date_dictionary(determinant=determinant,
-                                          func=self.default_dict['purge'].apply)
+                self.last_results = rangelist.range_find([Index(a_temp)
+                                                         for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+
+                display.noteprint((labels.RESULT_FOR
+                                   +formkeys(sorted(list(sr_temp[2]))),
+                                   rangelist.range_find([Index(a_temp)
+                                                         for a_temp in sr_temp[1]
+                                                         if a_temp!=0],
+                                                        reduce=True,
+                                                        compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
+                #formkeys(sorted(list(sr_temp[2])))
+
+                if predicate[0]:
+                    self.showall(sr_temp[1], highlight=sr_temp[2],show_date=self.defaults.get('showdate'))
+                if predicate[1]:
+                    
+                    determinant = self.defaults.get('determinant')
+                    
+                    if not predicate[2] and determinant in self.default_dict['date_dict']:
+                        self.default_dict['date_dict'][determinant].clear()
+                        self.dd_changed=True
+                    
+                    self.find_dates_for_keys_in_indexes(entrylist=sr_temp[1],
+                                                        determinant=determinant,
+                                                        flag='i'*predicate[3])
+                    self.show_date_dictionary(determinant=determinant,
+                                              func=self.default_dict['purge'].apply)
+
 
         elif mainterm in ['text']:
             results = []
@@ -13505,7 +13318,7 @@ class Console (Note_Shelf):
             mainterm = biginputterm.split(COLON)[0]
             longphrase = True
             for i_temp, term in enumerate(biginputterm.split(COLON)[1].split(SEMICOLON)):
-                otherterms[i_temp] = term
+                otherterms[i_temp] = unformat_text_output(term)
                 totalterms += 1
         else:
             # if a list of keywords 
@@ -13535,7 +13348,7 @@ class Console (Note_Shelf):
                      display.noteprint(('/C/ '+mainterm, self.variables[mainterm]))
                      self.key_results = EMPTYCHAR
                 elif self.text_result:
-                    self.variables[mainterm] = self.text_result
+                    self.variables[mainterm] = unformat_text_output(self.text_result)
                     self.text_result = EMPTYCHAR
                     display.noteprint(('/C/ '+mainterm,
                                            self.variables[mainterm]))
@@ -14003,7 +13816,6 @@ class Console (Note_Shelf):
         elif mainterm in ['showprojects']:
 
             temp_dict = self.default_dict['projects'].return_dict()
-            print(temp_dict)
             self.show_projects(projectobject=temp_dict)
 
         elif mainterm in ['showarchivedprojects']:
@@ -14159,6 +13971,7 @@ class Console (Note_Shelf):
             self.dd_changed = False
 
         db_connection.commit()
+        self.text_result = format_text_output(self.text_result)
 
         return continuelooping, \
                skipped, lastup, next_up, \
@@ -14443,12 +14256,10 @@ while bigloop:
 
             if not register.is_open(notebookname) or inp_temp == 'o':
 
-##                if add_new_notebook:
-##                    try:
-##                        db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
-##                        db_connection.commit()
-##                    except:
-##                        pass
+                if add_new_notebook:
+                    db_cursor.execute("INSERT OR REPLACE INTO notebooks (notebook) VALUES (?);",(notebookname,))
+                    db_connection.commit()
+
 
                 if bigloop and add_new_notebook:
                     if command_stack.size() > 0:
@@ -14769,13 +14580,13 @@ while bigloop:
             else:
                 allnotebooks[notebookname].using_database = False
                 allnotebooks[notebookname].using_shelf = True
-        if input("Load projects from database?") in YESTERMS:
-                    db_cursor.execute("SELECT projectfile FROM projects WHERE notebook=?;",(notebookname,))
-                    
-                    text = db_cursor.fetchone()[0]
-                    if text:
-                        allnotebooks[notebookname].default_dict['projects'].import_string(text)
-                        display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
+##        if input("Load projects from database?") in YESTERMS:
+##                    db_cursor.execute("SELECT projectfile FROM projects WHERE notebook=?;",(notebookname,))
+##                    
+##                    text = db_cursor.fetchone()[0]
+##                    if text:
+##                        allnotebooks[notebookname].default_dict['projects'].import_string(text)
+##                        display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                    
      
 

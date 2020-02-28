@@ -6,9 +6,16 @@ import shelve
 from globalconstants import SLASH
 from printcomplexobject import print_complex_object
 import sqlite3
+from displaylist import DisplayList
+from display import Display
+from globalconstants import YESTERMS
 
 
-
+relation_table = {1:'DIRECTED',
+                  2:'NONDIRECTED',
+                  3:'ATTRIBUTE',
+                  4:'RECIPROCAL',
+                  5:'COMPLEX'}
 
 def listprint(x):
      returntext = ''
@@ -41,6 +48,7 @@ class GeneralizedKnowledge:
 
           self.using_database = using_database
           self.using_shelf = using_shelf
+          self.displayobject = Display()
 
           if filename:
                self.notebookname = filename
@@ -190,30 +198,105 @@ class GeneralizedKnowledge:
           """)
 
           
-     def expose (self):
+     def expose (self,formated=False,all_notebooks=False,to_show=None,exporting=False):
+
+          result_dict = {}
+          if not to_show:
+               formatting = ['nodes','relations','converses','complexes','knowledge']
+          else:
+               formatting = to_show
+          returnlist = []
+
+          def all_caps (x):
+               return ''.join([y.upper() for y in x])
+
+          def get_content (enterlist,term):
+
+               for x in enterlist:
+                    print(term,x[1],x[2])
+                    if x[1] == term:
+                         return x[2]
+               return ''
+          
 
           if self.using_database:
 
-               self.db_cursor.execute("SELECT * FROM knowledge")
-               print('   KNOWLEDGE       ')
-               print(self.db_cursor.fetchall())
-               print()
-               self.db_cursor.execute("SELECT * FROM relations")
-               print('   RELATIONS      ')
-               print(self.db_cursor.fetchall())
-               print()
-               self.db_cursor.execute("SELECT * FROM converses")
-               print('   CONVERSES     ')
-               print(self.db_cursor.fetchall())
-               print()
-               self.db_cursor.execute("SELECT * FROM nodes")
-               print('   NODES      ')     
-               print(self.db_cursor.fetchall())
-               print()
-               self.db_cursor.execute("SELECT * FROM complexes")
-               print('   COMPLEXES     ')
-               print(self.db_cursor.fetchall())
-               print()
+               if not all_notebooks:
+
+                    self.db_cursor.execute("SELECT * FROM knowledge WHERE notebook=?",(self.notebookname,))
+                    result_dict['knowledge'] = self.db_cursor.fetchall()               
+                    self.db_cursor.execute("SELECT * FROM relations WHERE notebook=?",(self.notebookname,))
+                    result_dict['relations'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM converses WHERE notebook=?",(self.notebookname,))
+                    result_dict['converses'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM nodes WHERE notebook=?",(self.notebookname,))
+                    result_dict['nodes'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM complexes WHERE notebook=?",(self.notebookname,))
+                    result_dict['complexes'] = self.db_cursor.fetchall()
+
+               else:
+                    self.db_cursor.execute("SELECT * FROM knowledge")
+                    result_dict['knowledge'] = self.db_cursor.fetchall()               
+                    self.db_cursor.execute("SELECT * FROM relations")
+                    result_dict['relations'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM converses")
+                    result_dict['converses'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM nodes")
+                    result_dict['nodes'] = self.db_cursor.fetchall()
+                    self.db_cursor.execute("SELECT * FROM complexes")
+                    result_dict['complexes'] = self.db_cursor.fetchall()
+                    
+
+               if exporting and not all_notebooks:
+
+                         returnlist.append(','.join([x[1] for x in result_dict['nodes']]))
+                         for item in result_dict['relations']:
+                              if item[2] in [1,2,3]:
+                                   returnlist.append(item[1]+':'+relation_table[item[2]])
+                              elif item[2] == 4:
+                                   returnlist.append(item[1]+':'+'RECIPROCAL'+';'+get_content(result_dict['converses'],item[1]))
+                              else:
+                                   returnlist.append(item[1]+':'+'COMPLEX'+';'+get_content(result_dict['complexes'],item[1]))
+                         for item in result_dict['knowledge']:
+                              returnlist.append(item[1]+':'+item[2]+';'+item[3])
+                         return '\n'.join(returnlist)
+                         
+                         
+
+               
+               for dict_type in formatting:
+
+                    
+                    returnlist.append('')
+                    returnlist.append(all_caps(dict_type))
+                    returnlist.append('')
+
+                    
+
+                    for item in result_dict[dict_type]:
+                         line = ''
+
+                         
+                         for counter, member in enumerate(item):
+                              if (counter == 0 and all_notebooks) or (counter > 0):
+                                   if isinstance(member,int):
+                                        member = relation_table[member]
+                                        
+                                   line += member + ('|'*all_notebooks+':;;;')[counter]
+                         if line:
+                              line = line[0:-1]
+                         returnlist.append('   '+line)
+
+                    
+               if formated:
+                    return '\n'.join(returnlist)
+               else:
+                    print('\n'.join(returnlist))
+                    
+
+                         
+
+               
 
           if self.using_shelf:
 
@@ -222,7 +305,83 @@ class GeneralizedKnowledge:
                print(self.converses)
                print(self.complexes)
 
-               
+     def console (self,enter_text=None):
+
+          phrase_terms = {'n':'nodes',
+                          'r':'relations',
+                          'k':'knowledge',
+                          'c':'converses',
+                          'x':'complexes'}
+
+          go_on = True 
+
+          while go_on:
+               console = DisplayList(['(E)nter',
+                                      '(?)+PHRASE',
+                                      '(A)ll',
+                                      '(N)odes',
+                                      '(R)elations',
+                                      '(K)nowledge',
+                                      '(C)onverses',
+                                      'Comple(X)',
+                                      'C(L)ear)',
+                                      '(Q)uit',
+                                      'ex(P)ort',
+                                      '(I)nport'],
+                                        displayobject=self.displayobject)
+               i = input()
+               if i and i[0] != '?':
+                    i = ''.join([x.lower() for x in i])
+
+               if not i:
+                    pass
+
+               elif i[0] == 'e' or i[0] == '?':
+                    if i[0] == '?':
+                         i=i[1:]
+                    else:
+                         i=input('?')
+                    returned = self.text_interpret(i)
+                    self.displayobject.noteprint((returned[0],returned[1]))
+               elif i[0] == 'a':
+                    self.displayobject.noteprint(('',self.expose(formated=True,
+                                                      all_notebooks=False,
+                                                      to_show=None)))
+                    
+               elif i[0] == 'q':
+                    go_on = False
+
+               elif i[0] == 'p':
+                    temp_result = self.expose(exporting=True)
+                    self.displayobject.noteprint(('',temp_result))
+                    return temp_result
+
+               elif i[0] == 'i':
+                    if input('ARE YOU SURE?') in YESTERMS:
+                         
+                         if enter_text:
+
+                              for x in enter_text.split('\n'):
+                                   self.text_interpret(x)
+                                   
+                              
+
+               elif i[0] == 'l':
+                    if input('Are you sure?') in YESTERMS:
+                         self.clear()
+
+
+               else:
+                    phrase = []
+                    for x in i:
+                         if x in phrase_terms:
+                              phrase.append(phrase_terms[x])
+                    
+                         
+                         self.displayobject.noteprint(('',self.expose(formated=True,
+                                                           all_notebooks=False,
+                                                           to_show=phrase)))
+          return ''
 
      def query (self,
                 phrase=None,
@@ -446,8 +605,12 @@ class GeneralizedKnowledge:
                                    self.db_cursor.execute("DELETE FROM nodes "+
                                                           " WHERE notebook=? and node=?;",
                                                           value_tuple)
+                                   self.db_cursor.execute("DELETE FROM knowledge "+
+                                                          "WHERE notebook=? and node=?;",
+                                                          value_tuple)
 
                                    self.db_connection.commit()
+                                   
                                    
 
                               elif term1 == 'relations':
@@ -805,18 +968,52 @@ class GeneralizedKnowledge:
 
      def clear (self):
 
-          def empty_shelf(shelfobject):
+          if self.using_shelf:
 
-               for key in list(shelfobject.keys()):
-                    del shelfobject[key]
+               def empty_shelf(shelfobject):
 
-          if input('DO YOU REALLY WANT TO CLEAR THE ENTIRE KNOWLEDGE SHELF?? Type "yes" to continue!') == 'yes':
-               empty_shelf(self.knowledge)
-               empty_shelf(self.relations)
-               empty_shelf(self.converses)
-               empty_shelf(self.complexes)
+                    for key in list(shelfobject.keys()):
+                         del shelfobject[key]
 
-          print('DELETED')
+               if input('DO YOU REALLY WANT TO CLEAR THE ENTIRE KNOWLEDGE SHELF?? Type "yes" to continue!') == 'yes':
+                    empty_shelf(self.knowledge)
+                    empty_shelf(self.relations)
+                    empty_shelf(self.converses)
+                    empty_shelf(self.complexes)
+
+               print('DELETED')
+
+          if self.using_database:
+
+               value_tuple = (self.notebookname,)
+          
+               self.db_cursor.execute("DELETE FROM nodes "+
+                                      " WHERE notebook=?;",
+                                      value_tuple)
+               
+               self.db_cursor.execute("DELETE FROM knowledge "+
+                                      "WHERE notebook=?;",
+                                      value_tuple)
+
+
+
+               self.db_cursor.execute("DELETE FROM relations"+
+                                      " WHERE notebook=?;",
+                                      value_tuple)
+
+
+               self.db_cursor.execute("DELETE FROM converses"+
+                                      " WHERE notebook=?;",
+                                      value_tuple)
+               
+
+
+               self.db_cursor.execute("DELETE FROM complexes"+
+                                      " WHERE notebook=?;",
+                                      value_tuple)
+               self.db_connection.commit()
+
+
 
      def node_exists (self,node):
 
@@ -938,11 +1135,7 @@ class GeneralizedKnowledge:
                if typeof is None or self.query(term1='relations',
                                                term2=relation,
                                                action='get') == typeof:
-                    returnlist.append(relation + ' = ' + {1:'DIRECTED',
-                                                          2:'NONDIRECTED',
-                                                          3:'ATTRIBUTE',
-                                                          4:'RECIPROCAL',
-                                                          5:'COMPLEX'}[self.query(term1='relations',
+                    returnlist.append(relation + ' = ' + relation_table[self.query(term1='relations',
                                                                                   term2=relation,
                                                                                   action='get')])
           return returnlist
@@ -1034,6 +1227,20 @@ class GeneralizedKnowledge:
           for n_temp in self.query(term1='knowledge',
                                    action='get'):
 
+##               if n_temp == node:
+##
+##                    for relation in list(self.query(term1='knowledge',
+##                                               term2=n_temp,
+##                                               action='get')):
+##                         print('xx',relation)
+##                         for node2  in list(self.query(term1='knowledge',
+##                                                  term2=node,
+##                                                  term3=relation,action='get')):
+##                              print('xxx',node2)
+##                              
+##                              print(self.delete_directed_edge (relation,node,node2))
+
+
                for relation in list(self.query(term1='knowledge',
                                                term2=n_temp,
                                                action='get')):
@@ -1041,8 +1248,10 @@ class GeneralizedKnowledge:
                     if self.query(term1='knowledge',
                                   term2=n_temp,
                                   term3=relation,
-                                  term4=node):
-                         self.delete_directed_edge (relation,n_temp,node)
+                                  term4=node,
+                                  action='in'):
+                         print(self.delete_directed_edge (relation,n_temp,node))
+                    
 
      def add_directed_edge (self,
                             relation,
@@ -1365,11 +1574,7 @@ class GeneralizedKnowledge:
           for key in self.query(term1='knowledge',action='get'):
                complement = ''
 
-               relation_type = {1:'DIRECTED',
-                                2:'NONDIRECTED',
-                                3:'ATTRIBUTE',
-                                4:'RECIPROCAL',
-                                5:'COMPLEX'}[self.query(term1='relations',
+               relation_type = relation_table[self.query(term1='relations',
                                                         term2=key,
                                                         action='get')]
 
@@ -1833,6 +2038,7 @@ if __name__ == '__main__':
 
 
      b = GeneralizedKnowledge(find_paths=True)
+     b.console()
 ##
 ##     while True:
 ##
@@ -1843,28 +2049,28 @@ if __name__ == '__main__':
 ##          b.expose()
           
 
-     while True:
-          x= input('?')
-          print(listprint(b.text_interpret(x)))
-          b.expose()
-          
- 
-
-          if not x:
-               break
-
-          if x=='?':
-               while True:
-                    
-                    y = input('???')
-                    if '/' in y:
-                         print(b.find_nodes_with_attributes(y.split('/')[0],y.split('/')[1]))
-
-                    if not y:
-                         break
-
-     b.close()
-                    
+##     while True:
+##          x= input('?')
+##          print(listprint(b.text_interpret(x)))
+##          print(b.expose(formated=True))
+##          
+## 
+##
+##          if not x:
+##               break
+##
+##          if x=='?':
+##               while True:
+##                    
+##                    y = input('???')
+##                    if '/' in y:
+##                         print(b.find_nodes_with_attributes(y.split('/')[0],y.split('/')[1]))
+##
+##                    if not y:
+##                         break
+##
+##     b.close()
+##                    
                     
           
      
