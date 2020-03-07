@@ -291,6 +291,8 @@ $ to replace entered line with new line without EOL.
 ~| to quit and edit."""
 
 
+
+
 FORMATTINGSCRIPT = """
 /BREAK/ to ADD a BREAK.
 /NEW/ to divide into a SEPARATE NOTE.
@@ -310,6 +312,16 @@ _ to separate columns on the line.
 
 
 """
+TRUTHSCRIPT = "          TRUTH TABLE GENERATOR    **"+\
+              "         by Anthony Curtis Adler***"+\
+              "     ENTER A PHRASE TO INTERPRET *"+\
+              "     USING THE FOLLOWING SYMBOLS:**"\
+              "AND,and,&,^                = LOGICAL AND *"+\
+              "OR,or,V,|                  = LOGICAL OR *"+\
+              "iff,is equivalent to,<>    = LOGICAL EQUIVALENCY*"+\
+              ">,=>,->,implies            = LOGICAL IMPLICATION*"+\
+              "-,~                        = NEGATION*"+\
+              "[] ()                      = BRACKETS***"
 
 
 SEARCHSCRIPT = """

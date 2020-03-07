@@ -28,7 +28,7 @@ import _pickle as pickle
 
 from abbreviate import Abbreviate                                       #pylint 9.63/10
 from globalconstants import BOX_CHAR,\
-     INTROSCRIPT, ENTERSCRIPT, FORMATTINGSCRIPT, SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
+     INTROSCRIPT, ENTERSCRIPT, TRUTHSCRIPT, FORMATTINGSCRIPT, SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
      SMALLWORDS, LEFTNOTE, RIGHTNOTE, EOL, TAB,\
      BLANK, VERTLINE, DOLLAR, PERCENTAGE, EMPTYCHAR, EXCLAMATION,\
      COMMA, EQUAL, QUESTIONMARK, PERIOD, COLON, SEMICOLON, VOIDTERM, PLUS, \
@@ -73,6 +73,7 @@ import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
 from orderedlist import OrderedList, convert_to_type
+import simple_parser as parser
 import pointerclass                                                     #pylint 9.62/10
 from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      BREAKTERMS, NEWTERMS, QUITALLTERMS, QUITTERMS, YESTERMS, NOTERMS, ADDTERMS,\
@@ -95,6 +96,7 @@ import stack                                                            #pylint 
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
+from truth_table import truth_table
 import random
 ##client = False
 try:
@@ -1130,6 +1132,9 @@ def vertical_display (enterlist,
 
 def get_all_notebooks ():
 
+    """Returns a list of all the notebooks in the database"""
+
+
     db_cursor.execute("SELECT * FROM notebooks;")
     temp_list = db_cursor.fetchall()
     returnlist = [x[0] for x in temp_list]
@@ -1813,6 +1818,8 @@ class Note_Shelf:
                           dictionaryobject=None,
                           reverse=False):
 
+        """Returns a list of X=number of the most common words"""
+
         if not dictionaryobject:
             dictionaryobject = self.word_dict 
 
@@ -1839,6 +1846,9 @@ class Note_Shelf:
                 abridged=False,
                 always=False):
 
+
+        """discovers the deepest level of any index across the given range"""
+
         if not always:
         
             if abridged and self.abr_maxdepth_found>0:
@@ -1846,7 +1856,6 @@ class Note_Shelf:
             if not abridged and self.maxdepth_found>0:
                 return self.maxdepth_found
 
-        """discovers the deepest level of any index across the given range"""
 
         if entrylist is None:
             entrylist = self.default_dict['indexlist_indexes'].list
@@ -1935,6 +1944,8 @@ class Note_Shelf:
 
 
             if POUND not in str(indexfrom)+str(indexto):
+                # For a range of indexes. 
+                
                 if isinstance(indexfrom, (str, int)):
                     indexfrom = Index(index_expand(indexfrom))
                 if isinstance(indexto, (str, int)):
@@ -1956,6 +1967,7 @@ class Note_Shelf:
                 return x_temp
  
             else:
+                # For a range of dates.
                 if POUND in str(indexfrom) and POUND in str(indexto) and \
                    isinstance(indexfrom,str) and isinstance(indexto,str):
                     
@@ -1975,7 +1987,6 @@ class Note_Shelf:
                 indexfrom = self.indexes()[0]
             if not indexto:
                 indexto = self.indexes()[-1]
-
             if withinrange is None:
                 withinrange = self.indexes()
             if POUND not in str(indexfrom)+str(indexto):
@@ -2118,6 +2129,8 @@ class Note_Shelf:
                   meta_only=None,
                   text_only=None):
 
+        """Enters a note into the notebook"""
+
         # USING SHELF
         
         if note:
@@ -2201,6 +2214,8 @@ class Note_Shelf:
     def delete_note (self,
                      index):
 
+        """Deletes a note from the notebook"""
+
         if self.using_shelf:
 
             try:
@@ -2234,6 +2249,11 @@ class Note_Shelf:
 
     def get_note (self,
                   index):
+
+        """Fetches a note from sqlite database or shelf."""
+
+
+        
 
         if self.using_database:
             aprint('GETTING NOTE')
@@ -2308,6 +2328,8 @@ class Note_Shelf:
     def key_dict_contains (self,
                            key):
 
+        """Returns true if key is in keydictionary"""
+
         
     
         if self.using_database:
@@ -2331,6 +2353,8 @@ class Note_Shelf:
     def tag_dict_contains (self,
                            tag):
 
+        """REturns true if tag in tag dictionary"""
+
         
     
         if self.using_database:
@@ -2351,6 +2375,8 @@ class Note_Shelf:
 
     def word_dict_contains (self,
                            word):
+
+        """Returns true if word in word dictionary"""
 
         
     
@@ -2376,6 +2402,8 @@ class Note_Shelf:
 
     def get_all_indexes (self):
 
+        """Returns all indexes in notebook"""
+
         
         if self.using_database:
             aprint('GET ALL INDEXES')
@@ -2395,6 +2423,8 @@ class Note_Shelf:
     def get_keys_from_note (self,
                       index):
 
+        """Returns the keys for a given note"""
+
         if self.using_database:
             aprint('GETTING KEYS FROM NOTE')
             value_tuple = (notebookname, str(index),)
@@ -2412,6 +2442,8 @@ class Note_Shelf:
 
     def get_text_from_note (self,
                             index):
+
+        """Returns the text for a given note."""
 
         if self.using_database:
             aprint('GETTING TEXT DROM NOTE')
@@ -2432,6 +2464,8 @@ class Note_Shelf:
 
     def get_metadata_from_note (self,
                                 index):
+
+        """Returns the metadata for a note"""
 
         if self.using_database:
             aprint('GET METADATA')
@@ -2476,6 +2510,8 @@ class Note_Shelf:
 
     def get_keys(self):
 
+        """Returns all the keys in the notebook."""
+
         #using database
         
         if self.using_database:
@@ -2496,6 +2532,10 @@ class Note_Shelf:
         return self.key_dict.keys()
 
     def get_tags(self):
+
+        """Returns all the tags in the notebook"""
+
+        
 
         #using database
         
@@ -2518,6 +2558,8 @@ class Note_Shelf:
 
     def get_words(self):
 
+        """Returns all the words in the notebook."""
+
         #using database
         
         if self.using_database:
@@ -2537,6 +2579,8 @@ class Note_Shelf:
         return self.word_dict.keys()
 
     def get_keys_for_tag(self,tag):
+
+        """Returns keys for a given tag."""
 
         #using database
         if self.using_database:
@@ -2560,6 +2604,8 @@ class Note_Shelf:
 
 
     def add_key(self,key,index):
+
+        """Add a key at an index to the notebook."""
 
         #with shelf
 
@@ -2590,6 +2636,8 @@ class Note_Shelf:
 
     def add_word(self,word,index):
 
+        """Add a word at a given index to the notebook."""
+
         #with shelf
         if self.using_shelf:
 
@@ -2618,6 +2666,8 @@ class Note_Shelf:
 
     def initiate_new_word(self,word,index):
 
+        """For a word that has not yet been entered into the notebook."""
+
         #with shelf
         if self.using_shelf:
 
@@ -2640,6 +2690,8 @@ class Note_Shelf:
         
 
     def add_tag (self,tag,key):
+
+        """Add a tag for a given key to the notebook."""
 
         #with shelf
         
@@ -2667,6 +2719,8 @@ class Note_Shelf:
         
 
     def discard_index_from_key(self,key,index):
+
+        """Remove an index from a given key."""
 
         # with shelf
         if self.using_shelf:
@@ -2701,6 +2755,8 @@ class Note_Shelf:
 
     def remove_index_from_word(self,word,index):
 
+        """Remove an index from a given word."""
+
         # with shelf
         if self.using_shelf:
 
@@ -2733,6 +2789,8 @@ class Note_Shelf:
 
     def discard_index_from_word(self,word,index):
 
+        """Remove an index for a gien word."""
+
         # with shelf
         if self.using_shelf:
 
@@ -2763,12 +2821,16 @@ class Note_Shelf:
 
     def delete_word(self,word):
 
+        """Delete a word from a notebook."""
+
         # with shelf
         if self.using_shelf:
         
             del self.word_dict[word]
 
     def discard_key_from_tag(self,tag,key):
+
+        """Remove a key from a given tag."""
 
         # with shelf
         if self.using_shelf:
@@ -2787,11 +2849,16 @@ class Note_Shelf:
 
     def delete_tag(self,tag):
 
+
+        """Delete a tag from the notebook (Only with the shelf)."""
+
         # with shelf
         if self.using_shelf:
             del self.tag_dict[tag]
         
     def remove_index_from_key(self,key,index):
+
+        """Remove an index from a key"""
 
         #with shelf
         if self.using_shelf:
@@ -2822,6 +2889,8 @@ class Note_Shelf:
 
     def initiate_new_key (self,key,index):
 
+        """Initiate a new key in the notebook."""
+
         #with shelf
         if self.using_shelf:
 
@@ -2846,6 +2915,8 @@ class Note_Shelf:
 
     def initiate_new_tag (self,tag,key):
 
+        """Initiate a new tag in the notebook."""
+
         #with shelf
         if self.using_shelf:
             self.tag_dict[tag] = {key}
@@ -2863,6 +2934,8 @@ class Note_Shelf:
 
 
     def get_indexes_for_key (self,key):
+
+        """Return indexes for a given key."""
         
         if self.using_database:
             aprint('GETTING INDEXES FOR KEY')
@@ -2881,6 +2954,8 @@ class Note_Shelf:
         return self.key_dict[str(key)]
 
     def get_indexes_for_word (self,word):
+
+        """Return indexes for a given word."""
         
         if self.using_database:
             value_tuple = (notebookname,word,)
@@ -2900,6 +2975,8 @@ class Note_Shelf:
 
     def eliminate_key (self,key):
 
+        """Remove a key from the notebook."""
+
         if self.using_shelf:
 
             del self.key_dict[str(key)]
@@ -2910,6 +2987,8 @@ class Note_Shelf:
 ##            db_cursor.execute("DELETE FROM all_keys WHERE notebook=? AND keyword=?;",value_tuple)   
 
     def key_dict_values (self):
+
+        """Returns all the indexes for keys, corresponding to the values in the keydictionary"""
 
         if self.using_database:
             value_tuple = (notebookname,)
@@ -2926,6 +3005,8 @@ class Note_Shelf:
         return self.key_dict.values()
 
     def tag_dict_values (self):
+
+        """Returns all the indexes for tags, corresponding to the values in the keydictionary"""
 
         if self.using_database:
             value_tuple = (notebookname,)
@@ -2945,9 +3026,13 @@ class Note_Shelf:
 
     def get_key_dict (self):
 
+        """Return the keydictionary"""
+
         return self.key_dict
 
     def dumpprojects (self):
+
+        """Saves projects transformed into text."""
 
         
 
@@ -7167,7 +7252,16 @@ class Note_Shelf:
 
 
         query = nformat.reduce_blanks(query)
+
+        
         termlist = sorted(set(query.strip().split(BLANK)))
+
+        parsed_query = parser.parse(querycopy)
+        if isinstance(parsed_query,str):
+            parsed_query = [parsed_query]
+        
+
+        
 
 
         termlist.reverse()
@@ -7242,7 +7336,11 @@ class Note_Shelf:
         upto = len(termlista)
         result_temp = set()
 
+        universe = {}
+
         for counter, term in enumerate(termlista+termlistb):
+
+            unmodified_term = term 
 
 
             if not counter < upto:  #for the words
@@ -7369,10 +7467,6 @@ class Note_Shelf:
                         if not not_term:
                             pass
 
-##                if not term:                
-##                    if not temp_set:
-##                        temp_set = searchset
-##                        print(word,len(temp_set))
 
             else:   #if it is not 
 
@@ -7401,76 +7495,12 @@ class Note_Shelf:
                             else:
                                 temp_set = temp_set.intersection(set(self.indexes()))
 
-            temp_set = temp_set.intersection(searchset)
+##            temp_set = temp_set.intersection(searchset)
+            universe[unmodified_term] = temp_set.intersection(searchset)
 
-            if termcopy not in [ANDSIGN,
-                                VERTLINE,
-                                'intersection',
-                                '.union',
-                                'set']:
-
-                querycopy = querycopy.replace(termcopy,
-                                              str(temp_set).replace(LEFTCURLY,
-                                                                    '({').replace(RIGHTCURLY,'})'))
-            
-            querycopy = querycopy.replace(ANDSIGN, '.intersection')
-            querycopy = querycopy.replace(VERTLINE, '.union')
-            querycopy = querycopy.replace('set()', '({0})')
-            while ('.union.union' in querycopy
-                   or '.intersection.intersection' in querycopy):
-                querycopy = querycopy.replace('.union.union',
-                                              '.union')
-                querycopy = querycopy.replace('.intersection.intersection',
-                                              '.intersection')
-            while BLANK+BLANK in querycopy:
-                querycopy = querycopy.replace(BLANK+BLANK, BLANK)
-            querycopy = querycopy.replace(')(', ').union(')
-
-
-        if is_regular(querycopy):
-
-            result = (eval(querycopy))-{0}
-            if result == set():
-                result = {0}
-            if foundterms == set():
-                foundterms = {'VOID'}
-            
-            
-            self.searchlog.append((querycopy2,
-                                   result,
-                                   foundterms))
-            
-            return query, result, foundterms
-        if len(querycopy) > 2000:
-            len_temp = int(len(querycopy)/1000)
-            for x_temp in range(1000):
-                try:
-                    q_temp = querycopy[x_temp*len_temp:(x_temp+1)*len_temp]
-                    for a_temp in [PERIOD,
-                           DASH,
-                           BLANK,
-                           LEFTPAREN,
-                           RIGHTPAREN,
-                           LEFTCURLY,
-                           RIGHTCURLY,
-                           COMMA,
-                           'intersection',
-                           'union',
-                           'set',
-                           "'"]:
-                        q_temp = q_temp.replace(a_temp,BLANK)
-                    for a_temp in '0123456789':
-                        q_temp = q_temp.replace(a_temp,BLANK)
-                    q_temp = q_temp.strip()
-                        
-                    if q_temp:
-                        nprint(q_temp)
-                except:
-                    nprint('too big')
-
-        display.noteprint((EMPTYCHAR,alerts.NOT_REGULAR))
-
-        return query, set(), foundterms
+        result = parser.interpret(parsed_query,universe=universe)
+        
+        return query, result, foundterms
 
 
     def cluster(self,
@@ -8684,7 +8714,7 @@ class histogram:
             else:
                 shown_indexes = formkeys({abridge(index_reduce(x_temp),
                                                       maxlength=20)
-                                              for x_temp in x_temp[1]},reduce=(len(x_temp[1])>100))
+                                              for x_temp in x_temp[1]})
             
                 
             if len(shown_indexes) < 20:
@@ -10547,7 +10577,18 @@ class Console (Note_Shelf):
 
                 
 
-                
+        if mainterm in ['truthtable']:
+
+
+            display.noteprint(('TRUTH TABLE',TRUTHSCRIPT.replace('*','\n')),
+                              param_width=60,
+                              override=True)
+            query = s_input('?',otherterms[0])
+
+            self.text_result = truth_table(query)
+            display.noteprint(('TRUTH TABLE FOR '+query,self.text_result))
+            
+            
 
         if mainterm in ['cleargeneralknowledge']:
         
@@ -14191,10 +14232,9 @@ while bigloop:
  
     
     while (add_new_notebook and not isinstance(flagvalue, str)) or  not successful:
-            successful = False 
+            successful = False  # True when a notebook succesfully initiated 
 
 
-##        try:
             add_new_notebook = True
             notebookname = prefix+'defaultnotebook'
             flagvalue = 'w'
@@ -14203,6 +14243,7 @@ while bigloop:
             if command_stack.size() > 0 or inputterm not in list(NOTERMS) + list(QUITTERMS):
                 if command_stack.size() > 0:
                     notebookname = command_stack.pop()
+                    
                     if SLASH in notebookname:
                         flagvalue = notebookname.split(SLASH)[0]
                         notebookname = notebookname.split(SLASH)[1]
@@ -14212,9 +14253,7 @@ while bigloop:
                             
                     else:
                         flagvalue = 'c'
-                else:
-
-                
+                else:           
                     nb_temp = get_file_name(file_path=os.altsep + 'notebooks',
                                             file_suffix='ND.dat',
                                             file_prefix=prefix,
@@ -14580,6 +14619,7 @@ while bigloop:
             else:
                 allnotebooks[notebookname].using_database = False
                 allnotebooks[notebookname].using_shelf = True
+
 ##        if input("Load projects from database?") in YESTERMS:
 ##                    db_cursor.execute("SELECT projectfile FROM projects WHERE notebook=?;",(notebookname,))
 ##                    

@@ -334,7 +334,8 @@ saveconfigurations| |save configurations
 loadconfigurations| |load configurations
 dumpprojects | |save a backup textfile of projects
 loadprojects | |load a backup textfile of projects
-clearprojects | |clear existing projects 
+clearprojects | |clear existing projects
+truthtable |string |generates a truth table for a logical expression
 ||
 """
 HYPERLINKS = """
@@ -509,7 +510,8 @@ help|						|
 showsettings| |Show settings
 switch|notebase |switches to a new notebase without quiting
 quit|  {$ to suppress query}			|save and quit
-test| execute test script 
+test| execute test script
+
 
 """
 COMMANDSCRIPT.append(COMMANDS.replace(PERIOD+PERIOD,EMPTYCHAR))
