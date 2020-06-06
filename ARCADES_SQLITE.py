@@ -7249,6 +7249,8 @@ class Note_Shelf:
             # extract keywords, which are surrounded by arrow brackets.
             a_temp = LEFTNOTE+a_temp+RIGHTNOTE
             query = query.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
+            querycopy = querycopy.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
+              #spaces in keywords replaced with blanks
 
 
         query = nformat.reduce_blanks(query)
@@ -7365,6 +7367,7 @@ class Note_Shelf:
                 temp_set = set()
 
                 term = term.replace(PERCENTAGE, BLANK)
+                    #REPLACES BLANKS WITH PERCENTAGE SIGNS
                 termcopy = term
 
                 keyterm = True
@@ -7398,6 +7401,7 @@ class Note_Shelf:
 
                     if ATSIGN in word:
 
+                        #for the sequence keywords 
                                 ft_temp = set()
 
                                 if word[0] == LEFTBRACKET and word[-1] == RIGHTBRACKET:                              
@@ -7450,6 +7454,7 @@ class Note_Shelf:
                                 
 
                     elif  self.key_dict_contains(word):
+                        # for a regular keyword
                         if not not_term:
 
                             temp_set = temp_set.union(self.get_indexes_for_key(word))
@@ -9077,15 +9082,19 @@ class Console (Note_Shelf):
         self.word_dict = {}
         self.default_dict = {}
 
-        auto_database = False
+        auto_database = True
 
         if self.using_shelf:
             for suffix in ('d','k','t','w'):
                 if not failed:
                     try:
+
                         tempfile = open(self.directoryname
-                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'rb')
-                        self.pickle_dictionary[suffix] = pickle.load(tempfile)
+                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'wb')
+                        try:
+                            self.pickle_dictionary[suffix] = pickle.load(tempfile)
+                        except:
+                            self.pickle_dictionary[suffix] = {}
                         tempfile.close()
                         display_temp+={'d':'DEFAULT DICTIONARY',
                                        'k':'KEY DICTIONARY',
@@ -9101,6 +9110,7 @@ class Console (Note_Shelf):
                                        ' WILL LOAD AS SINGLE PICKLE FILE!'
                         self.pickle_dictionary[suffix] = {}
                         failed = True
+                    
             display.noteprint((alerts.ATTENTION,display_temp))    
 
             if failed:
@@ -9112,6 +9122,7 @@ class Console (Note_Shelf):
                     self.pickle_dictionary = pickle.load(tempfile)
                     display.noteprint((alerts.ATTENTION,
                                        'PICKLE DICTIONARY OPENED'))
+
                     tempfile.close()
 
                     
