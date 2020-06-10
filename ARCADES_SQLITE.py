@@ -13194,6 +13194,7 @@ class Console (Note_Shelf):
                                                                             series_enter=series_enter)
 
         if biginputterm.startswith('(*)'):
+            # For entering a phrase to be directed to the knowledgebase
             while True:
                 biginputterm = biginputterm[3:]
                 if '(*)' in biginputterm:
@@ -13898,6 +13899,7 @@ class Console (Note_Shelf):
                 name_temp = s_input('Name of project?',otherterms[0])
                 if name_temp in self.default_dict['projects'].get_all_projects() or not name_temp:
                     break
+                otherterms[0] = ''
             if name_temp:
                 text_temp = 'PROJECTNAME: '+name_temp+EOL+EOL
                 text_temp += 'DEFAULTKEYS: '+', '.join(self.default_dict['projects'].get_default_keys(project=name_temp)) + EOL + EOL
@@ -13911,6 +13913,20 @@ class Console (Note_Shelf):
                                                                     surround=False))
                                                   
                 display.noteprint(('/C/ PROJECT',text_temp))
+                if predicate[0]:
+                    existing_keys = self.default_dict['projects'].get_default_keys(project=name_temp)
+                    existing_keys = list(edit_keys(keyobject=list(existing_keys),
+                                      displayobject=display,
+                                      prompt='Keys',
+                                      deletekeys=True,
+                                      addkeys=True,
+                                      askabort=True,
+                                      vertmode=self.vertmode,
+                                      notebookobject=self))
+                    self.default_dict['projects'].set_default_keys(new_defaultkeys=existing_keys,
+                                                                   project=name_temp)
+                    
+                    
         
         elif mainterm in ['showprojectdates']:
 
