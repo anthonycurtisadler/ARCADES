@@ -27,6 +27,7 @@ sequences = None
 import _pickle as pickle
 
 from abbreviate import Abbreviate                                       #pylint 9.63/10
+from calculator import Calculator 
 from globalconstants import BOX_CHAR,\
      INTROSCRIPT, ENTERSCRIPT, TRUTHSCRIPT, FORMATTINGSCRIPT, SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
      SMALLWORDS, LEFTNOTE, RIGHTNOTE, EOL, TAB,\
@@ -749,13 +750,16 @@ def next_next(index,
 
     """ returns the next available 'next' note"""
 
+    #For an unrestricted index domain 
     if index_list is None:
         index_list = notebook.indexes()
 
+    #If no note exists at the given index, then return given index
     if rightat:
         if str(index) not in index_list:
             return index
 
+    #Otherwise, fetch the next index.    
     while True:
         if str(index.next()) not in index_list:
             return index.next()
@@ -768,11 +772,15 @@ def next_child(index,
 
     """ returns the next available 'child' note"""
 
+    #For an unrestricted index domain
     if index_list is None:
         index_list = notebook.indexes()
 
+    #If no note exists at the given index, then return given index
     if str(index.child()) not in index_list:
         return index.child()
+
+    #Return child index 
     return index.child().next()
 
 
@@ -782,6 +790,7 @@ def reduce_tupples(entrylist):
     """provides a list of tupples giving the 'moves'
     needed to reduce a NoteBook"""
 
+    #Create a list of top-level (non-child) indexes.
     entrylist = [a_temp for a_temp in entrylist if a_temp.is_top()]
 
     returnlist = []
@@ -1313,11 +1322,13 @@ def remove_tag(key):
 class Note_Shelf:
 
 
-    """ database OBJECT using a combination of a shelve and
+    """ IN SHELF MODE: database OBJECT using a combination of a shelve and
         pickled dictionary THE pickled file is entirely dependent
         on the shelve, and can be reconstructed from it.
         If pickle errors emerge, the database can usually
-        be saved by deleting the pickled file!"""
+        be saved by deleting the pickled file!
+
+        IN NEWER VERSION: BASED ON SQLITE DATABASE INSTEAD"""
 
     def autodefaults (self):
 
@@ -9067,6 +9078,7 @@ class Console (Note_Shelf):
         self.pad_dict = {}
         self.currentpad = 'default'
         self.using_shelf = True
+        self.calculator = None
         
         self.using_database = True
 
@@ -10586,6 +10598,10 @@ class Console (Note_Shelf):
                     print(temp_counter, end=' ')
                 temp_counter+=1
 
+        if mainterm in ['calculate']:
+            if self.calculator is None:
+                self.calculator = Calculator()
+            self.calculator.console()
                 
 
         if mainterm in ['truthtable']:
