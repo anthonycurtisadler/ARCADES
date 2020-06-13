@@ -7223,14 +7223,12 @@ class Note_Shelf:
         ##beginning of the main routine##
 
         returnstack = []
-        querycopy = query # create a copy of the query
-        querycopy2 = query
         foundterms = set()
 
         if onlyterms:
 
             foundterms = set()
-            for term in querycopy.split(COMMA):
+            for term in query.split(COMMA):
 
                 t_temp = [wildcards(term)[0]]
 
@@ -7260,7 +7258,6 @@ class Note_Shelf:
             # extract keywords, which are surrounded by arrow brackets.
             a_temp = LEFTNOTE+a_temp+RIGHTNOTE
             query = query.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
-            querycopy = querycopy.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
               #spaces in keywords replaced with blanks
 
 
@@ -7269,9 +7266,7 @@ class Note_Shelf:
         
         termlist = sorted(set(query.strip().split(BLANK)))
 
-        parsed_query = parser.parse(querycopy)
-        if isinstance(parsed_query,str):
-            parsed_query = [parsed_query]
+
         
 
         
@@ -7281,7 +7276,7 @@ class Note_Shelf:
 
         def knowledge_from_word (word):
             originalword = word
-            nonlocal querycopy
+            nonlocal query
 
             def rebracket (word,brackets=False):
 
@@ -7317,7 +7312,7 @@ class Note_Shelf:
                             for x in self.default_dict['generalknowledge'].text_interpret(DOLLAR
                                                                                           +DOLLAR+node
                                                                                           +COLON+relation+relation_suffix)[1].split('//')[0].split(',')]
-                querycopy = querycopy.replace(originalword,
+                query = query.replace(originalword,
                                               '|'.join(newwords))
             else:
                 newwords = [rebracket(word, is_bracketed)]
@@ -7345,7 +7340,11 @@ class Note_Shelf:
         termlistb = transform_list([a_temp for a_temp
                                     in termlist
                                     if LEFTNOTE not in a_temp])
+    
             #termlist b = list of words in text
+        parsed_query = parser.parse(query)
+        if isinstance(parsed_query,str):
+            parsed_query = [parsed_query]
         upto = len(termlista)
         result_temp = set()
 
@@ -7513,9 +7512,10 @@ class Note_Shelf:
 
 ##            temp_set = temp_set.intersection(searchset)
             universe[unmodified_term] = temp_set.intersection(searchset)
+        
 
         result = parser.interpret(parsed_query,universe=universe)
-        
+
         return query, result, foundterms
 
 
@@ -11817,7 +11817,14 @@ class Console (Note_Shelf):
             self.currentpad = bufferpad
 
        
-        
+        elif mainterm in ['currentpad']:
+
+            display.noteprint(('CURRENT WORKPAD',self.currentpad))
+        elif mainterm in ['allpads']:
+            display.noteprint(('ALL ACTIVE WORKPADS','\n'.join(self.pad_dict.keys())))
+        elif mainterm in ['switchpad']:
+            if otherterms[0] in self.pad_dict.keys():
+                self.currentpad = otherterms[0]
         elif mainterm in ['addtopad','a','padshow']:
 
             bufferpad = self.currentpad
