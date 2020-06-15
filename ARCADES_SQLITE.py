@@ -12503,9 +12503,10 @@ class Console (Note_Shelf):
             
             
             default_notebook = notebookname
-            display.noteprint(('NOTEBOOKS',','.join(get_all_notebooks())))
+            display.noteprint(('NOTEBOOKS',', '.join(get_all_notebooks())))
 
             if mainterm in ['search','?']:
+                # for a simple search
 
                 
                 notebooks_to_search = [x for x in otherterms[0][1:].split('}')[0].split(',') if x in get_all_notebooks()]
@@ -12514,35 +12515,39 @@ class Console (Note_Shelf):
                 
                 
             else:
+                # for a global search 
                 if not otherterms[1]:
                     notebooks_to_search = get_all_notebooks()
                 else:
                     notebooks_to_search = [x for x in otherterms[1].split(',') if x in get_all_notebooks()]
 
-            display.noteprint(('SEARCH RANGE='+','.join(notebooks_to_search),'SEARCH PHRASE='+otherterms[0]))
+            display.noteprint(('SEARCH RANGE='+', '.join(notebooks_to_search),'SEARCH PHRASE='+otherterms[0]))
 
             for temp_notebook in notebooks_to_search:
+                # iterate through the notebooks 
 
-                
+                if temp_notebook in allnotebooks_tracking:
 
-                notebookname = temp_notebook
-                sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
-                                              otherterms[0])))
-                
-                display.noteprint(('TOTAL RESULTS for '+temp_notebook+'!',str(len(sr_temp[1]))))
+                    notebookname = temp_notebook
+                    
+                    sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
+                                                  otherterms[0])))
+                    
+                    display.noteprint(('TOTAL RESULTS for '+temp_notebook+'!',str(len(sr_temp[1]))))
 
-                if predicate[0] or input('SHOW RESULTS?') in YESTERMS:
+                    if predicate[0] or input('SHOW RESULTS?') in YESTERMS:
 
-                    self.last_results = rangelist.range_find([Index(a_temp)
-                                             for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+                        self.last_results = rangelist.range_find([Index(a_temp)
+                                                 for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
 
-                    display.noteprint((labels.RESULT_FOR
-                                       +formkeys(sorted(list(sr_temp[2]))),
-                                       rangelist.range_find([Index(a_temp)
-                                                             for a_temp in sr_temp[1]
-                                                             if a_temp!=0],
-                                                            reduce=True,
-                                                            compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
+                        display.noteprint((labels.RESULT_FOR
+                                           +formkeys(sorted(list(sr_temp[2]))),
+                                           rangelist.range_find([Index(a_temp)
+                                                                 for a_temp in sr_temp[1]
+                                                                 if a_temp!=0],
+                                                                reduce=True,
+                                                                compact=(len(sr_temp[1])>1000)).replace(LONGDASH,SLASH)))
+
             notebookname = default_notebook
             self.usesequence = old_usesequence
                            
@@ -14682,10 +14687,14 @@ while bigloop:
 
         while continuelooping:
 
-            lastup = allnotebooks_tracking[notebookname]['lastup']
-            uptohere = allnotebooks_tracking[notebookname]['uptohere']
-            next_up = allnotebooks_tracking[notebookname]['next_up']
-            skipped = allnotebooks_tracking[notebookname]['skipped']
+            if notebookname in allnotebooks_tracking:
+
+                lastup = allnotebooks_tracking[notebookname]['lastup']
+                uptohere = allnotebooks_tracking[notebookname]['uptohere']
+                next_up = allnotebooks_tracking[notebookname]['next_up']
+                skipped = allnotebooks_tracking[notebookname]['skipped']
+            else:
+                nprint(notebookname + ' NOT FOUND')
 
 
             if prefix == 'beta' or override:
@@ -14713,6 +14722,7 @@ while bigloop:
                         series_enter=series_enter)
 
                 except KeyError:
+
                     nprint('KEY ERROR')
                     notebook.usesequence = False
                     notebook.indexchanged = True
@@ -14722,6 +14732,7 @@ while bigloop:
                     uptohere = Index(notebook.indexes()[-1])
                     lastup = uptohere
                     nprint(str(uptohere))
+
                 except AttributeError:
                     nprint('ATTRIBUTE ERROR')
                 except FileNotFoundError:
@@ -14745,11 +14756,17 @@ while bigloop:
                     nprint('OSError')
                 except:
                     nprint('OTHER ERROR')
-            
-            allnotebooks_tracking[notebookname]['lastup'] = lastup
-            allnotebooks_tracking[notebookname]['uptohere'] = uptohere
-            allnotebooks_tracking[notebookname]['next_up'] = next_up
-            allnotebooks_tracking[notebookname]['skipped'] = skipped
+
+                if notebookname in allnotebooks_tracking:
+                    
+                    allnotebooks_tracking[notebookname]['lastup'] = lastup
+                    allnotebooks_tracking[notebookname]['uptohere'] = uptohere
+                    allnotebooks_tracking[notebookname]['next_up'] = next_up
+                    allnotebooks_tracking[notebookname]['skipped'] = skipped
+                else:
+                    nprint(notebookname+ ' IS NOT FOUND')
+
+                    
 
         if not continuelooping:
 
