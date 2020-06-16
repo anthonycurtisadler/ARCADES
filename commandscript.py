@@ -196,6 +196,7 @@ search, ?	|search phrase  %indexrange..			|keysearch..
                 |##metatag..  /$ show.. /&dates.. |
                 |/? show indexes  |
                 |* wildcard |
+                | this$is$a$phrase  
                 |<SEQUENCE@FROM> | to search for sequences
                 |<SEQUENCE@TO> | ADD # and _ as appropriate
                 |<SEQUENCE@FROM/SEQUENCE@TO>
@@ -336,6 +337,7 @@ dumpprojects | |save a backup textfile of projects
 loadprojects | |load a backup textfile of projects
 clearprojects | |clear existing projects
 truthtable |string |generates a truth table for a logical expression
+calculate | |enter the calculator mode
 ||
 """
 HYPERLINKS = """
@@ -469,7 +471,10 @@ addtopad |range,padname |add notes to pad
 ||add notes to pad, and display 
 padshow |range,padname |create pad if needed
 emptypadstack |padname| clears notes from pad
-renewpad |clears an existing pad 
+renewpad | |clears an existing pad
+switchpad | padname |switch the current pad
+currentpad | |desplay the current pad
+allpads | |show all the pads
 sheet|range,display stream,width,save stream, Xmax*Ymax |display as sheet
 | /$ query size  /* vary
 rsheet, resumesheet | resumes existing sheet

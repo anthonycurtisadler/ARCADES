@@ -6991,6 +6991,13 @@ class Note_Shelf:
         risk of eval function
         """
 
+        def eliminate_punctuation (x):
+            #to eliminate punctuation marks 
+
+            for ch in string.punctuation:
+                x = x.replace(ch,'')
+            return x 
+
 
         def modify(term,
                    todo=EMPTYCHAR):
@@ -7150,7 +7157,7 @@ class Note_Shelf:
 
         def expand_term_list(termlist):
 
-            """expand term list """
+            """expand the list of search terms according to the type of query """
 
             returnlist = []
             for term in termlist:
@@ -7158,7 +7165,10 @@ class Note_Shelf:
                 brackets = False
                 tilda = False
 
-                if term[0] in [POUND, CARET] and term[1:].replace(TILDA,EMPTYCHAR) in self.tags():
+                if DOLLAR in term:
+                    returnlist.append(term)
+
+                elif term[0] in [POUND, CARET] and term[1:].replace(TILDA,EMPTYCHAR) in self.tags():
                     #    #TAG search for a tag
                     returnlist += [a_temp+SLASH+term[1:]
                                    for a_temp
@@ -7166,7 +7176,7 @@ class Note_Shelf:
                                                                 for a_temp
                                                                 in self.get_keys_for_tag(term[1:])]
                     # 1) adds keys+tags 2) adds keys without tags
-                if (term[:2] == '##' and self.default_dict['knower'].learned(term[2:])
+                elif (term[:2] == '##' and self.default_dict['knower'].learned(term[2:])
                         and self.default_dict['knower'].genus(term[2:]) is True):
                     definitionlist = self.default_dict['knower'].reveal(term[2:])
                     for d_temp in definitionlist:
@@ -7227,10 +7237,13 @@ class Note_Shelf:
 
         if onlyterms:
 
+            #extract all search terms from query
+
             foundterms = set()
             for term in query.split(COMMA):
 
                 t_temp = [wildcards(term)[0]]
+                    #analyse wildcards
 
                 for tt_temp in t_temp:
 
@@ -7251,8 +7264,7 @@ class Note_Shelf:
         # add spaces around ( ) & |
         for a_temp in [LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE]:  
             query = query.replace(a_temp, '  '+a_temp+'  ')
-        for a_temp in [LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE]:
-            query = query.replace(a_temp, EMPTYCHAR)
+
 
         for a_temp in extract.extract(query, LEFTNOTE, RIGHTNOTE):
             # extract keywords, which are surrounded by arrow brackets.
@@ -7262,9 +7274,13 @@ class Note_Shelf:
 
 
         query = nformat.reduce_blanks(query)
+        querycopy = query
+
+        for a_temp in [LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE]:
+            querycopy = querycopy.replace(a_temp, EMPTYCHAR)
 
         
-        termlist = sorted(set(query.strip().split(BLANK)))
+        termlist = [x for x in sorted(set(querycopy.strip().split(BLANK))) if x]
 
 
         
@@ -7483,32 +7499,58 @@ class Note_Shelf:
                             pass
 
 
-            else:   #if it is not 
+            else:   #if it is not a keyword
 
                 for word in el_temp:
 
+                    if DOLLAR not in word:
+                        #To search for single words
+
                     
 
-                    if self.word_dict_contains(word):
-                        if not not_term:
-                            temp_set = temp_set.union(self.get_indexes_for_word(word))
-                            if self.get_indexes_for_word(word).intersection(searchset):
-                                foundterms.add(word)
-                        else:
-                            if not temp_set:
-                                temp_set = set(self.indexes())-self.get_indexes_for_word(word)
+                        if self.word_dict_contains(word):
+                            if not not_term:
+                                temp_set = temp_set.union(self.get_indexes_for_word(word))
+                                if self.get_indexes_for_word(word).intersection(searchset):
+                                    foundterms.add(word)
                             else:
-                                temp_set = temp_set - self.get_indexes_for_word(word)
-                            foundterms.add('~'+word)
+                                if not temp_set:
+                                    temp_set = set(self.indexes())-self.get_indexes_for_word(word)
+                                else:
+                                    temp_set = temp_set - self.get_indexes_for_word(word)
+                                foundterms.add('~'+word)
+                        else:
+                            if not not_term:
+                                pass
+                            else:
+                                if not temp_set:
+                                    temp_set = {a_temp for a_temp
+                                                in self.indexes()}
+                                else:
+                                    temp_set = temp_set.intersection(set(self.indexes()))
+
                     else:
-                        if not not_term:
-                            pass
-                        else:
-                            if not temp_set:
-                                temp_set = {a_temp for a_temp
-                                            in self.indexes()}
-                            else:
-                                temp_set = temp_set.intersection(set(self.indexes()))
+                        # to search for phrases
+
+                        
+                        search_word = word.replace(DOLLAR,BLANK)
+ 
+                        words = [eliminate_punctuation(x) for x in word.split(DOLLAR) if eliminate_punctuation(x) not in English_frequent_words]
+                        words = [x[0:-2] for x in words if x.endswith("'s")]
+                        words = [x for x in words if x]
+                          
+                        temp_indexes = set(searchset)
+                        for temp_word in words:
+                            temp_indexes = temp_indexes.intersection(self.get_indexes_for_word(temp_word))
+
+                        temp_set = set()
+                        for temp_index in temp_indexes:
+                            temp_text =  self.get_text_from_note(temp_index)
+                            if search_word in temp_text:
+                                temp_set.add(temp_index)
+                                
+                            
+                        
 
 ##            temp_set = temp_set.intersection(searchset)
             universe[unmodified_term] = temp_set.intersection(searchset)
