@@ -10,7 +10,6 @@ import math
 import os
 import shelve
 import string
-import json
 import sys
 import sqlite3
 
@@ -6985,10 +6984,6 @@ class Note_Shelf:
             #TERM tag
             ##TERM class defined through knowledge base
 
-        The search function relies uses the eval function,
-        but the string is preformated and tested before
-        the eval is run, in order to minimize
-        risk of eval function
         """
 
         def eliminate_punctuation (x):
@@ -7532,7 +7527,7 @@ class Note_Shelf:
                     else:
                         # to search for phrases
 
-                        
+                            
                         search_word = word.replace(DOLLAR,BLANK)
  
                         words = [eliminate_punctuation(x) for x in word.split(DOLLAR) if eliminate_punctuation(x) not in English_frequent_words]
@@ -7544,11 +7539,18 @@ class Note_Shelf:
                             temp_indexes = temp_indexes.intersection(self.get_indexes_for_word(temp_word))
 
                         temp_set = set()
+                        phrase_found = False
                         for temp_index in temp_indexes:
                             temp_text =  self.get_text_from_note(temp_index)
                             if search_word in temp_text:
                                 temp_set.add(temp_index)
-                                
+                                phrase_found = True
+                        if phrase_found:
+                            if not_term:
+                                temp_set = set(searchset)-temp_set
+                                foundterms.add('~'+search_word)
+                            else:
+                                foundterms.add(search_word)
                             
                         
 
@@ -11889,6 +11891,7 @@ class Console (Note_Shelf):
         elif mainterm in ['closesheetshelf']:
             del self.sheetshelf
         elif mainterm in ['tosheetshelf']:
+
             if not self.sheetshelf:
                 self.sheetshelf = SheetShelf(self.directoryname,notebookname,display=display)
         
@@ -11923,6 +11926,8 @@ class Console (Note_Shelf):
                     display.noteprint(('ATTENTION!',to_name+' exists'))
                     if input('OK to overwrite') in YESTERMS:
                         break
+                else:
+                    break
             temp_obj, self.sheetname = self.sheetshelf.select()
 
             self.pad_dict[to_name] = emptymovingwindow.EmptyMovingWindow(textlist=temp_obj[0],object_dict=temp_obj[1])
