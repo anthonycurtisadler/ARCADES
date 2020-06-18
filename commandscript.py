@@ -196,7 +196,8 @@ search, ?	|search phrase  %indexrange..			|keysearch..
                 |##metatag..  /$ show.. /&dates.. |
                 |/? show indexes  |
                 |* wildcard |
-                | this$is$a$phrase  
+                | this$is$a$phrase
+                | $thi$wild$ase$ for a Wildcard phrase
                 |<SEQUENCE@FROM> | to search for sequences
                 |<SEQUENCE@TO> | ADD # and _ as appropriate
                 |<SEQUENCE@FROM/SEQUENCE@TO>

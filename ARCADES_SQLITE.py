@@ -7232,7 +7232,7 @@ class Note_Shelf:
 
         if onlyterms:
 
-            #extract all search terms from query
+            #extract all search terms from query and return the search terms 
 
             foundterms = set()
             for term in query.split(COMMA):
@@ -7361,6 +7361,8 @@ class Note_Shelf:
 
         universe = {}
 
+        
+
         for counter, term in enumerate(termlista+termlistb):
 
             unmodified_term = term 
@@ -7380,9 +7382,14 @@ class Note_Shelf:
                     term = term[1:]
 
                 keyterm = False
-                t_temp = wildcards(term)
+                if term.startswith(DOLLAR) and term.endswith(DOLLAR):
+                    el_temp = [term]
+                    t_temp = [term],False
+                else:
+                    t_temp = wildcards(term)
 
-                el_temp = expand_term_list(t_temp[0])
+                    el_temp = expand_term_list(t_temp[0])
+
 
             else:  #for the keywords
                 temp_set = set()
@@ -7497,6 +7504,7 @@ class Note_Shelf:
             else:   #if it is not a keyword
 
                 for word in el_temp:
+ 
 
                     if DOLLAR not in word:
                         #To search for single words
@@ -7527,31 +7535,107 @@ class Note_Shelf:
                     else:
                         # to search for phrases
 
-                            
-                        search_word = word.replace(DOLLAR,BLANK)
- 
-                        words = [eliminate_punctuation(x) for x in word.split(DOLLAR) if eliminate_punctuation(x) not in English_frequent_words]
-                        words = [x[0:-2] for x in words if x.endswith("'s")]
-                        words = [x for x in words if x]
-                          
-                        temp_indexes = set(searchset)
-                        for temp_word in words:
-                            temp_indexes = temp_indexes.intersection(self.get_indexes_for_word(temp_word))
+                        if not (word.endswith(DOLLAR) and word.startswith(DOLLAR)):
 
-                        temp_set = set()
-                        phrase_found = False
-                        for temp_index in temp_indexes:
-                            temp_text =  self.get_text_from_note(temp_index)
-                            if search_word in temp_text:
-                                temp_set.add(temp_index)
-                                phrase_found = True
-                        if phrase_found:
-                            if not_term:
-                                temp_set = set(searchset)-temp_set
-                                foundterms.add('~'+search_word)
-                            else:
-                                foundterms.add(search_word)
+                            #for a searchphrase without wildcards
+                            search_word = word.replace(DOLLAR,BLANK)
                             
+     
+                            words = [eliminate_punctuation(x) for x in word.split(DOLLAR) if eliminate_punctuation(x) not in English_frequent_words]
+                            words = [x[0:-2] for x in words if x.endswith("'s")]
+                            words = [x for x in words if x]
+                              
+                            temp_indexes = set(searchset)
+                            for temp_word in words:
+                                temp_indexes = temp_indexes.intersection(self.get_indexes_for_word(temp_word))
+
+                            temp_set = set()
+                            phrase_found = False
+                            for temp_index in temp_indexes:
+                                temp_text =  self.get_text_from_note(temp_index)
+                                if search_word in temp_text:
+                                    temp_set.add(temp_index)
+                                    phrase_found = True
+                            if phrase_found:
+                                if not_term:
+                                    temp_set = set(searchset)-temp_set
+                                    foundterms.add('~'+search_word)
+                                else:
+                                    foundterms.add(search_word)
+                        else:
+                            # for a searchphrase with wildcards
+
+
+                            search_word = word
+                            word = word[1:-1]
+                            word = word.replace(DOLLAR,STAR+VERTLINE+STAR)
+                            words = [x for x in word.split(VERTLINE) if x not in [EMPTYCHAR,STAR]]
+ 
+                            
+
+                            temp_indexes = set(searchset)
+
+                            for segment  in words:
+
+                                tt_temp = wildcards(segment)
+                                all_terms = expand_term_list(tt_temp[0])
+
+
+                                found_indexes = set()
+                                
+
+                                for temp_word in all_terms:
+                                    found_indexes = found_indexes.union(self.get_indexes_for_word(temp_word))
+
+     
+                                temp_indexes = temp_indexes.intersection(found_indexes)
+
+
+                            def all_indexes(text,segment):
+                                # get all indexes for a segment in text
+
+                                returnlist = []
+                                position = 0
+                                while position < len(text) and segment in text[position:]:
+                                    pos = text.index(segment,position)
+                                    returnlist.append(pos)
+                                    position = pos+1
+                                return returnlist
+
+                            
+
+                            
+                            
+                            if temp_indexes:
+                                temp_set = set()
+    
+                                for temp_index in temp_indexes:
+
+                                    temp_text =  self.get_text_from_note(temp_index)
+                                    position = 0
+                                    found = True 
+                                    for segment in words:
+                                        # To test whether the segments of the phrase
+                                        # appear in order in the text
+
+                                        segment = segment.replace(STAR,EMPTYCHAR)
+                                        if segment in temp_text:
+                                            positions = all_indexes(temp_text,segment)
+
+                                            after_positions = [x for x in positions if x > position]
+                                            if after_positions:
+                                                position = min(after_positions)
+                                            else:
+                                                found = False
+                                                break
+                                    if found:
+  
+                                        if not temp_set:
+                                            foundterms.add(search_word)
+                                        temp_set.add(temp_index)
+                                        
+                                        
+                                                
                         
 
 ##            temp_set = temp_set.intersection(searchset)
