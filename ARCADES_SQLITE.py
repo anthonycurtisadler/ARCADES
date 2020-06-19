@@ -7608,12 +7608,13 @@ class Note_Shelf:
                             
                             if temp_indexes:
                                 temp_set = set()
+                                
     
                                 for temp_index in temp_indexes:
 
                                     temp_text =  self.get_text_from_note(temp_index)
                                     position = 0
-                                    found = True 
+                                    temp_found = True 
                                     for segment in words:
                                         # To test whether the segments of the phrase
                                         # appear in order in the text
@@ -7621,18 +7622,27 @@ class Note_Shelf:
                                         segment = segment.replace(STAR,EMPTYCHAR)
                                         if segment in temp_text:
                                             positions = all_indexes(temp_text,segment)
+                                            # finds all the positions in which a segment appears,
+                                            # produces a set containing all those values above the current position,
+                                            # and if the set is non-empty, sets the position to the minimum value of th
+                                            # set. Otherwise, returns a negative result for the search.
 
                                             after_positions = [x for x in positions if x > position]
                                             if after_positions:
                                                 position = min(after_positions)
                                             else:
-                                                found = False
+                                                temp_found = False
                                                 break
-                                    if found:
+                                    if temp_found:
   
                                         if not temp_set:
                                             foundterms.add(search_word)
                                         temp_set.add(temp_index)
+                                if temp_set and not_term:
+                                    # for a negative search
+                                    # Here too: no result for a phrase that isn't found 
+                                    temp_set = set(searchset)-temp_set
+                                
                                         
                                         
                                                 

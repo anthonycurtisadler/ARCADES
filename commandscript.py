@@ -186,7 +186,7 @@ keystags	| |show tags and their keys
 
 ||"""
 SEARCHING = """| |
-search, ?	|search phrase  %indexrange..			|keysearch..
+search, ?	|search phrase  %%indexrange..	%%daterange		|keysearch..
                 |use a straight slash for OR.. |.. =>COMMAND:?.. 
                 |use an amperstand for AND.. |to feed results into
                 |parentheses are allowed.. |another command
