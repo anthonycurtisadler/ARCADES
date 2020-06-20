@@ -7084,12 +7084,18 @@ class Note_Shelf:
             tilda = False
             pound = False
             caret = False
+            
+            qualifier = ''
+            if term.count('"')==2:
+                qualifier = '"'+term.split('"')[1]+'"'
+                EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
+                
 
             if term[0] == TILDA:
                 tilda = True
                 term = term[1:]
-            if term[0] == LEFTNOTE and term[-1] == RIGHTNOTE:
-                term = term[1:-1]
+            if term[0] == LEFTNOTE and RIGHTNOTE in term and term.count(RIGHTNOTE)==1:
+                term = term[1:].replace(RIGHTNOTE,EMPTYCHAR)
                 brackets = True
 
             if term[0] == POUND:
@@ -7131,10 +7137,11 @@ class Note_Shelf:
 
 ##            nprint(starts_with,mid_terms,ends_with)
 
-            return find_terms(starts_with,
-                              mid_terms,
-                              ends_with,
-                              searched_list), (brackets or pound)
+            return [x+qualifier for x in
+                    find_terms(starts_with,
+                               mid_terms,
+                               ends_with,
+                               searched_list)], (brackets or pound)
 
         def add_keys(termlist):
 
@@ -7156,6 +7163,12 @@ class Note_Shelf:
 
             returnlist = []
             for term in termlist:
+                
+                qualifier = ''
+
+                if term.count('"')==2:
+                    qualifier = '"'+term.split('"')[1]+'"'
+                    term = EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
 
                 brackets = False
                 tilda = False
@@ -7212,7 +7225,7 @@ class Note_Shelf:
 
 
 
-                    returnlist += concatenate(l_list, r_list)
+                    returnlist +=   concatenate(l_list, r_list)
                     #generate all possible combinations
                     # of l list and r list.
 
@@ -7220,9 +7233,9 @@ class Note_Shelf:
 
             for term in middlelist:
                 if term[0] == DOLLAR:
-                    returnlist += self.default_dict['keymacros'].get_definition(term[1:])
+                    returnlist += [x+qualifier for x in self.default_dict['keymacros'].get_definition(term[1:])]
                 else:
-                    returnlist += [term]
+                    returnlist += [term+qualifier]
             return returnlist
 
         ##beginning of the main routine##
@@ -7330,6 +7343,7 @@ class Note_Shelf:
             return newwords
         
         def transform_list (wordlist):
+            #to interpret knowldedge terms 
 
             returnlist = []
             for x in wordlist:
@@ -7404,7 +7418,7 @@ class Note_Shelf:
                     not_term = True
                     term = term[1:]
 
-                term = term[1:-1]
+                term = term.replace(LEFTNOTE,EMPTYCHAR).replace(RIGHTNOTE,EMPTYCHAR)
 
                 if SLASH not in term:
                     t_temp = wildcards(term)
@@ -7419,12 +7433,24 @@ class Note_Shelf:
                     t_temp = [term], True
                     el_temp = [term]
 
-
+            
             if t_temp[1] or keyterm:   # if the term is a keyterm
                 if not_term:
                     temp_set = set(searchset)
                     
+                is_a_single_word = False        
+
+                    
                 for word in el_temp:
+
+                    
+
+                    qualifier = ''
+
+                    if word.count('"')==2:
+                        qualifier = '"'+word.split('"')[1]+'"'
+                        word = EMPTYCHAR.join([word.split('"')[0],word.split('"')[2]])
+
 
 
                     if ATSIGN in word:
@@ -7503,11 +7529,21 @@ class Note_Shelf:
 
             else:   #if it is not a keyword
 
+                is_a_single_word = False        
+
+
                 for word in el_temp:
+
+                    qualifier = ''
+
+                    if word.count('"')==2:
+                        qualifier = '"'+word.split('"')[1]+'"'
+                        word = EMPTYCHAR.join([word.split('"')[0],word.split('"')[2]])
  
 
                     if DOLLAR not in word:
                         #To search for single words
+                        is_a_single_word = True
 
                     
 
@@ -7642,6 +7678,7 @@ class Note_Shelf:
                                     # for a negative search
                                     # Here too: no result for a phrase that isn't found 
                                     temp_set = set(searchset)-temp_set
+                                    
                                 
                                         
                                         
@@ -7649,6 +7686,90 @@ class Note_Shelf:
                         
 
 ##            temp_set = temp_set.intersection(searchset)
+
+
+            if qualifier and qualifier.count('"')==2:
+                temp_qualifier = qualifier.split('"')[1]
+                
+                #interpret the qualifier
+                
+                qualifier_terms  = temp_qualifier.split('!')
+                lowest_index, highest_index, users, lowest_date,highest_date, lowest_count, highest_count,lowest_size,greatest_size = None, None, None, None, None, None, None, None, None
+                for qt in qualifier_terms:
+                    if qt.startswith('index=') and '/' in qt:
+                        lowest_index, highest_index = qt[8:].split('/')[0],qt[8:].split('/')[1]
+                    if qt.startswith('user='):
+                        users = qt[5:].split(PERIOD)
+                    if qt.startswith('date=') and '/' in qt:
+                        lowest_date, highest_date = qt[6:].split('/')[0],qt[6:].split('/')[1]
+                        
+                    if qt.startswith('count=') and '/' in qt:
+                        lowest_count, highest_count = qt[6:].split('/')[0],qt[6:].split('/')[1]
+                    if qt.startswith('size=') and '/' in qt:
+                        lowest_size,greatest_size = qt[5:].split('/')[0],qt[5:].split('/')[1]
+              
+                        
+                old_temp_set = set(temp_set)
+                temp_set = set()
+                accepted = True
+
+                for nts in old_temp_set:
+                    # test the notes that have been found to see if they satisfy the qualification
+                    if lowest_index and Index(nts) < Index(lowest_index):
+                        accepted = False
+                    if highest_index and Index(nts) > Index(highest_index):
+                        accepted = False
+                    if users or lowest_date or highest_date or lowest_size or greatest_size:
+                        temp_meta = self.get_metadata_from_note(nts)
+                        if 'user' in temp_meta and users and temp_meta['user'] not in users:
+                            accepted = False
+                        if 'size' in temp_meta:
+                            if lowest_size and lowest_size.isnumeric() and temp_meta['size'] < int(lowest_size):
+                                accepted = False
+                            if greatest_size and greatest_size.isnumeric() and temp_meta['size'] > int(greatest_size):
+                                accepted = False
+                        if 'date' in temp_meta:
+                            meta_year, meta_month, meta_day = [int(x) for x in temp_meta['date'][-1].split(BLANK)[0].split(DASH)[0:3]]
+
+                            if lowest_date:
+
+                                
+                                lowest_year,lowest_month,lowest_day = [int(x) for x in lowest_date.split(DASH)+['1','1']]
+
+                                if (meta_year < lowest_year
+                                    or (meta_year==lowest_year and meta_month<lowest_month)
+                                    or (meta_year==lowest_year and meta_month==lowest_month and meta_day < lowest_day)):
+                                    accepted = False
+                                    
+                                
+                            if highest_date:
+                                temp_highest_date  =  highest_date.split(DASH)
+                                if len(temp_highest_date) == 3:
+                                    pass
+                                elif len(temp_highest_date) == 2:
+                                    temp_highest_date += ['31']
+                                elif len(temp_highest_date) == 1:
+                                    temp_highest_date += ['12','31']
+                                    
+                                highest_year,highest_month,highest_day = [int(x) for x in temp_highest_date]
+                                if (meta_year > highest_year
+                                    or (meta_year==highest_year and meta_month>highest_month)
+                                    or (meta_year==highest_year and meta_month==highest_month and meta_day > highest_day)):
+                                    accepted = False                          
+                            
+                            
+                    if is_a_single_word and (lowest_count or highest_count):
+                        temp_text =  self.get_text_from_note(nts)
+                        temp_count = temp_text.count(word)
+                        if lowest_count and lowest_count.isnumeric() and temp_count<int(lowest_count):
+                            accepted=False
+                        if highest_count and highest_count.isnumeric() and temp_count>int(highest_count):
+                            accepted=False
+                        
+                    if accepted:
+                        temp_set.add(nts)
+                        
+                
             universe[unmodified_term] = temp_set.intersection(searchset)
         
 
@@ -8645,7 +8766,7 @@ class Note_Shelf:
             else:
                 return Index(func_temp(keylist_temp))
 
-    def show_projects(self,projectobject=None):
+    def show_projects(self,projectobject=None,value=False,prefix='archived'):
 
         trim1 = self.default_dict['keytrim']
         trim2 = self.default_dict['texttrim']
@@ -8653,52 +8774,53 @@ class Note_Shelf:
         notelist = DisplayList(displayobject=display)
         text_temp = [labels.PROJECT_DISPLAY,' || ']
         for counter,temp_key in enumerate(sorted(projectobject)):
+            if temp_key.startswith(prefix) == value:
 
-            if 'indexes' not in projectobject[temp_key]:
-                projectobject[temp_key]['indexes'] = OrderedList()
-            else:
-                if isinstance(projectobject[temp_key]['indexes'],list):
-                    projectobject[temp_key]['indexes'] = OrderedList(sorted(projectobject[temp_key]['indexes'],
-                                                                            key=lambda x_temp:Index(x_temp)))
-            if 'status' not in projectobject[temp_key]:
-                projectobject[temp_key]['status'] = {'started':str(datetime.datetime.now()),
-                                                                             'open':True,
-                                                                             'lastmodified':[str(datetime.datetime.now())]}
-            if 'defaultkeys' not in projectobject[temp_key]:
-                projectobject[temp_key]['defaultkeys'] = []
-            if 'position' not in projectobject[temp_key]:
-                projectobject[temp_key]['position'] = (Index(0),Index(0))
+                if 'indexes' not in projectobject[temp_key]:
+                    projectobject[temp_key]['indexes'] = OrderedList()
+                else:
+                    if isinstance(projectobject[temp_key]['indexes'],list):
+                        projectobject[temp_key]['indexes'] = OrderedList(sorted(projectobject[temp_key]['indexes'],
+                                                                                key=lambda x_temp:Index(x_temp)))
+                if 'status' not in projectobject[temp_key]:
+                    projectobject[temp_key]['status'] = {'started':str(datetime.datetime.now()),
+                                                                                 'open':True,
+                                                                                 'lastmodified':[str(datetime.datetime.now())]}
+                if 'defaultkeys' not in projectobject[temp_key]:
+                    projectobject[temp_key]['defaultkeys'] = []
+                if 'position' not in projectobject[temp_key]:
+                    projectobject[temp_key]['position'] = (Index(0),Index(0))
+                    
+                    
                 
-                
-            
-            keys_formated = formkeys (projectobject[temp_key]['defaultkeys'])
-            fl_temp = max([50,len(keys_formated)])
-            keys_formated = keys_formated[0:fl_temp]
-            line_temp = str(counter+1)+(5-len(str(counter+1)))*BLANK + VERTLINE
-            line_temp += abridge(temp_key,trim1)\
-                         +(trim1-len(abridge(temp_key,trim1)))\
-                         *BLANK + VERTLINE
-            line_temp += str(len(projectobject[temp_key]['indexes'].list))\
-                         +(10-len(str(len(projectobject[temp_key]['indexes'].list))))*BLANK
-##            line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)\
-##                         +(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
-            line_temp += VERTLINE + '[' + abridge(keys_formated, trim2) \
-                         + (trim2 + 6 -  \
-                            len(abridge(keys_formated, trim2))) \
-                            * BLANK + ']/'
-            if len(projectobject[temp_key]['indexes']) > 1:
-                   line_temp += index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
-                                                   surround=False)[0]))\
-                                                   +':'+index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
-                                                                                            surround=False)[-1]))
-            elif len(projectobject[temp_key]['indexes'].list) == 1:
-                line_temp += str(projectobject[temp_key]['indexes'].list[0])
-                
-            else:
-                line_temp += EMPTYCHAR
+                keys_formated = formkeys (projectobject[temp_key]['defaultkeys'])
+                fl_temp = max([50,len(keys_formated)])
+                keys_formated = keys_formated[0:fl_temp]
+                line_temp = str(counter+1)+(5-len(str(counter+1)))*BLANK + VERTLINE
+                line_temp += abridge(temp_key,trim1)\
+                             +(trim1-len(abridge(temp_key,trim1)))\
+                             *BLANK + VERTLINE
+                line_temp += str(len(projectobject[temp_key]['indexes'].list))\
+                             +(10-len(str(len(projectobject[temp_key]['indexes'].list))))*BLANK
+    ##            line_temp += abridge(str(projectobject[temp_key]['position'][1]),10)\
+    ##                         +(10-len(abridge(str(projectobject[temp_key]['position'][1])))) * BLANK
+                line_temp += VERTLINE + '[' + abridge(keys_formated, trim2) \
+                             + (trim2 + 6 -  \
+                                len(abridge(keys_formated, trim2))) \
+                                * BLANK + ']/'
+                if len(projectobject[temp_key]['indexes']) > 1:
+                       line_temp += index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
+                                                       surround=False)[0]))\
+                                                       +':'+index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
+                                                                                                surround=False)[-1]))
+                elif len(projectobject[temp_key]['indexes'].list) == 1:
+                    line_temp += str(projectobject[temp_key]['indexes'].list[0])
+                    
+                else:
+                    line_temp += EMPTYCHAR
+                                     
                                  
-                             
-            text_temp.append(line_temp)
+                text_temp.append(line_temp)
             
         nformat.columns(EOL.join(text_temp),
                         listobject=notelist,
@@ -13966,51 +14088,48 @@ class Console (Note_Shelf):
                         once_through = True 
                                                                     
 
-                
 
-        elif mainterm in ['archiveproject']:
 
-            while True:
-                
-                project_name = s_input('Project name?',otherterms[0])
-                if project_name in self.default_dict['projects'].get_all_projects():
-                    break
-            if 'archivedprojects' not in self.default_dict:
-                self.default_dict['archivedprojects'] = ProjectManager(archive=True)
-            if project_name not in self.default_dict['archivedprojects'].get_all_projects():
-                self.default_dict['archivedprojects'].set_project(project=project_name,
-                                                                  project_dict=copy.deepcopy(self.default_dict['projects'].get_project(project=project_name)))
-                if self.default_dict['archivedprojects'].get_project(project=project_name) == self.default_dict['projects'].get_project(project=project_name):
-                    self.default_dict['projects'].delete_project(project_name)
-                    
-                display.noteprint((alerts.ATTENTION,
-                                   project_name + ' has been archived'))
-
-        elif mainterm in ['renameproject']:
+        elif mainterm in ['renameproject','archiveproject','unarchiveproject']:
             while True:
                 old_name = s_input('Existing name of project?',otherterms[0])
+                if mainterm in ['unarchiveproject'] and not old_name.startswith('archived'):
+                    old_name = 'archived'+old_name
                 if old_name in self.default_dict['projects'].get_all_projects() or not old_name:
                     break
                 otherterms[0] = ''
-            while True:
+                
+            while True and mainterm in ['renameproject']:
                 new_name = s_input('Change name of '+old_name+' to?',otherterms[1])
                 if new_name not in self.default_dict['projects'].get_all_projects() or not new_name:
                     break
                 otherterms[1] = ''
+            if mainterm in ['archiveproject']:
+                new_name = 'archived'+old_name
+            if mainterm in ['unarchiveproject']:
+                new_name = old_name[8:]
             if old_name and new_name:
                 self.default_dict['projects'].set_project(project=new_name,
                                                           project_dict=copy.deepcopy(self.default_dict['projects'].get_project(project=old_name)))
                 self.default_dict['projects'].delete_project(project_name=old_name)              
                 display.noteprint((alerts.ATTENTION,
                                    old_name+' changed to '+new_name))
-                
+                if mainterm in ['archiveproject']:
+                    display.noteprint((alerts.ATTENTION,
+                                       old_name + ' has been archived'))
+                if mainterm in ['unarchiveproject']:
+                    display.noteprint((alerts.ATTENTION,
+                                       old_name + ' has been unarchived'))
+                    
 
         elif mainterm in ['deletearchivedproject']:
             while True:
                 project_name = s_input('Name of project to delete?',otherterms[0])
-                if project_name and project_name in self.default_dict['archivedprojects'].get_all_projects():
+                if not project_name.startswith('archived'):
+                    project_name = 'archived'+project_name
+                if project_name and project_name in self.default_dict['projects'].get_all_projects():
                     if input('ARE YOUR SURE?') in YESTERMS:
-                        self.default_dict['archivedprojects'].delete_project(project_name=project_name)
+                        self.default_dict['projects'].delete_project(project_name=project_name)
                         break
                 if not project_name:
                     break
@@ -14026,7 +14145,7 @@ class Console (Note_Shelf):
                 while True:
                     
                     project_name = s_input('Project name?',otherterms[0])
-                    if project_name in self.default_dict['archivedprojects'].get_all_projects():
+                    if project_name in self.default_dict['projects'].get_all_projects():
                         break
                 if project_name not in self.default_dict['projects'].get_all_projects():
                     self.default_dict['projects'].set_project(project=project_name,
@@ -14041,7 +14160,9 @@ class Console (Note_Shelf):
             self.show_projects(projectobject=temp_dict)
 
         elif mainterm in ['showarchivedprojects']:
-            self.show_projects(projectobject=self.default_dict['archivedprojects'].return_dict())
+            # THIS NEEDS WORK
+            temp_dict = self.default_dict['projects'].return_dict()
+            self.show_projects(projectobject=temp_dict,value=True)
 
 
         elif mainterm in ['flipproject']:
