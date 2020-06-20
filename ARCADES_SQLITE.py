@@ -7088,7 +7088,7 @@ class Note_Shelf:
             qualifier = ''
             if term.count('"')==2:
                 qualifier = '"'+term.split('"')[1]+'"'
-                EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
+                term = EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
                 
 
             if term[0] == TILDA:
@@ -7379,7 +7379,8 @@ class Note_Shelf:
 
         for counter, term in enumerate(termlista+termlistb):
 
-            unmodified_term = term 
+            unmodified_term = term
+            qualifier=''
 
 
             if not counter < upto:  #for the words
@@ -7433,7 +7434,6 @@ class Note_Shelf:
                     t_temp = [term], True
                     el_temp = [term]
 
-            
             if t_temp[1] or keyterm:   # if the term is a keyterm
                 if not_term:
                     temp_set = set(searchset)
@@ -7529,8 +7529,7 @@ class Note_Shelf:
 
             else:   #if it is not a keyword
 
-                is_a_single_word = False        
-
+                is_a_single_word = False    
 
                 for word in el_temp:
 
@@ -7697,11 +7696,11 @@ class Note_Shelf:
                 lowest_index, highest_index, users, lowest_date,highest_date, lowest_count, highest_count,lowest_size,greatest_size = None, None, None, None, None, None, None, None, None
                 for qt in qualifier_terms:
                     if qt.startswith('index=') and '/' in qt:
-                        lowest_index, highest_index = qt[8:].split('/')[0],qt[8:].split('/')[1]
+                        lowest_index, highest_index = qt[6:].split('/')[0],qt[6:].split('/')[1]
                     if qt.startswith('user='):
                         users = qt[5:].split(PERIOD)
                     if qt.startswith('date=') and '/' in qt:
-                        lowest_date, highest_date = qt[6:].split('/')[0],qt[6:].split('/')[1]
+                        lowest_date, highest_date = qt[5:].split('/')[0],qt[5:].split('/')[1]
                         
                     if qt.startswith('count=') and '/' in qt:
                         lowest_count, highest_count = qt[6:].split('/')[0],qt[6:].split('/')[1]
@@ -7768,6 +7767,7 @@ class Note_Shelf:
                         
                     if accepted:
                         temp_set.add(nts)
+                qualifier=''
                         
                 
             universe[unmodified_term] = temp_set.intersection(searchset)
