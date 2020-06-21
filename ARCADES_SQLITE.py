@@ -7713,6 +7713,7 @@ class Note_Shelf:
                               highest_count, lowest_size, greatest_size, min_depth, max_depth, low_slice, high_slice\
                               = None, None, None, None, None, None, None, None, None, None, None, None, None
                 strict = False
+                must = False
                 for qt in qualifier_terms:
 
                     # To extract the qualifier terms from the qualifier
@@ -7737,6 +7738,9 @@ class Note_Shelf:
                             high_slice = get_slice_tuple(high_slice)
                     if qt.startswith('strict'):
                         strict = True
+                    if qt.startswith('must'):
+                        must = True
+                    
                     
                     
                       
@@ -7757,9 +7761,9 @@ class Note_Shelf:
                         accepted = False
                     if max_depth and max_depth.isnumeric() and Index(nts).level() > int(max_depth):
                         accepted = False
-                    if low_slice and not Index(nts).within(limit=low_slice,not_less=True):
+                    if low_slice and not Index(nts).within(limit=low_slice,not_less=True,must_have=must):
                         accepted = False
-                    if high_slice and not Index(nts).within(limit=high_slice,not_more=True):
+                    if high_slice and not Index(nts).within(limit=high_slice,not_more=True,must_have=must):
                         accepted = False
                         
                         
