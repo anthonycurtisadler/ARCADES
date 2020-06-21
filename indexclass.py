@@ -239,6 +239,35 @@ class Index:
 
         return len(tuple(self.self))
 
+    def within(self,limit=(),not_less=False,not_more=False,must_have=True):
+
+        """For checking whether elements of index are above or below given values"""
+
+        if must_have:
+
+            for position in range(len(limit)):
+                if position < len(tuple(self.self)):
+                    
+                    if not_less and limit[position] and tuple(self.self)[position] < limit[position]:
+                        return False
+                    if not_more and limit[position] and tuple(self.self)[position] > limit[position]:
+                        return False
+                else:
+                    return False
+            return True
+        for position in range(min([len(limit),len(tuple(self.self))])):
+                if position < len(tuple(self.self)):
+                    
+                    if not_less and limit[position] and tuple(self.self)[position] < limit[position]:
+                        return False
+                    if not_more and limit[position] and tuple(self.self)[position] > limit[position]:
+                        return False
+        return True 
+            
+        
+
+        
+
     def parent(self):
 
         """Returns the parent of an index."""

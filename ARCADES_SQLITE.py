@@ -7691,6 +7691,16 @@ class Note_Shelf:
                         
 
 ##            temp_set = temp_set.intersection(searchset)
+            def get_slice_tuple (x):
+                returnlist = []
+                values = x.split('.')
+                for v in values:
+                    if v.isnumeric():
+                        returnlist.append(int(v))
+                    else:
+                        returnlist.append(None)
+                return tuple(returnlist)
+                    
 
 
             if qualifier and qualifier.count('"')==2:
@@ -7699,8 +7709,13 @@ class Note_Shelf:
                 #interpret the qualifier
                 
                 qualifier_terms  = temp_qualifier.split('!')
-                lowest_index, highest_index, users, lowest_date,highest_date, lowest_count, highest_count,lowest_size,greatest_size = None, None, None, None, None, None, None, None, None
+                lowest_index, highest_index, users, lowest_date,highest_date, lowest_count, \
+                              highest_count, lowest_size, greatest_size, min_depth, max_depth, low_slice, high_slice\
+                              = None, None, None, None, None, None, None, None, None, None, None, None, None
+                strict = False
                 for qt in qualifier_terms:
+
+                    # To extract the qualifier terms from the qualifier
                     if qt.startswith('index=') and '/' in qt:
                         lowest_index, highest_index = qt[6:].split('/')[0],qt[6:].split('/')[1]
                     if qt.startswith('user='):
@@ -7712,8 +7727,19 @@ class Note_Shelf:
                         lowest_count, highest_count = qt[6:].split('/')[0],qt[6:].split('/')[1]
                     if qt.startswith('size=') and '/' in qt:
                         lowest_size,greatest_size = qt[5:].split('/')[0],qt[5:].split('/')[1]
-              
-                        
+                    if qt.startswith('depth=') and '/' in qt:
+                        min_depth,max_depth = qt[6:].split('/')[0],qt[6:].split('/')[1]
+                    if qt.startswith('slice=') and '/' in qt:
+                        low_slice, high_slice = qt[6:].split('/')[0],qt[6:].split('/')[1]
+                        if low_slice:
+                            low_slice = get_slice_tuple(low_slice)
+                        if high_slice:
+                            high_slice = get_slice_tuple(high_slice)
+                    if qt.startswith('strict'):
+                        strict = True
+                    
+                    
+                      
                 old_temp_set = set(temp_set)
                 temp_set = set()
 
@@ -7727,7 +7753,19 @@ class Note_Shelf:
                     if highest_index and Index(nts) > Index(highest_index):
 
                         accepted = False
+                    if min_depth and min_depth.isnumeric() and Index(nts).level() < int(min_depth):
+                        accepted = False
+                    if max_depth and max_depth.isnumeric() and Index(nts).level() > int(max_depth):
+                        accepted = False
+                    if low_slice and not Index(nts).within(limit=low_slice,not_less=True):
+                        accepted = False
+                    if high_slice and not Index(nts).within(limit=high_slice,not_more=True):
+                        accepted = False
+                        
+                        
                     if users or lowest_date or highest_date or lowest_size or greatest_size:
+
+                        #For qualifier terms involving the metadata
                         temp_meta = self.get_metadata_from_note(nts)
                         if 'user' in temp_meta and users and temp_meta['user'] not in users:
                             accepted = False
@@ -7768,8 +7806,17 @@ class Note_Shelf:
                             
                             
                     if is_a_single_word and (lowest_count or highest_count):
-                        temp_text =  self.get_text_from_note(nts)
-                        temp_count = temp_text.count(word)
+                        #For the count of a single word
+                        temp_text =  BLANK+self.get_text_from_note(nts)+BLANK
+                        temp_count = 0
+                        if strict:
+                            for l_char in string.punctuation+BLANK:
+                                for r_char in string.punctuation+BLANK:
+                                
+                                    temp_count += temp_text.count(l_char+word+r_char)
+                        if not strict:
+                            temp_count = temp_text.count(word)
+                            
                         if lowest_count and lowest_count.isnumeric() and temp_count<int(lowest_count):
                             accepted=False
                         if highest_count and highest_count.isnumeric() and temp_count>int(highest_count):
