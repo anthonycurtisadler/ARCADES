@@ -7182,7 +7182,7 @@ class Note_Shelf:
                                    in self.get_keys_for_tag(term[1:])]+[a_temp
                                                                 for a_temp
                                                                 in self.get_keys_for_tag(term[1:])]
-                    print('here',returnlist)
+
                     # 1) adds keys+tags 2) adds keys without tags
                 elif (term[:2] == '##' and self.default_dict['knower'].learned(term[2:])
                         and self.default_dict['knower'].genus(term[2:]) is True):
@@ -7437,7 +7437,6 @@ class Note_Shelf:
                 else:
                     t_temp = [term], True
                     el_temp = [term]
-                print('elk',el_temp)
 
             if t_temp[1] or keyterm:   # if the term is a keyterm
                 if not_term:
@@ -7445,7 +7444,6 @@ class Note_Shelf:
                     
                 is_a_single_word = False        
 
-                print('keyel',el_temp)
                 for word in el_temp:
 
                     
@@ -7543,9 +7541,12 @@ class Note_Shelf:
                     if word.count('"')==2:
                         qualifier = '"'+word.split('"')[1]+'"'
                         word = EMPTYCHAR.join([word.split('"')[0],word.split('"')[2]])
+
+                    if word == '_ALLNOTES_':
+                        temp_set = set(searchset)
  
 
-                    if DOLLAR not in word:
+                    elif DOLLAR not in word:
                         #To search for single words
                         is_a_single_word = True
 
@@ -7736,12 +7737,13 @@ class Note_Shelf:
                             if greatest_size and greatest_size.isnumeric() and temp_meta['size'] > int(greatest_size):
                                 accepted = False
                         if 'date' in temp_meta:
-                            meta_year, meta_month, meta_day = [int(x) for x in temp_meta['date'][-1].split(BLANK)[0].split(DASH)[0:3]]
+                            
+                            meta_year, meta_month, meta_day = [int(x.replace("'",EMPTYCHAR)) for x in temp_meta['date'][-1].split(BLANK)[0].split(DASH)][0:3]
 
                             if lowest_date:
 
                                 
-                                lowest_year,lowest_month,lowest_day = [int(x) for x in lowest_date.split(DASH)+['1','1']]
+                                lowest_year,lowest_month,lowest_day = [int(x) for x in lowest_date.split(DASH)+['1','1']][0:3]
 
                                 if (meta_year < lowest_year
                                     or (meta_year==lowest_year and meta_month<lowest_month)
