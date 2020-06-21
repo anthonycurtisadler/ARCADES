@@ -7169,7 +7169,6 @@ class Note_Shelf:
                 if term.count('"')==2:
                     qualifier = '"'+term.split('"')[1]+'"'
                     term = EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
-
                 brackets = False
                 tilda = False
 
@@ -7183,6 +7182,7 @@ class Note_Shelf:
                                    in self.get_keys_for_tag(term[1:])]+[a_temp
                                                                 for a_temp
                                                                 in self.get_keys_for_tag(term[1:])]
+                    print('here',returnlist)
                     # 1) adds keys+tags 2) adds keys without tags
                 elif (term[:2] == '##' and self.default_dict['knower'].learned(term[2:])
                         and self.default_dict['knower'].genus(term[2:]) is True):
@@ -7367,6 +7367,8 @@ class Note_Shelf:
                                     if LEFTNOTE not in a_temp])
     
             #termlist b = list of words in text
+
+        
         parsed_query = parser.parse(query)
         if isinstance(parsed_query,str):
             parsed_query = [parsed_query]
@@ -7421,8 +7423,10 @@ class Note_Shelf:
 
                 term = term.replace(LEFTNOTE,EMPTYCHAR).replace(RIGHTNOTE,EMPTYCHAR)
 
-                if SLASH not in term:
+
+                if SLASH not in term.split('"')[0]:
                     t_temp = wildcards(term)
+
                     el_temp = expand_term_list(t_temp[0])
                     el_copy = list(el_temp)
                     for k_temp in el_copy:
@@ -7433,6 +7437,7 @@ class Note_Shelf:
                 else:
                     t_temp = [term], True
                     el_temp = [term]
+                print('elk',el_temp)
 
             if t_temp[1] or keyterm:   # if the term is a keyterm
                 if not_term:
@@ -7440,7 +7445,7 @@ class Note_Shelf:
                     
                 is_a_single_word = False        
 
-                    
+                print('keyel',el_temp)
                 for word in el_temp:
 
                     
@@ -7710,13 +7715,16 @@ class Note_Shelf:
                         
                 old_temp_set = set(temp_set)
                 temp_set = set()
-                accepted = True
+
 
                 for nts in old_temp_set:
+                    accepted = True
                     # test the notes that have been found to see if they satisfy the qualification
                     if lowest_index and Index(nts) < Index(lowest_index):
+
                         accepted = False
                     if highest_index and Index(nts) > Index(highest_index):
+
                         accepted = False
                     if users or lowest_date or highest_date or lowest_size or greatest_size:
                         temp_meta = self.get_metadata_from_note(nts)
