@@ -7829,6 +7829,8 @@ class Note_Shelf:
                     if accepted:
                         temp_set.add(nts)
                 qualifier=''
+                if not_term:
+                    temp_set = set(searchset) - temp_set
                         
                 
             universe[unmodified_term] = temp_set.intersection(searchset)
