@@ -244,6 +244,7 @@ class Index:
         """For checking whether elements of index are above or below given values"""
 
         if must_have:
+            # rejects if any element fails to meet a given condition for all elements given in the slice
 
             for position in range(len(limit)):
                 if position < len(tuple(self.self)):
@@ -254,7 +255,8 @@ class Index:
                         return False
                 else:
                     return False
-            return True
+            return True 
+        # only rejects
         for position in range(min([len(limit),len(tuple(self.self))])):
                 if position < len(tuple(self.self)):
                     
