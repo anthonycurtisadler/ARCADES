@@ -6106,7 +6106,8 @@ class Note_Shelf:
                 header=EMPTYCHAR,
                 brackets=True,
                 curtail=0,
-                groupsize=None):
+                groupsize=None,
+                save_list='display'):
         
         if not groupsize:
             groupsize = self.how_many
@@ -6126,7 +6127,7 @@ class Note_Shelf:
             return (x_temp)
 
         if quick and not entrylist and self.indexchanges < 20:
-            show_list(self.default_dict['all'],
+            show_list(self.default_dict[save_list],
                       'INDEXES',0,40,
                       func=xformat,
                       present=True)
@@ -6160,14 +6161,18 @@ class Note_Shelf:
             else:
                 shortform = shortshow
 
+            if save_list not in self.default_dict or not self.default_dict[save_list]:
+                self.default_dict[save_list] = DisplayList(displayobject=display)
+            
+
             if not multi and shortshow:
                
-                if 'display' in self.default_dict:
-                    del self.default_dict['display']
+                if save_list in self.default_dict:
+                    del self.default_dict[save_list]
                     self.dd_changed = True
                     
 
-                self.default_dict['display'] = DisplayList(displayobject=display)
+                self.default_dict[save_list] = DisplayList(displayobject=display)
 
 
             lastcounter = 0
@@ -6175,7 +6180,7 @@ class Note_Shelf:
     ##            display.noteprint(('ATTENTION!', 'Please wait a moment!'))
 
             if quick:
-                self.default_dict['all'] = []
+                self.default_dict[save_list] = []
                 self.dd_changed = True
 
             deepest_temp = self.deepest(is_string=True,abridged=True,always=True)
@@ -6227,7 +6232,7 @@ class Note_Shelf:
                                                                       convert=False)
 
                         
-                        self.default_dict['all'].append(ind_temp+self.mark(str(i_temp))
+                        self.default_dict[save_list].append(ind_temp+self.mark(str(i_temp))
                                                         +VERTLINE+d_temp
                                                         +VERTLINE+k_temp
                                                         +VERTLINE+t_temp)
@@ -6265,7 +6270,7 @@ class Note_Shelf:
                                 
                             else:
                                 
-                                self.default_dict['display'].append(display.noteprint(self.show
+                                self.default_dict[save_list].append(display.noteprint(self.show
                                                                               (i_temp, shortform=shortform,
                                                                                yestags=self.tagdefault,
                                                                                highlight=highlight,
@@ -6297,7 +6302,7 @@ class Note_Shelf:
                                                                    leftmargin=self.defaults.get('leftmargin'),
                                                                    brackets=brackets)
                             else:
-                                self.default_dict['display'].append(display.noteprint(self.show(i_temp,
+                                self.default_dict[save_list].append(display.noteprint(self.show(i_temp,
                                                                 shortform=shortform,
                                                                 yestags=self.tagdefault,
                                                                 show_date=show_date,deepest=deepest_temp),
@@ -6383,17 +6388,17 @@ class Note_Shelf:
             if not quick and shortform and not multi:
 
                 if not header:
-                    self.text_result = self.default_dict['display']\
+                    self.text_result = self.default_dict[save_list]\
                                        .present(dump=True,
                                                 howmany=self.how_many)
                 else:
-                    self.text_result = self.default_dict['display']\
+                    self.text_result = self.default_dict[save_list]\
                                        .present(header=header,
                                                 dump=True,
                                                 howmany=self.how_many)
             if quick:
 
-                show_list(self.default_dict['all'],
+                show_list(self.default_dict[save_list],
                           'INDEXES',0,40,
                           func=xformat,present=True)
             if not quick and shortshow:
@@ -6861,6 +6866,7 @@ class Note_Shelf:
             returnvalue = (set(),set())
 
 
+
         if key.startswith('GT_'):
              func_pred = '>='
              pred_len = 3
@@ -6890,6 +6896,16 @@ class Note_Shelf:
             return returnvalue 
 
         key = key[pred_len:]
+        if key.startswith(LEFTBRACKET):
+            key = key[1:]
+            left_more_than = True
+        else:
+            left_more_than = False
+        if key.endswith(RIGHTBRACKET):
+            key = key[:-1]
+            right_less_than = True
+        else:
+            right_less_than = False
 
         if ATSIGN not in key:
             return returnvalue 
@@ -6904,8 +6920,10 @@ class Note_Shelf:
                 afterslash = EMPTYCHAR
             identifier = key.split(ATSIGN)[0]
             key_value = key.split(ATSIGN)[1]
+        
 
         key_mark, key_value, key_type, key_value2 = self.parse_sequence_key(key_value,afterslash)
+        
 
         if not self.default_dict['sequences'].query(term1=identifier,action='in'):
                 return returnvalue
@@ -6930,12 +6948,14 @@ class Note_Shelf:
                 # for a range of values
 
                 if func_pred == '/':
-                    func_pred = '>='
-
-                left_func = func_pred
-                
-                right_func = {'>=':'<=',
-                              '>':'<'}[left_func]
+                    if left_more_than:
+                        left_func = '>'
+                    else:
+                        left_func = '>='
+                    if right_less_than:
+                        right_func = '<'
+                    else:
+                        right_func = '<='
 
                 from_left_sequence = sequence.get(func_name=left_func,item=key_value)
                 from_right_sequence = sequence.get(func_name=right_func,item=key_value2)
@@ -7461,7 +7481,7 @@ class Note_Shelf:
                         #for the sequence keywords 
                                 ft_temp = set()
 
-                                if word[0] == LEFTBRACKET and word[-1] == RIGHTBRACKET:                              
+                                if word[0] == LEFTBRACKET and word[-1] == RIGHTBRACKET and SLASH not in word:                              
                                     result_temp, ft_temp = self.sequence_key_search('=_'+word[1:-1],
                                                                                     return_found_terms=True)
                                     
@@ -9400,7 +9420,7 @@ class Console (Note_Shelf):
         self.window = None
         self.pad_dict = {}
         self.currentpad = 'default'
-        self.using_shelf = True
+        self.using_shelf = False
         self.calculator = None
         
         self.using_database = True
@@ -9419,85 +9439,85 @@ class Console (Note_Shelf):
 
         auto_database = True
 
-        if self.using_shelf:
-            for suffix in ('d','k','t','w'):
-                if not failed:
-                    try:
-
-                        tempfile = open(self.directoryname
-                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'wb')
-                        try:
-                            self.pickle_dictionary[suffix] = pickle.load(tempfile)
-                        except:
-                            self.pickle_dictionary[suffix] = {}
-                        tempfile.close()
-                        display_temp+={'d':'DEFAULT DICTIONARY',
-                                       'k':'KEY DICTIONARY',
-                                       't':'TAG DICTIONARY',
-                                       'w':'WORD DICTIONARY'}[suffix]+' LOADED'+'\n'
-                        loaded += suffix
-                        
-                        
-                    except:
-                        display_temp+={'d':'DEFAULT DICTIONARY',
-                                       'k':'KEY DICTIONARY','t':'TAG DICTIONARY',
-                                       'w':'WORD DICTIONARY'}[suffix]+' FAILED'+'\n'+'\n'+\
-                                       ' WILL LOAD AS SINGLE PICKLE FILE!'
-                        self.pickle_dictionary[suffix] = {}
-                        failed = True
-                    
-            display.noteprint((alerts.ATTENTION,display_temp))    
-
-            if failed:
-                try:
-                    self.divided = False
-                    tempfile = open(self.directoryname
-                                    +SLASH+self.filename+'.pkl', 'rb')
-              
-                    self.pickle_dictionary = pickle.load(tempfile)
-                    display.noteprint((alerts.ATTENTION,
-                                       'PICKLE DICTIONARY OPENED'))
-
-                    tempfile.close()
-
-                    
-                except OSError:
-
-                    db_cursor.execute("SELECT notebook FROM notebooks")
-                    filelist = list([i[0] for i in db_cursor.fetchall()])
-                    if self.filename in filelist:
-                        nprint(self.filename+' ALREADY OPENED AS DATABASE')
-                        auto_database = True
-                        self.using_shelf = False 
-
-                    else:
-               
-                        display.noteprint((alerts.ATTENTION,
-                                           'CREATING NEW PICKLE DICTIONARY'))
-                        display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
-                        self.pickle_dictionary = {'k':{},
-                                                  't':{},
-                                                  'w':{},
-                                                  'd':{}}
-                        tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
-                        pickle.dump(self.pickle_dictionary, tempfile)
-                        tempfile.close()
-
-                       
-
-            if self.using_shelf:
-                display.noteprint(('DIVIDED',str(self.divided)))
-                
-
-                self.key_dict = self.pickle_dictionary['k']
-                    # keeps track of keys
-                self.tag_dict = self.pickle_dictionary['t']
-                    # keeps track of tags
-                self.word_dict = self.pickle_dictionary['w']
-                    # keeps track of words to facilitate quick searches
-                self.default_dict = self.pickle_dictionary['d']
-                    # persistent default date
-
+##        if self.using_shelf:
+##            for suffix in ('d','k','t','w'):
+##                if not failed:
+##                    try:
+##
+##                        tempfile = open(self.directoryname
+##                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'wb')
+##                        try:
+##                            self.pickle_dictionary[suffix] = pickle.load(tempfile)
+##                        except:
+##                            self.pickle_dictionary[suffix] = {}
+##                        tempfile.close()
+##                        display_temp+={'d':'DEFAULT DICTIONARY',
+##                                       'k':'KEY DICTIONARY',
+##                                       't':'TAG DICTIONARY',
+##                                       'w':'WORD DICTIONARY'}[suffix]+' LOADED'+'\n'
+##                        loaded += suffix
+##                        
+##                        
+##                    except:
+##                        display_temp+={'d':'DEFAULT DICTIONARY',
+##                                       'k':'KEY DICTIONARY','t':'TAG DICTIONARY',
+##                                       'w':'WORD DICTIONARY'}[suffix]+' FAILED'+'\n'+'\n'+\
+##                                       ' WILL LOAD AS SINGLE PICKLE FILE!'
+##                        self.pickle_dictionary[suffix] = {}
+##                        failed = True
+##                    
+##            display.noteprint((alerts.ATTENTION,display_temp))    
+##
+##            if failed:
+##                try:
+##                    self.divided = False
+##                    tempfile = open(self.directoryname
+##                                    +SLASH+self.filename+'.pkl', 'rb')
+##              
+##                    self.pickle_dictionary = pickle.load(tempfile)
+##                    display.noteprint((alerts.ATTENTION,
+##                                       'PICKLE DICTIONARY OPENED'))
+##
+##                    tempfile.close()
+##
+##                    
+##                except OSError:
+##
+##                    db_cursor.execute("SELECT notebook FROM notebooks")
+##                    filelist = list([i[0] for i in db_cursor.fetchall()])
+##                    if self.filename in filelist:
+##                        nprint(self.filename+' ALREADY OPENED AS DATABASE')
+##                        auto_database = True
+##                        self.using_shelf = False 
+##
+##                    else:
+##               
+##                        display.noteprint((alerts.ATTENTION,
+##                                           'CREATING NEW PICKLE DICTIONARY'))
+##                        display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
+##                        self.pickle_dictionary = {'k':{},
+##                                                  't':{},
+##                                                  'w':{},
+##                                                  'd':{}}
+##                        tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
+##                        pickle.dump(self.pickle_dictionary, tempfile)
+##                        tempfile.close()
+##
+##                       
+##
+##            if self.using_shelf:
+##                display.noteprint(('DIVIDED',str(self.divided)))
+##                
+##
+##                self.key_dict = self.pickle_dictionary['k']
+##                    # keeps track of keys
+##                self.tag_dict = self.pickle_dictionary['t']
+##                    # keeps track of tags
+##                self.word_dict = self.pickle_dictionary['w']
+##                    # keeps track of words to facilitate quick searches
+##                self.default_dict = self.pickle_dictionary['d']
+##                    # persistent default date
+##
 
             
         self.by_line = Convert()
@@ -9511,37 +9531,38 @@ class Console (Note_Shelf):
                                        connection=db_connection,
                                        cursor=db_cursor)
                                        
-                                       
-        
-        if self.using_shelf and not self.defaults.contains('usedatabase'):
-            self.defaults.set('usedatabase',auto_database or
-                              input('Use database?') in YESTERMS)
-            self.purge_objects = True 
-        if not self.defaults.get('usedatabase'):
-            try:
-                self.note_dict = shelve.open(self.directoryname
-                                         +SLASH+self.filename
-                                         +'ND', flag=flagvalue)
-
-                self.using_shelf = True
-                self.using_database = False
-            except:
-                display.noteprint(('ATTENTION!',
-                                   'OPENING AS DATABASE'))
-                self.using_shelf = False
-                self.using_database = True
-                
-                del self.tag_dict
-                del self.word_dict
-                self.defaults.set('usedatabase',
-                                  True)
-            
-            
-        else:
-            del self.tag_dict
-            del self.word_dict
-            self.using_shelf = False
-            self.using_database = True
+        self.defaults.set('usedatabase',True)                               
+        display.noteprint(('ATTENTION!',
+                           'OPENING AS DATABASE'))
+##        if self.using_shelf and not self.defaults.contains('usedatabase'):
+##            self.defaults.set('usedatabase',auto_database or
+##                              input('Use database?') in YESTERMS)
+##            self.purge_objects = True 
+##        if not self.defaults.get('usedatabase'):
+##            try:
+##                self.note_dict = shelve.open(self.directoryname
+##                                         +SLASH+self.filename
+##                                         +'ND', flag=flagvalue)
+##
+##                self.using_shelf = True
+##                self.using_database = False
+##            except:
+##                display.noteprint(('ATTENTION!',
+##                                   'OPENING AS DATABASE'))
+##                self.using_shelf = False
+##                self.using_database = True
+##                
+##                del self.tag_dict
+##                del self.word_dict
+##                self.defaults.set('usedatabase',
+##                                  True)
+##            
+##            
+##        else:
+##            del self.tag_dict
+##            del self.word_dict
+##            self.using_shelf = False
+##            self.using_database = True
 
         def initiate_defaults(label,predicate):
 
@@ -11825,13 +11846,13 @@ class Console (Note_Shelf):
                 except:
                     l_temp = 0
             self.showall(show_date=self.default_dict['showdate'] or predicate[4],
-                         quick=not predicate[0],childrentoo=not predicate[1],levels=l_temp,brackets=not predicate[2],
-                         shortshow=not predicate[3])
+                         quick=False,childrentoo=not predicate[1],levels=l_temp,brackets=not predicate[2],
+                         shortshow=not predicate[3],save_list='all')
 
         elif mainterm in [DOLLAR]:
           self.default_dict['display'].present()
         elif mainterm in [DOLLAR+DOLLAR]:
-            show_list(allnotebooks[notebookname].default_dict['all'],'INDEXES',0,40,func=dummy,present=True)
+            self.default_dict['all'].present()
         elif mainterm in ['show', 's']:
             
             if not otherterms[1]:
