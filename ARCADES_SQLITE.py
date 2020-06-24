@@ -97,6 +97,7 @@ from temporaryholder import TemporaryHolder                             #pylint 
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
 from truth_table import truth_table
+from tutorial import TutorialManager
 import random
 ##client = False
 try:
@@ -5002,6 +5003,8 @@ class Note_Shelf:
 
         def query_keys(keysetobject=None):
 
+            self.tutor.show('KEYWORDS')
+
 
             for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
                 if isinstance(k_temp,str) and len(k_temp) > 0:
@@ -5151,14 +5154,8 @@ class Note_Shelf:
         if ek is None:
             from_keys = False
             
-        if not et and not em and not ek and (self.defaults.get('enterhelp')\
-                                             or self.defaults.get('formattinghelp')):
-            display.noteprint((labels.ENTRYCOMMANDS,
-                               ENTERSCRIPT*self.defaults.get('enterhelp')
-                               +EOL+FORMATTINGSCRIPT*self.defaults.get('formattinghelp')),
-                               param_width=60,
-                              override=True)
-
+ 
+            
         
         if em is None:
             em = {}
@@ -5191,6 +5188,19 @@ class Note_Shelf:
 
         keyset.update(oldkeys)
         self.last_keys = set(keyset)
+
+        if not et and not em and not ek:
+            if (self.defaults.get('enterhelp')
+                or self.defaults.get('formattinghelp')):
+                display.noteprint((labels.ENTRYCOMMANDS,
+                                   ENTERSCRIPT*self.defaults.get('enterhelp')
+                                   +EOL+FORMATTINGSCRIPT*self.defaults.get('formattinghelp')),
+                                   param_width=60,
+                                  override=True)
+            if not self.defaults.get('enterhelp'):
+                self.tutor.show('ENTERING')
+            if not self.defaults.get('formattinghelp'):
+                self.tutor.show('FORMATTING')
 
         imp_list = []
         if et != EMPTYCHAR:
@@ -9424,8 +9434,9 @@ class Console (Note_Shelf):
         self.calculator = None
         
         self.using_database = True
-
-
+        self.tutor = TutorialManager()
+        self.tutor.load()
+        self.tutor.start()
         
         self.pickle_dictionary = {}
         loaded = EMPTYCHAR
@@ -9598,8 +9609,8 @@ class Console (Note_Shelf):
                                       'section'],
                     'sequences_in_text':False,
                     'texttrim':40,
-                    'enterhelp':True,
-                    'formattinghelp':True,
+                    'enterhelp':False,
+                    'formattinghelp':False,
                     'updated data':False,
                     'field':{},
                     'date_dict':{},
@@ -10906,6 +10917,17 @@ class Console (Note_Shelf):
                         totalterms=0):
 
         global override
+
+        if mainterm in ['tutorial']:
+
+            self.tutor.start()
+            display.noteprint(('ATTENTION!','TUTORIAL ACTIVATED'))
+        
+            if predicate[0]:
+                self.tutor.load()
+                display.noteprint(('ATTENTION!','TUTORIAL RELOADED'))
+                
+            
 
         if mainterm in ['test']:
 
@@ -12903,7 +12925,7 @@ class Console (Note_Shelf):
             
                 
                 if not otherterms[0]:
-                    print(SEARCHSCRIPT)
+                    self.tutor.show('SEARCH')
                 sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
                                                   otherterms[0])))
                 display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))
@@ -13224,20 +13246,27 @@ class Console (Note_Shelf):
         if mainterm == 'conent':
             mainterm = PLUS
             series_enter = PLUS
+            self.tutor.show('CONESCAPE')
         elif mainterm == 'connext':
             mainterm = PLUS + PLUS
             series_enter = PLUS + PLUS
+            self.tutor.show('CONESCAPE')
         elif mainterm == 'conchild':
             mainterm = PLUS + PLUS + PLUS
             series_enter = PLUS + PLUS + PLUS
+            self.tutor.show('CONESCAPE')
         elif mainterm == 'enternext':
             mainterm = PLUS + PLUS
+            self.tutor.show('CONESCAPE')
         elif mainterm == 'enterchild':
             mainterm = PLUS + PLUS + PLUS
+            self.tutor.show('CONESCAPE')
 
 
         elif mainterm == 'enterback':
             mainterm = DASH
+            self.tutor.show('CONESCAPE')
+        
         if ((len(mainterm) < 2 or mainterm[1] != PLUS)
                 and (not self.always_next and not self.always_child)):
             if mainterm[0] != DASH:
@@ -13330,6 +13359,10 @@ class Console (Note_Shelf):
                 if self.project:
                     temp_insert = SLASH
 ##                print('<<'+nformat.format_keys(self.default_dict['defaultkeys'])+'>>')
+                self.tutor.show('INITIATE')
+                if series_enter:
+                    self.tutor.show('CONESCAPE')
+                    
                 manyinputterm = input(self.using_shelf*'*'+self.using_database*'DB'+notebookname
                                       +temp_insert
                                       +UNDERLINE.join(self.project)
@@ -13564,6 +13597,8 @@ class Console (Note_Shelf):
             display.noteprint((alerts.ATTENTION,
                                alerts.ENTER_DOCUMENTATION))
         self.first_time = False
+        if not next_up:
+            self.tutor.show('ESCAPE')
         biginputterm,continuelooping,close_notebook = self.biginputterm_imp(lastup,
                                                                             command_stack,
                                                                             series_enter=series_enter)
@@ -14816,6 +14851,8 @@ while bigloop:
                 allnotebooks[notebookname].autobackup = False
                 allnotebooks[notebookname].enter({labels.WELCOME_HEAD},
                                labels.WELCOME_BODY)
+
+                
                 allnotebooks[notebookname].autobackup = backup_was
             allnotebooks[notebookname].check_spelling = spelling_was
             if reconstitute and input(queries.RECON_KEY) in YESTERMS:
@@ -14838,6 +14875,7 @@ while bigloop:
                                   present=True)
                     else:
                         allnotebooks[notebookname].default_dict['display'].present()
+
 
 
 
