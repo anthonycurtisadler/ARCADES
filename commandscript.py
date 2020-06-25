@@ -116,7 +116,8 @@ revise,rev|indexrange;index to merge;break mark|revise a note..
 
 undo|undo						|undo last action
 redo|redo						|redo last action
-tutorial| /$ to reload |Restart tutorial 
+tutorial| /$ to reload & Restart tutorial
+starttutorial |To resume tutorial
 """
 
 DEFAULTKEYS = """

@@ -10926,6 +10926,7 @@ class Console (Note_Shelf):
             if predicate[0]:
                 self.tutor.load()
                 display.noteprint(('ATTENTION!','TUTORIAL RELOADED'))
+            
                 
             
 
@@ -13797,6 +13798,42 @@ class Console (Note_Shelf):
             else:
                 mainterm = biginputterm
 
+        #to invoke special tutorials
+
+        if 'sequences' in mainterm and not otherterms[0]:
+            self.tutor.show('SEQUENCE')
+        if 'displaying' in mainterm:
+            self.tutor.show('DISPLAY')
+        if 'linking' in mainterm:
+            self.tutor.show('LINK')
+        if 'defaultkeywords' in mainterm:
+            self.tutor.show('DEFAULTKEYWORDS')
+        if 'workpad' in mainterm:
+            self.tutor.show('WORKPAD')
+        if 'variables' in mainterm:
+            self.tutor.show('VARIABLES')
+        if 'notescript' in mainterm:
+            self.tutor.show('NOTESCRIPT')
+        if 'notebook' in mainterm:
+            self.tutor.show('NOTEBOOK')
+        if 'representations' in mainterm:
+            self.tutor.show('REPRESENTATIONS')
+        if 'refeeding' in mainterm:
+            self.tutor.show('REFEEDING')
+        if 'macros' in mainterm:
+            self.tutor.show('MACROS')
+        if 'knowledge' in mainterm:
+            self.tutor.show('KNOWLEDGE')
+        if 'keydefinitions' in mainterm:
+            self.tutor.show('KEYDEFINITIONS')
+        if 'spellchecker' in mainterm:
+            self.tutor.show('SPELLING')
+        if 'others' in mainterm or 'miscellaneous' in mainterm:
+            self.tutor.show('MISCELLANEOUS')
+            
+            
+        
+            
         
         # to assign a variable       
         if len(mainterm) > 2 and mainterm.isupper()\
