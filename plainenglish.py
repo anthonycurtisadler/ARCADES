@@ -331,7 +331,7 @@ class Labels:
                                        +' FREQUENCY DICTIONAR!'
 
           self.WELCOME_HEAD = '/C/ WELCOME'
-          self.WELCOME_BODY = '/C/ WELCOME TO NOTESCRIPTION!'
+          self.WELCOME_BODY = '/C/ WELCOME TO ARCADES!'
           self.MAX_DEPTH = '/C/ MAXIMUM INDEX DEPTH'
           self.LIMIT_LIST_RESET = '/C/ LIMIT LIST RESET'
           self.LIMIT_LIST = '/C/ LIMIT LIST'

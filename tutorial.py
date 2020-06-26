@@ -45,12 +45,14 @@ class TutorialManager:
                     display.noteprint((title,body),param_width=75,override=True)
                else:
                     print(body)
-               entry = input('PLUS+RETURN for advance, PLUS+PLUS+RETURN to advance immediately \n'
+               entry = input('PLUS+RETURN for advance, PLUS+PLUS+RETURN to show next \n'
                              *(len(self.tutorials[header]['message'])>1)
                              +'SPACE+RETURN to stop showing this message, '
-                             +'or SPACE+SPACE+RETURN to quit tutorial ')
+                             +'SPACE+SPACE+RETURN to quit tutorial, \n or MINUS+RETURN to SHOW TUTORIAL MENU  ')
                if entry == ' ':
                     self.tutorials[header]['status'] = False
+               elif entry == '-':
+                    self.all_tutorials()
                elif entry == '  ':
                     self.activated = False
                elif entry == '+':
@@ -60,12 +62,16 @@ class TutorialManager:
                     self.show(header)
      def all_tutorials(self):
 
-          header_text = ''
-          headers = list(self.tutorials.keys())
-          for counter, x in enumerate(headers):
-               header_text += '('+str(counter+1)+') '+headers[counter]+'\n'
-          display.noteprint(('TUTORIALS',header_text))
+          
+          
           while True:
+               header_text = ''
+               headers = list(reversed(sorted([h for h in list(self.tutorials.keys())
+                                               if len(self.tutorials[h]['message'])>0],
+                                              key=lambda x:len(self.tutorials[x]['message']))))
+               for counter, x in enumerate(headers):
+                    header_text += '('+str(counter+1)+') '+headers[counter]+'\n'
+               display.noteprint(('TUTORIALS',header_text))
                x = input('ENTER THE NUMBER OF THE TUTORIAL TO BEGIN, Q TO QUIT, \n OR R TO RESTORE TUTORIALS ')
                if x.upper() == 'Q':
                     break
@@ -117,16 +123,14 @@ class TutorialManager:
           self.add('INITIATE',
                    """
 COMMAND SYNTAX /**/ 
-A basic command consists in one or more command phrases.
+     A basic command consists in one or more command phrases.
 
-If there are multiple command phrases,
-each command phrase is separated by a double SLASH.
+     If there are multiple command phrases, each command phrase is separated by a double SLASH.
      (1) defaultnotebook:4017.1.12 4017 +//delete:5//quit
      | Adds a new note, deletes note at index 5,
        and quits the notebook.
 
-To repeat a command N times, add **N at the
-end of the command, preceded by a space
+     To repeat a command N times, add **N at the end of the command, preceded by a space
 
        """)
 
@@ -417,7 +421,7 @@ DISPLAYING_NOTES_AS_A_SHEET/**/
      The /= saves the output to a textfile, using either the name of the display stream or name entered as value 4.""")
 
 
-          self.add('INIITIATE',
+          self.add('INITIATE',
                    """
 REORGANIZING_THE_NOTEBOOK/**/
      Commands for manipulating the notebook may be divided into three categories:
@@ -1184,19 +1188,19 @@ THE_WORKPAD/**/
      In addition, the workpad allows for drawing with Unicode characters, and typing directly on the workpad.
      Finally, new notes can be composed in the workpad, which are then added to back to the notebook on leaving the workpad mode.""")
 
-          self.add('WORDPAD',
+          self.add('WORKPAD',
                    """
 INITIATING_A_WORKPAD/**/
      To initiate a workpad, use the command "createworkpad". This command accepts, as an optional value, the name of the pad to be initiated.
      If no padname is given, it will activate the default workpad.""")
           self.add('WORKPAD',
                    """
-ADDING_NOTES_TO_THE_WORDPAD/**/
+ADDING_NOTES_TO_THE_WORKPAD/**/
      To add notes to the workpad buffer, use the command "addtopad", which accepts two values: the range of indexes of notes to be added, and the name of the pad you wish to use.
      If no padname is given, the notes will be added to the default pad.""")
           self.add('WORKPAD',
                    """
-OPENING_THE_WORDPAD/**/
+OPENING_THE_WORKPAD/**/
      The command "padshow" or "showpad" switches to the workpad.
      The command "showpad" accepts as a value the name of the pad that you wish to open.""")
           self.add('WORKPAD',
@@ -1205,7 +1209,7 @@ RENEWING_THE_WORKPAD/**/
      Use the command "renewpad", with the name of a workpad as an optional value, to empty out the stack of a workpad.""")
           self.add('WORKPAD',
                    """
-CHANGING_THE_WORDPAD/**/
+CHANGING_THE_WORKPAD/**/
      Use the command switchpad:PADNAME to change the current workpad.
      Use the command currentpad to display the current workpad, and allpads to display all the workpads.
 """)
@@ -1254,7 +1258,7 @@ WORKPAD_COMMAND_MENU/**/
      When not in the drawing mode, press SHIFT F12 to call up the workpad command menu.
      In the drawing mode, the drawing command menu will be displayed.""")
 
-          self.add('WORDPAD',
+          self.add('WORKPAD',
                    """
 DRAWING_MODE/**/
 
@@ -1301,7 +1305,7 @@ NOTE_AND_NOTESCRIPT/**/
 
           self.add('NOTESCRIPT',
                    """
-NOTESCRIPT_FORMATTING_CODES/***/
+NOTESCRIPT_FORMATTING_CODES/**/
      When ARCADES reads a notescript, it extracts all the elements of the text that begin with a left arrow bracket (<) and ends with a right arrow bracket (>).
      These extracted elements constitute notephrases. Notephrases are interpreted according to the initial element immediately following the bracket.
      If the notephrase begins with DOLLAR ($), PLUS (+), DASH (-), then it modifies the keywords.Dollar, followed by a list of keys, resets the keywords.
@@ -1849,7 +1853,8 @@ RUNINTERPRT/**/
           self.add('REFEEDING',
                    """
 EXPLODING_A_NOTE/**/
-     The command "explode" yields an index, keyword list, and text from a single note, which in turn can be accessed with single, double, and quadruple question marks.
+     The command "explode" yields an index, keyword list, and text from a single note, which in turn can be accessed with single, double, and quadruple question marks.
+
 """)
           self.add('REFEEDING',
                    """
@@ -1863,20 +1868,23 @@ REFEEDING_KEYS_INTO_ANOTHER_COMMAND/**/
      It accepts one value – the collection of indexes from which the keys are to be taken and the modifiers /$, /&, /*, /?.
      The modifier /$ generates a histogram from the keys, whereas the modifiers /&, /*, and /?, are used, respectively, to include “all-cap,” capitalized, and lower-case keywords.
      If neither of these three modifiers are invoked, then it will show all keywords.
-     This generates a search phrase, which can be refed into another command by using double question marks (??).
+     This generates a search phrase, which can be refed into another command by using double question marks (??).
+
 """)
           self.add('REFEEDING',
                    """
 REFEEDING_TAGS/**/
      The command tags (alternate forms: tag, t) displays the tags from a collection of indexes, given as its first value.
-     This generates a search phrase, which can be refed into another command by using double question marks (??).
+     This generates a search phrase, which can be refed into another command by using double question marks (??).
+
 """)
           self.add('REFEEDING',
                    """
 REFEEDING_TEXT/**/
      The command "text", which accepts three values and the modifiers /$, /&, and /*, is used to show the most relevant words in a text, determined according to either their frequency in the note, their scarcity in the notebook, or both.
      The first value is the collection of indexes, the second value is the number of words according to frequency in text, and third value is the number of words according to their scarcity in the notebook.
-     The modifier /$ presents the intersection of both sets, while the modifier /& presents them by decreasing frequency in the notebook and /* by increasing frequency in the text of the selected notes.
+     The modifier /$ presents the intersection of both sets, while the modifier /& presents them by decreasing frequency in the notebook and /* by increasing frequency in the text of the selected notes.
+
 """)
           self.add('MACROS',
                    """
@@ -1905,7 +1913,8 @@ CODES/**/
      4 codes are predefined in ARCADES:
      (1) < = /060/ (2) > = /062/.
      (3) { =/123/ (4) } =/125/.
-     The use of the slash is not inherent to a code. But it is recommended that you only define codes that are unlikely to appear in ordinary text.
+     The use of the slash is not inherent to a code. But it is recommended that you only define codes that are unlikely to appear in ordinary text.
+
 """)
           self.add('MACROS',
                    """
@@ -2004,7 +2013,8 @@ DEFAULT_NOTE_TEXT/**/
                    """
 CLEARING_MACROS/**/
      ARCADES offers two different ways of defining relations between search terms. The first is a
-     simple classificatory knowledgebase, while the second allows for the definition of relational facts.
+     simple classificatory knowledgebase, while the second allows for the definition of relational facts.
+
 """)
           self.add('KNOWLEDGE',
                    """
@@ -2095,7 +2105,8 @@ THE_GENERALKNOWLEDGE_COMMAND/**/
           self.add('KNOWLEDGE',
                    """
 KNOWLEDGE_CALLS_IN_KEYWORDS/**/
-     It is also possible to include calls to the knowledge base in the text of a note by surrounding them with double curly braces.
+     It is also possible to include calls to the knowledge base in the text of a note by surrounding them with double curly braces.
+
 """)
           self.add('KNOWLEDGE',
                    """
@@ -2145,7 +2156,8 @@ LOADING_RAW_TEXT/**/
 SETTING_AND_CHANGING_KEY_DEFINITIONS/**/
      The commands "changekeydefinitions", "defaultkeydefinitions", "recordkeydefinitions", and "clearkeydefinitions" can be used to define and change key definitions.
      The formatting of default key definitions is as follows: KEY:DEFINITION1,DEFINITION2,DEFINITION3…
-     The “definitions” are the words in the text corresponding to a given key.
+     The “definitions” are the words in the text corresponding to a given key.
+
 """)
           self.add('SPELLING',
                    """
@@ -2182,13 +2194,15 @@ DEFAULT_SPELLING/**/
      The defaultspelling command operates analogously to the “default”-commands for macros, key definitions, and the knowledge base.
      There are only two differences.
      (1) The suffix must contain the language-abbreviation (“en”, “es”, “de”, “fr”) in addition to the optional specifier.
-     (2) The text consists simply in a list of words to be added to the spelling dictionary for the language indicated.         
+     (2) The text consists simply in a list of words to be added to the spelling dictionary for the language indicated.
+         
 """)
           self.add('MISCELLANEOUS',
                    """
 SETTINGS/**/
      The command "showsettings" can be used to show all the string, integer, and Boolean values stored as persistent properties.
-     Most, but not all, of these properties can be manually adjusted.
+     Most, but not all, of these properties can be manually adjusted.
+
 """)
           self.add('MISCELLANEOUS',
                     """

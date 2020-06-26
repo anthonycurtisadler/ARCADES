@@ -10927,6 +10927,13 @@ class Console (Note_Shelf):
                 self.tutor.load()
                 display.noteprint(('ATTENTION!','TUTORIAL RELOADED'))
             
+            
+
+        if mainterm in ['starttutorial']:
+            self.tutor.all_tutorials()
+            
+        
+            
                 
             
 
@@ -14887,7 +14894,9 @@ while bigloop:
                 backup_was = allnotebooks[notebookname].autobackup
                 allnotebooks[notebookname].autobackup = False
                 allnotebooks[notebookname].enter({labels.WELCOME_HEAD},
-                               labels.WELCOME_BODY)
+                               labels.WELCOME_BODY+'|'+'NOTEBOOK: '
+                                                 +notebookname+'|'+'CREATED: '
+                                                 +str(datetime.datetime.now()).split(' ')[1])
 
                 
                 allnotebooks[notebookname].autobackup = backup_was
