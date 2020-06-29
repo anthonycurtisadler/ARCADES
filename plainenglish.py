@@ -430,7 +430,7 @@ class Spelling:
           self.WORDS_TO_DELETE = 'A(dd) new word\nD(elete)'\
                                  +'\nL(oad)words from text'\
                                  +'\nS(how) words\nC(hange) language'\
-                                 +'\n(E)rase\n(Q)uit'
+                                 +'\n(E)rase\nX(change database)\n(Q)uit'
           self.TEXT_TO_ADD = 'Text to add?'
           self.ARE_YOU_SURE = 'Are you sure?'
           self.THERE_ARE = 'There are '

@@ -8,7 +8,7 @@ import string
 from spellchecker import SpellChecker
 from globalconstants import EMPTYCHAR, BLANK, EOL, COLON, COMMABLANK, DASH, SLASH, YESTERMS
 from display import Display
-
+import sqlite3
 
 
 
@@ -21,13 +21,17 @@ class SpellCheck:
     and Spanish are also available added words for each
     language are kept in separate keys of added_words"""
 
-    def __init__(self, displayobject=None,added_words=None,headings=None):
+    def __init__(self, displayobject=None,added_words=None,headings=None,using_database=False,notebookname=None):
 
         if not headings:
             from plainenglish import Spelling
             self.headings = Spelling()
         else:
             self.headings = headings
+
+        if not notebookname:
+            notebookname = 'GENERAL'
+        self.notebookname = notebookname
 
 
         self.language = 'en'
@@ -44,7 +48,118 @@ class SpellCheck:
                 for word in self.added_words:
                     self.spell.word_frequency.load_words(word)
 
-        self.displayobject = displayobject
+        if not displayobject:
+            self.displayobject = Display()
+
+        else:
+            self.displayobject = displayobject
+        self.open_connection()
+        self.create_database()
+        self.update_notebook()
+        self.update_language()
+        self.load_words_from_DB()
+        
+
+        
+
+    def create_database (self):
+
+        self.db_cursor.executescript("""
+
+            CREATE TABLE IF NOT EXISTS notebooks (
+            
+                    notebook TEXT NOT NULL UNIQUE);
+
+              
+            CREATE TABLE IF NOT EXISTS languages (
+              
+                    notebook TEXT NOT NULL,
+                    language TEXT NOT NULL,
+                                        
+                    PRIMARY KEY (notebook, language)
+                    FOREIGN KEY (notebook) REFERENCES notebooks (notebook) ON DELETE CASCADE
+                    
+              );
+
+            CREATE TABLE IF NOT EXISTS words (
+              
+                    notebook TEXT NOT NULL,
+                    language TEXT NOT NULL,
+                    word TEXT NOT NULL,
+                    
+                    PRIMARY KEY (notebook, language, word)
+                    FOREIGN KEY (notebook) REFERENCES notebooks (notebook) ON DELETE CASCADE
+                    FOREIGN KEY (language) REFERENCES languages (language) ON DELETE CASCADE
+                    
+              );
+              """)
+
+    def update_notebook (self):
+
+        self.db_cursor.execute("INSERT OR REPLACE "+
+                               " INTO notebooks "+
+                               "(notebook) VALUES (?);",(self.notebookname,))
+        self.db_connection.commit()
+
+    def update_language (self,language=None):
+        if language is None:
+            language=self.language
+        value_tuple = (self.notebookname,self.language,)
+        self.db_cursor.execute("INSERT OR REPLACE INTO languages "+
+                               " (notebook, language) VALUES (?,?);",
+                               value_tuple)
+        self.db_connection.commit()
+
+    def open_connection (self):
+
+        self.db_connection = sqlite3.connect('notebooks'+'/'+'spelling.db')
+        self.db_cursor = self.db_connection.cursor()                                         
+
+    def purge_connection (self):
+
+        self.db_connection = None
+        self.db_cursor = None
+
+    def load_words_from_DB (self):
+
+        for language in self.added_words:
+            value_tuple = (self.notebookname, language,)
+            self.db_cursor.execute("SELECT word FROM words WHERE notebook=? and language=?",value_tuple)
+            words = self.db_cursor.fetchall()
+            self.added_words[language].update([word[0] for word in words])
+            
+    def add_word (self,word,language=None):
+
+        """Adds words both to dictionary and to database"""
+
+        if language is None:
+            language = self.language
+
+        self.added_words[self.language].add(word)
+        value_tuple = (self.notebookname, language, word)
+        self.update_language()
+        self.db_cursor.execute("INSERT OR REPLACE "+
+                               " INTO words "+
+                               "(notebook, language, word)"+
+                               "  VALUES (?,?,?);",
+                               value_tuple)
+        self.db_connection.commit()
+        value_tuple = (self.notebookname, self.language, word)
+        
+
+    def discard_word (self,word,language=None):
+        
+        if language is None:
+            language = self.language
+        self.added_words[self.language].discard(word)
+        self.update_language()
+        value_tuple = (self.notebookname, language, word)
+        self.db_cursor.execute("DELETE FROM words "+
+                              "WHERE notebook=? AND "+
+                              "language=? AND word=?;",value_tuple)
+        self.db_connection.commit()
+       
+               
 
     def set_language(self,
                      entry='en'):
@@ -132,7 +247,7 @@ class SpellCheck:
                         pass
                     elif inp == BLANK:
                         self.load(upper_lower(word,is_upper),language=self.language)
-                        self.added_words[self.language].add(upper_lower(word,is_upper))
+                        self.add_word(upper_lower(word,is_upper))
                         self.spell.word_frequency.load_words(upper_lower(word,is_upper))
                         self.displayobject.noteprint(('/C/ ATTENTION!',upper_lower(word,is_upper)
                                                       +' added to dictionary for '
@@ -152,7 +267,7 @@ class SpellCheck:
                                                         is_upper))
                     else:
                         if inp[0] == BLANK:
-                            self.added_words[self.language].add(word)
+                            self.add_word(word)
                             self.spell.word_frequency.load_words([word])
                             text = text.replace(upper_lower(word, is_upper),
                                                 upper_lower(inp, is_upper))
@@ -163,13 +278,13 @@ class SpellCheck:
                     if inp == EMPTYCHAR:
                         pass
                     elif inp == BLANK:
-                        self.added_words[self.language].add(word)
+                        self.add_word(word)
                         self.spell.word_frequency.load_words(word)
                     elif inp == SLASH:
                         break
                     else:
                         if inp[0] == BLANK:
-                            self.added_words[self.language].add(word)
+                            self.add_word(word)
                             self.spell.word_frequency.load_words([word])
                             text = text.replace(upper_lower(word, is_upper),
                                                 upper_lower(inp, is_upper))
@@ -195,7 +310,8 @@ class SpellCheck:
                     if len(a_temp) > 2
                     and a_temp not in self.added_words[self.language]]
         self.spell.word_frequency.load_words(list(entryset))
-        self.added_words[self.language].update(entryset)
+        for word in entryset:
+            self.add_word(word)
         self.displayobject.noteprint(('/C/ ATTENTION!',', '.join(list(entryset))
                               +' added to dictionary for '
                               +{'en':'English',
@@ -207,7 +323,8 @@ class SpellCheck:
     def console(self):
         go_on = True 
         while go_on:
-            self.displayobject.noteprint((self.headings.SPELLING_DICTIONARY,
+
+            self.displayobject.noteprint((self.headings.SPELLING_DICTIONARY+' '+self.notebookname,
                                           self.headings.WORDS_TO_DELETE))
             command = input('?')
             if not command:
@@ -220,7 +337,7 @@ class SpellCheck:
                 if command == 'D':
                     word = {x_temp.strip() for x_temp in input(self.headings.WORD_TO_DELETE).split(',')}
                     for w_temp in word:
-                        self.added_words[self.language].discard(w_temp)
+                        self.discard_word(w_temp)
                 if command == 'S':
                     self.show_added(self.language)
                 if command == 'C':
@@ -233,7 +350,24 @@ class SpellCheck:
                 if command == 'E':
                     if input(self.headings.ARE_YOU_SURE) in YESTERMS:
                         self.added_words[self.language] = set()
-
+                if command == "X":
+                    self.db_cursor.execute("SELECT * FROM notebooks")
+                    nb_list = [x[0] for x in self.db_cursor.fetchall()]
+                    self.displayobject.noteprint(('NOTEBOOKS',', '.join(nb_list)))
+                    new_nb = input('NAME of notebook to switch to?')
+                    query = True
+                    if new_nb not in nb_list:
+                        query = input('Are you sure you want to create '+new_nb) in YESTERMS
+                    if query:
+                        self.notebookname = new_nb
+                        self.update_notebook()
+                        self.added_words = {'es':set(),
+                                'en':set(),
+                                'fr':set(),
+                                'de':set()}
+                        self.load_words_from_DB()
+                        
+                        
                 if command == 'Q':
                     go_on = False
  
@@ -252,4 +386,10 @@ class SpellCheck:
                                              'fr':'FRENCH',
                                              'es':'SPANISH'}[self.language],
                                       ', '.join(list(sorted(self.added_words[self.language],key=lambda x:x.lower())))))
+
+if __name__ == "__main__":
+
+    spellchecker = SpellCheck()
+    spellchecker.console()
+    
 

@@ -67,7 +67,7 @@ import nformat                                                          #pylint 
 from ninput import q_input, s_input                                     #pylint 10.0/10
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
-from knowledgebase_ns import KnowledgeBase                              #pylint  8.62/10
+from knowledgebase import KnowledgeBase                              #pylint  8.62/10
 from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
@@ -6117,7 +6117,7 @@ class Note_Shelf:
                 brackets=True,
                 curtail=0,
                 groupsize=None,
-                save_list='display'):
+                save_list='all'):
         
         if not groupsize:
             groupsize = self.how_many
@@ -8719,6 +8719,9 @@ class Note_Shelf:
 
 
     def all_descendents (self,ind,from_indexes=None,as_index=True):
+
+        """Return all the descendents within the notebook of the gicen index"""
+        
         if not from_indexes:
             from_indexes = self.indexes()
         if as_index:
@@ -8732,6 +8735,9 @@ class Note_Shelf:
                 and Index(x_temp)>Index(0)]
 
     def group_into_descendents (self,from_indexes=None):
+
+        """Organize indexes into groups of top level indexes and their descendents"""
+        
         if not from_indexes:
             from_indexes = self.indexes()
         last_up = None
@@ -8766,6 +8772,9 @@ class Note_Shelf:
         return returnlist
 
     def iterate_over_descendents(self,index_groups):
+
+        """For iterating over groups of descendents"""
+        
         self.reset_iterators()
         for l_temp in index_groups:
             self.add_iterator(l_temp)
@@ -8773,6 +8782,8 @@ class Note_Shelf:
 
     def choose_from(self,index_list):
 
+        """For choosing from a range of indexes to move to.
+           Used for the second hypermode"""
 
         if len(index_list)==1:
             return index_list[0]
@@ -8804,6 +8815,10 @@ class Note_Shelf:
                 
 
     def hypermove(self,index):
+
+
+        """For iterating through notes with links"""
+        
         if self.hypermovemode == 0:
             # MODE ONE randomly jumps to related notes 
 
@@ -8860,6 +8875,8 @@ class Note_Shelf:
                 return Index(func_temp(keylist_temp))
 
     def show_projects(self,projectobject=None,value=False,prefix='archived'):
+
+        """For displaying all the different projects"""
 
         trim1 = self.default_dict['keytrim']
         trim2 = self.default_dict['texttrim']
@@ -11906,7 +11923,8 @@ class Console (Note_Shelf):
                 childrentoo=not predicate[1],
                 levels=l_temp,
                 brackets=not predicate[2],
-                         shortshow=not predicate[3])
+                         shortshow=not predicate[3],
+                         save_list='display')
     
         elif mainterm in ['histogram']:
 
@@ -14719,7 +14737,7 @@ while bigloop:
             notebookname = prefix+'defaultnotebook'
             flagvalue = 'w'
             if command_stack.size() < 1:
-                inputterm = stack_input(queries.OPEN_DIFFERENT,command_stack)
+                inputterm = stack_input("(N)o to open "+notebookname+" (Y)es to open a differnent notebook, or (Q)uit ",command_stack)
             if command_stack.size() > 0 or inputterm not in list(NOTERMS) + list(QUITTERMS):
                 if command_stack.size() > 0:
                     notebookname = command_stack.pop()
@@ -14741,11 +14759,9 @@ while bigloop:
                     notebookname = nb_temp[0]
                     flagvalue = nb_temp[1]
             else:
-                if inputterm in ['quit',
-                                 'QUIT',
-                                 'Quit',
-                                 'Q']:
+                if inputterm in QUITTERMS:
                     bigloop = False
+                    break
             nprint(notebookname)
             if notebookname in allnotebooks:
                 display.noteprint((alerts.ATTENTION,notebookname + alerts.ALREADY_OPEN))
@@ -14912,7 +14928,7 @@ while bigloop:
                and allnotebooks[notebookname].defaults.get('displayonstart'):                
                 if not allnotebooks[notebookname].default_dict['display'] \
                    and not allnotebooks[notebookname].default_dict['all']:
-                    allnotebooks[notebookname].showall(shortshow=True,quick=True)
+                    allnotebooks[notebookname].showall(shortshow=True,quick=False)
                 else:
                     if allnotebooks[notebookname].default_dict['all']:
                         show_list(allnotebooks[notebookname].default_dict['all'],
