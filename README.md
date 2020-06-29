@@ -13,7 +13,8 @@ Tags can be subordinated into higher order genuses (Kant/German philosopher=phil
 Keywords can also be organized through relations. (Kant influenced Fichte, Fichte influenced Hegel)
 Special "sequence keywords" can be used to keep track of page numbers, dates, or even index values.
 
-It is possible to search over nearly all attributes of the note, and the seerch phrase permits full logical argiculativeness by combining terms with AND (&), OR (|), NOT (~), and nested parentheses.
+It is possible to search over nearly all attributes of the note, and the seerch phrase permits full logical articulativeness by combining terms
+with AND (&), OR (|), NOT (~), and nested parentheses.
 
 The non-GUI display allows for RAPID cycling through notes with a variety of different iteration modes. 
 
