@@ -10,7 +10,7 @@ on:
 jobs:
   deploy:
 
-    runs-on: windows10
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v2
