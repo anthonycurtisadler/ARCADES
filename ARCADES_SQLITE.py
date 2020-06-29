@@ -67,7 +67,7 @@ import nformat                                                          #pylint 
 from ninput import q_input, s_input                                     #pylint 10.0/10
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
-from knowledgebase import KnowledgeBase                              #pylint  8.62/10
+from knowbase import KnowledgeBase                              #pylint  8.62/10
 from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
