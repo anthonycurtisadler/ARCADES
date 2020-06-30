@@ -961,9 +961,25 @@ def save_file(returntext=EMPTYCHAR,
                     encoding='utf-8') as textfile:
         textfile.write(returntext.replace('\ufeff', ' '))
 
-    return 'Saved to ' + directoryname+SLASH+filename+'.txt' 
+    return 'Saved to ' + directoryname+SLASH+filename+'.txt'
 
+def make_new_directory (directory_name='testnotebook',
+                        file_path=EMPTYCHAR,):
 
+    full_path = os.getcwd()+file_path
+    allfiles = os.listdir(full_path)
+    return_text = ""
+
+    if directory_name not in allfiles:
+        try:
+            os.mkdir(full_path+os.altsep+directory_name)
+            return_text = 'NEW FOLDER CREATED: '+directory_name
+        except:
+            return_text = 'NEW FOLDER CREATION FAILED'
+    else:
+        return_text = directory_name + ' ALREADY EXISTS'
+    return return_text
+   
 def get_file_name(file_path=EMPTYCHAR,
                   file_suffix=EMPTYCHAR,
                   file_prefix=EMPTYCHAR,
@@ -14519,7 +14535,12 @@ class Console (Note_Shelf):
 INTROSCRIPT = INTROSCRIPT.replace(PERCENTAGE, BLANK*int((OPENING_WIDTH-150)/2))
 
 
+
 display = Display()
+for dir_name in  ['notebooks','textfiles','registry','diagnostics','pictures','programs']:
+    result = make_new_directory(dir_name)
+    if result:
+        display.noteprint((result,''))
 register = Registry(displayobject=display)
 display.noteprint([INTROSCRIPT],
                   param_is_emb=True,
@@ -14722,6 +14743,10 @@ db_connection.commit()
 # TOP-LEVEL LOOP FOR OPENING AND CLOSING NOTEBOOKS.
 add_new_notebook = True
 succesful = True # if a new notebook is successfully loaded
+
+
+
+
 while bigloop:
     
     flagvalue = None
