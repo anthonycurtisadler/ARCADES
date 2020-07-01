@@ -53,6 +53,11 @@ NOTERMS = ['no',
 class Queries:
 
      def __init__(self):
+          self.OPEN_NEW1 = "(N)o to open "
+          self.OPEN_NEW2 = " (Y)es to open a different notebook, or (Q)uit "
+          self.RESUME_PROJECTS = 'RESUME PROJECTS? (y)es (no) or list of projects to resume!'
+          self.MOVE_SHELVES = "DO YOU WANT TO MOVE (S)HELF,SE(Q)UENCES, AND "+\
+                              "(P)ROJECTS TO DATABASE? ENTER ALL THAT APPLY"
           self.INITIAL_MENU = "(1) Display commands \n"+\
                        "(2) display commands in compact mode\n"+\
                        "(3) Start in Betamode \n"+\
@@ -229,7 +234,9 @@ class Queries:
 class Alerts:
     def __init__(self):
          
+          self.ADDED_TO_DATABASE_REGISTER = " ADDED TO DATABASE REGISTER"
           self.ATTENTION = '/C/ ATTENTION'
+          self.MOVING_NOTE = 'MOVING NOTE DICTIONARY FROM SHELF!'
           self.SELECTED = '/C/ SELECTED'
           self.CONSTITUTING_WORD_DICT = '/C/ CONSTITUTING WORD DICTIONARY!'
           self.WAIT = '/C/ PLEASE WAIT!'

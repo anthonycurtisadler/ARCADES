@@ -14762,7 +14762,7 @@ while bigloop:
             notebookname = prefix+'defaultnotebook'
             flagvalue = 'w'
             if command_stack.size() < 1:
-                inputterm = stack_input("(N)o to open "+notebookname+" (Y)es to open a differnent notebook, or (Q)uit ",command_stack)
+                inputterm = stack_input(queries.OPEN_NEW1+notebookname+queries.OPEN_NEW2,command_stack)
             if command_stack.size() > 0 or inputterm not in list(NOTERMS) + list(QUITTERMS):
                 if command_stack.size() > 0:
                     notebookname = command_stack.pop()
@@ -14878,7 +14878,7 @@ while bigloop:
                                                                     
                                 display.noteprint((labels.PREVIOUS_PROJECTS,t_temp))
 
-                                yes_temp = input('RESUME PROJECTS? (y)es (no) or list of projects to resume!')
+                                yes_temp = input(queries.RESUME_PROJECTS)
                                 if yes_temp in YESTERMS:
                                     q_temp = p_temp
                                 else:
@@ -14981,7 +14981,7 @@ while bigloop:
 
         
         if not allnotebooks[notebookname].defaults.get('usedatabase'):
-            temp_input = input('DO YOU WANT TO MOVE (S)HELF,SE(Q)UENCES, AND (P)ROJECTS TO DATABASE? ENTER ALL THAT APPLY')
+            temp_input = input(queries.MOVE_SHELVES)
             temp_input = ''.join(x.lower() for x in temp_input)
             
 
@@ -14990,7 +14990,7 @@ while bigloop:
                 try:
                     db_cursor.execute("INSERT INTO notebooks (notebook) VALUES (?);",(notebookname,))
                     db_connection.commit()
-                    nprint(notebookname," ADDED TO DATABASE REGISTER")
+                    nprint(notebookname,queries.ADDED_TO_DATABASE_REGISTER)
                 except:
                     pass
 
