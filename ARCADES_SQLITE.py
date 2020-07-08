@@ -1524,9 +1524,49 @@ class Note_Shelf:
 
         """
 
+        def expand (keys):
 
+            """returns variant forms of a name"""
+
+            returnkeyset = set()
+            for key in keys:
+
+                if SLASH in key:
+                    has_tags = True
+                    tag_tail = key.split(SLASH)[1]
+                    key = key.split(SLASH)[0]
+                else:
+                    has_tags = False
+                    tag_tail = EMPTYCHAR
+                if PERIOD not in key:
+                    all_keys = [key]
+                    
+                else:
+                    key_parts = key.split(PERIOD)
+                    if len(key_parts)==2:
+                        all_keys = [key_parts[1],key_parts[0]+BLANK+key_parts[1],key_parts[0][0]+BLANK+key_parts[1]]
+                    else:
+                        abbreviated = EMPTYCHAR
+                        for x in key_parts[0:-1]:
+                            abbreviated += x[0].upper()
+                            
+                        
+                        all_keys = [key_parts[-1],
+                                    key_parts[0]+BLANK+key_parts[-1],
+                                    BLANK.join(key_parts),
+                                    abbreviated+BLANK+key_parts[-1]]
+                for k in all_keys:
+                    returnkeyset.add(k+SLASH*has_tags+tag_tail)
+            return returnkeyset
+                        
+                        
+                    
         newkeyset = set()
 ##        is_sequence = False
+        if self.name_interpret:
+            keyset = expand(keyset)
+
+        
         for key in keyset:
             key = key.strip()
 
@@ -10043,6 +10083,7 @@ class Console (Note_Shelf):
         self.show_key_freq = True
         self.how_many = 30
         self.carry_keys = False
+        self.name_interpret = True 
 
         self.first_time = True
             #true if entry loop is running for the first time

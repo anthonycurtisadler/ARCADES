@@ -362,6 +362,7 @@ class Labels:
           self.SIZE ='/C/ SIZE'
           self.FLIPOUT = '/C/ FLIPOUT'
           self.SHORTSHOW = '/C/ SHORTSHOW'
+          self.NAME_INTERPRET = '/C/ NAME INTERPRET'
 
           self.ITERATOR_SHOW = '/C/ SHOW INDEXES WITH ITERATOR RESET '
           self.NONE = '/C/ NONE '
@@ -520,7 +521,8 @@ binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_I
                       'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE),
                       'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS),
                       'carrykeys':("self.carry_keys",labels.CARRY_KEYS),
-                      'abridgedformat':("self.abridgedformat",labels.ABRIDGEDFORMAT)}
+                      'abridgedformat':("self.abridgedformat",labels.ABRIDGEDFORMAT),
+                      'nameinterpret':("self.name_interpret",labels.NAME_INTERPRET)}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'

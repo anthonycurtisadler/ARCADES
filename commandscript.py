@@ -303,6 +303,8 @@ formathelp  |                                               |turn on or off form
 keysbefore||ask for keys before entering note
 keyafter||ask for keys after entering note
 carryoverkeys||carry over keys for child and nextnotes
+nameinterpret||Expand keywords with PERIOD to multiple name forms
+|| e.g. Martin.Heidegger = Martin Heidegger,M Heidegger,Heidegger
 carryall||carry over keys from all parents
 returnquit| |Exit note entry mode after pressing successive returns
 setreturnquit| |Set number of returns for returnquit
