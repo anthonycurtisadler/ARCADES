@@ -1722,15 +1722,12 @@ class Note_Shelf:
                         x = self.default_dict['sequences'].query(term1='#TYPE#',
                                                                  term2=identifier,
                                                                  action='get')
-                        if seq_type == self.default_dict['sequences'].query(term1='#TYPE#',
-                                                                            term2=identifier,
-                                                                            action='get'):
+                        if seq_type == x:
                             self.default_dict['sequences'].query(term1=identifier,
                                                                  term2=seq_value,
                                                                  action='set')
                         else:
-                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + self.default_dict['sequences'].query(term1='#TYPE#',
-                                                                                                                             action='get')
+                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + identifier + '/' + seq_value + str(x)
                             nprint(temp_label)
                             
         return newkeyset
