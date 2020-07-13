@@ -48,6 +48,10 @@ class Display:
 
 
         def splitnumber(integer):
+
+            """Divides a number into an odd and even part, or two even parts,
+            both of which add up to the number"""
+            
             if integer % 2 == 0:
                 return (int(integer/2),int(integer/2))
             if integer % 2 == 1:
@@ -199,6 +203,7 @@ class Display:
                 return BLANK
             else:
                 return char
+        def_leftmargin = leftmargin 
 
         npp_temp = np_temp
         np_temp = True
@@ -267,6 +272,7 @@ class Display:
             # print the divider between box heading and box body
             for line in body.split(EOL):
                 #split the main body into lines
+                
                 if (param_spacing > 0 or line.strip() != EMPTYCHAR):
 
                     if not override and  '/BREAK/' in line or '/NEW/' in line:
@@ -376,6 +382,41 @@ class Display:
             if body.replace(BLANK,EMPTYCHAR).replace(EOL,EMPTYCHAR):
 
                 for line in body.split(EOL):
+                    if '[#' in line and '#]' in line:
+                        #to modify leftmargin 
+                        if '[#]' in line:
+                            
+                            # to set margin to one 
+                            line = line.replace('[#]',EMPTYCHAR)
+                            leftmargin=def_leftmargin+1
+                        elif '[##]' in line:
+                            # to set margin to one
+                            line = line.replace('[##]',EMPTYCHAR)
+                            leftmargin=def_leftmargin+2
+                            
+                        elif '[#/#]' in line:
+                            # to reset margin
+                            line = line.replace('[#/#]',EMPTYCHAR)
+                            leftmargin=def_leftmargin
+
+                        else:
+                            # to set to the number of pounds 
+                            pounds_between = (POUND+line.split('[#')[1]).split('#]')[0]+POUND
+                            print(pounds_between)
+                            if not pounds_between.replace(POUND,EMPTYCHAR):
+                                leftmargin=def_leftmargin + len(pounds_between)
+                            elif len(pounds_between)>2 and pounds_between[1:-1].isnumeric():
+                                print(pounds_between)
+                                leftmargin=int(pounds_between[1:-1])
+                            elif len(pounds_between)>2 and not pounds_between[1:-1].replace('+',EMPTYCHAR):
+                                leftmargin += len(pounds_between)-2
+                            elif len(pounds_between)>2 and not pounds_between[1:-1].replace('-',EMPTYCHAR):
+                                leftmargin -= (len(pounds_between)-2)
+                                if leftmargin <= 0:
+                                    leftmargin = 0
+                            line = line.split('[#')[0]+line.split('#]')[1]
+                                
+                                    
 
                     if columns_done:
                         columnate = False

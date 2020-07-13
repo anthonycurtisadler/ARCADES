@@ -296,7 +296,12 @@ $ to replace entered line with new line without EOL.
 FORMATTINGSCRIPT = """
 /BREAK/ to ADD a BREAK.
 /NEW/ to divide into a SEPARATE NOTE.
-[INT] to change size of note.
+[/INT/]to change size of note.
+[####]To change the left margin to the number of pounds
+[#+#]To add one to the left margin
+[#-#]To delete one from the left margin
+[#/#]To reset the left margin to normal
+[#INT#]To set the left margin to INT
 /DEF/ to return to default size
 
 /COL/ To initiate columns by line.

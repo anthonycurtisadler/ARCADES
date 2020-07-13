@@ -1538,9 +1538,8 @@ class Note_Shelf:
                 else:
                     has_tags = False
                     tag_tail = EMPTYCHAR
-                if PERIOD not in key:
+                if ATSIGN in key or PERIOD not in key or PERIOD+BLANK in key:
                     all_keys = [key]
-                    
                 else:
                     key_parts = key.split(PERIOD)
                     if len(key_parts)==2:
