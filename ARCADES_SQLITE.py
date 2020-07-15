@@ -5048,7 +5048,7 @@ class Note_Shelf:
             """
             
             returnkeys = set()
-            for project in self.project:
+            for project in (self.project*self.suspend_default_keys) + self.temp_projects:
                 if project in self.default_dict['projects'].get_all_projects():
                     returnkeys = returnkeys.union(set(self.default_dict['projects'].get_default_keys(project=project)))
             return returnkeys
@@ -5078,10 +5078,11 @@ class Note_Shelf:
         def sequence_keys(keysetobject=None):
 
             """ Queries the sequence keys with question marks in them
+            and gets other keys from projects 
             """
 
-            for k_temp in sorted(usedefaultkeys*(self.defaults.get('defaultkeys')
-                                                 +list(get_keys_from_projects()))
+            for k_temp in sorted(usedefaultkeys*(self.defaults.get('defaultkeys'))
+                                 +list(get_keys_from_projects())
                                  +list(keysetobject),
                                  key=lambda x:order_sequence_keys(x)):
                 if (not et
@@ -5173,8 +5174,8 @@ class Note_Shelf:
             """adds to the number for the automatic sequence keys
             """
             
-            if self.project:
-                for p_temp in self.project:
+            if self.project*self.suspend_default_keys + self.temp_projects:
+                for p_temp in self.project*self.suspend_default_keys + self.temp_projects:
                     found_temp = False
                     for x_temp in range(1,10000):
                         if p_temp + ATSIGN + str(x_temp)+'.0' in self.keys():
@@ -9486,6 +9487,7 @@ class Console (Note_Shelf):
         self.divide_no_query = True
         self.add_diagnostics = True
         self.suspend_default_keys = False
+        self.temp_projects = []
         self.vertmode = False
         self.apply_abr_inp = True
         self.abridgedformat = True
@@ -13702,7 +13704,15 @@ class Console (Note_Shelf):
             self.suspend_default_keys = False
             biginputterm = biginputterm[1:]
         else:
-            self.suspend_default_keys = True 
+            self.suspend_default_keys = True
+        if (VERTLINE in biginputterm
+            and COLON not in biginputterm.split(VERTLINE)[0]
+            and SEMICOLON not in biginputterm.split(VERTLINE)[0]):
+            self.temp_projects = [x.strip() for x in biginputterm.split(VERTLINE)[0].split(COMMA)]
+            biginputterm = biginputterm.split(VERTLINE)[1]
+        else:
+            self.temp_projects = []
+            
             
         if biginputterm and self.add_diagnostics:
             diagnostics.addline(biginputterm)
