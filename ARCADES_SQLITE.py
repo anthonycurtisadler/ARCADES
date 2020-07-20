@@ -38,7 +38,7 @@ from globalconstants import BOX_CHAR,\
 
 
                                                                         #pylint 10.0/10
-
+from alphabetmanager import AlphabetManager
 import commandscript                                                    #pylint 10.0/10
 from complexobjecttransformindexes import transform
 import consolidate                                                      #Stack Overflow
@@ -5057,8 +5057,11 @@ class Note_Shelf:
 
             self.tutor.show('KEYWORDS')
 
-
-            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(input(queries.KEYS)).split(COMMA)):
+            key_text = input(queries.KEYS)
+            if self.use_alphabets:
+                key_text = self.alphabet_manager.interpret(key_text)
+            
+            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(key_text).split(COMMA)):
                 if isinstance(k_temp,str) and len(k_temp) > 0:
                     if k_temp[0] == DOLLAR:
                         keysetobject.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
@@ -5440,7 +5443,8 @@ class Note_Shelf:
                             self.entry_buffer.append(at_temp)
                             lastline = True
                             splitting = True 
-
+        if self.use_alphabets:
+            text = self.alphabet_manager.interpret(text)
         
         if len(text) > 1 and text[-2:] == VERTLINE + VERTLINE:
             text = text[0:-2]
@@ -9518,6 +9522,9 @@ class Console (Note_Shelf):
         self.tag_dict = {}
         self.word_dict = {}
         self.default_dict = {}
+        self.alphabet_manager = AlphabetManager()
+        self.use_alphabets = True
+        
 
         auto_database = True
 
@@ -10990,6 +10997,10 @@ class Console (Note_Shelf):
 
         global override
 
+        if mainterm in ['alphabets']:
+
+            self.alphabet_manager.console()
+            
         if mainterm in ['tutorial']:
 
             self.tutor.start()
@@ -13453,6 +13464,10 @@ class Console (Note_Shelf):
                                       +BLANK+{EMPTYCHAR:EMPTYCHAR,
                                               PLUS+PLUS:'[++]',
                                               PLUS+PLUS+PLUS:'[+++]'}[series_enter]+BLANK)
+                if self.use_alphabets:
+                    
+                    manyinputterm = self.alphabet_manager.interpret(manyinputterm)
+                
                 if self.apply_abr_inp:
                     manyinputterm = self.default_dict['abbreviations'].undo(manyinputterm)
                 manyinputterm = self.default_dict['commands'].do(manyinputterm, lchar=EMPTYCHAR)

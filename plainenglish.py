@@ -522,7 +522,8 @@ binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_I
                       'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS),
                       'carrykeys':("self.carry_keys",labels.CARRY_KEYS),
                       'abridgedformat':("self.abridgedformat",labels.ABRIDGEDFORMAT),
-                      'nameinterpret':("self.name_interpret",labels.NAME_INTERPRET)}
+                      'nameinterpret':("self.name_interpret",labels.NAME_INTERPRET),
+                      'usealphabets':("self.use_alphabets","USE ALPHABETS")}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -622,6 +623,7 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'showiterators':'self.show_iterators()',
                     'randomon':"self.iterator.random_on()",
                     'randomoff':"self.iterator.random_off()",
+                    'alphabets':RESIZE_COM,
                     'branchone':DEFAULT_COM,
                     'branchtwo':DEFAULT_COM,
                     'branchthree':DEFAULT_COM,

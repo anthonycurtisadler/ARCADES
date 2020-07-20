@@ -308,6 +308,7 @@ nameinterpret||Expand keywords with PERIOD to multiple name forms
 carryall||carry over keys from all parents
 returnquit| |Exit note entry mode after pressing successive returns
 setreturnquit| |Set number of returns for returnquit
+usealphabets| |Apply transcription for foreign languages
 ||"""
 
 INPUT = """||
@@ -402,7 +403,8 @@ clearknowledge | |reset knowledgebase
 ||
 showspelling |language.. /$  en.. /& gr.. /* fr.. /? es |show words added to spelling dictionary
 spelldictionary| |call up spelling dictionary console
-defaultspelling|language.. /$  en.. /& gr.. /* fr.. /? es |load added words from note 
+defaultspelling|language.. /$  en.. /& gr.. /* fr.. /? es |load added words from note
+alphabets| |Call up alphabet console
 
 | |NOT RECOMMENDED for large ranges"""
 
