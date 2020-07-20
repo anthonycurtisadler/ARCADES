@@ -42,6 +42,8 @@ class AlphabetManager:
 
         self.alphabets = {}
         self.display = Display()
+        self.load()
+        self.load('de')
 
     def load (self,language='gr'):
 
