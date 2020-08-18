@@ -1530,6 +1530,7 @@ class Note_Shelf:
 
             returnkeyset = set()
             for key in keys:
+            
 
                 if SLASH in key:
                     has_tags = True
@@ -1538,7 +1539,7 @@ class Note_Shelf:
                 else:
                     has_tags = False
                     tag_tail = EMPTYCHAR
-                if ATSIGN in key or PERIOD not in key or PERIOD+BLANK in key:
+                if ATSIGN in key or PERIOD not in key or PERIOD+BLANK in key or key[0].isnumeric():
                     all_keys = [key]
                 else:
                     key_parts = key.split(PERIOD)
@@ -3124,8 +3125,8 @@ class Note_Shelf:
     ###to these core functions
 
     def addnew(self,
-               keyset,
-               text,
+               keyset=None,
+               text=None,
                notundoing=True,
                metadata=None,
                show=False,
@@ -3137,7 +3138,8 @@ class Note_Shelf:
                suspend=False,
                carrying_keys=True,
                quick=False,
-               update_table=True):
+               update_table=True,
+               editing=False):
 
 
         """adds a new note (keyset&text) Includes metadata if entered;
@@ -3174,20 +3176,22 @@ class Note_Shelf:
 
             if isinstance(ind, (int, str)):
                 ind = Index(ind)
-
-
-            keyset = {a_temp.strip()
-                      for a_temp in keyset.union(set(self.suspend_default_keys
-                                                     *self.defaults.get('defaultkeys')))
-                                                     if a_temp not in [EMPTYCHAR,
-                                                                       BLANK,
-                                                                       BLANK*2,
-                                                                       BLANK*3,
-                                                                       VOIDTERM]
-                      and ATSIGN + QUESTIONMARK not in a_temp
-                      and ATSIGN + UNDERLINE + QUESTIONMARK not in a_temp
-                      and ATSIGN + POUND + QUESTIONMARK not in a_temp} 
-                      #Add keywords from default list
+            
+            if not editing:
+                keyset = {a_temp.strip()
+                          for a_temp in keyset.union(set(self.suspend_default_keys
+                                                         *self.defaults.get('defaultkeys')))
+                                                         if a_temp not in [EMPTYCHAR,
+                                                                           BLANK,
+                                                                           BLANK*2,
+                                                                           BLANK*3,
+                                                                           VOIDTERM]
+                          and ATSIGN + QUESTIONMARK not in a_temp
+                          and ATSIGN + UNDERLINE + QUESTIONMARK not in a_temp
+                          and ATSIGN + POUND + QUESTIONMARK not in a_temp} 
+                          #Add keywords from default list
+            if not keyset:
+                keyset = set()
 
             if self.linking:
                 if not self.starting_linking:
@@ -4429,7 +4433,8 @@ class Note_Shelf:
                     metadata=oldmeta,
                     ind=index,
                     right_at=True,
-                    update_table=update_table)
+                    update_table=update_table,
+                    editing=True)
         return True
 
     def add_keyword(self,
