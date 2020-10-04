@@ -487,7 +487,8 @@ sheet|range,display stream,width,save stream, Xmax*Ymax |display as sheet
 rsheet, resumesheet | resumes existing sheet
 closesheetshelf |close the sheet shelf
 tosheetshelf|frompad,topad|add a pad to the shelf for storage
-selectsheet |resume a pad in the sheetshelf 
+selectsheet |resume a pad in the sheetshelf
+indexer| |Calls index generator
 
 ||
 ||"""
@@ -523,6 +524,7 @@ showsettings| |Show settings
 switch|notebase |switches to a new notebase without quiting
 quit|  {$ to suppress query}			|save and quit
 test| execute test script
+
 
 
 """

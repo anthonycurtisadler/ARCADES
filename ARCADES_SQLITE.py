@@ -54,6 +54,7 @@ import emptymovingwindow
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
+from indexer import Index_Maker
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output
@@ -5455,8 +5456,8 @@ class Note_Shelf:
             text = text[0:-2]
 
         if self.abridgedformat:
-            text = text.replace('///','/NEW/')
-            text = text.replace('//','/BREAK/')
+            text = text.replace('/*/*/','/NEW/')
+            text = text.replace('/*/','/BREAK/')
 
         text = text.replace('/BREAK/',VERTLINE+'/BREAK/'+VERTLINE)
         text = text.replace('/NEW/',VERTLINE+'/NEW/'+VERTLINE)
@@ -9475,6 +9476,7 @@ class Console (Note_Shelf):
         self.sortedindexes = set()
         self.sortedtags = set()
         self.sortedkeys = set()
+        self.index_maker = None
 
         self.dd_changed = False 
 
@@ -11001,6 +11003,35 @@ class Console (Note_Shelf):
                         totalterms=0):
 
         global override
+
+        if mainterm in ['indexer']:
+
+            def is_index(x):
+
+                try:
+                    x = Index(x)
+                    return True
+                except:
+                    return False
+            if not self.index_maker:
+                self.index_maker = Index_Maker()
+            
+            returned = self.index_maker.console()
+            if isinstance(returned,dict) and len(list(returned.keys()))>0:
+                roman_index = ''
+                arabic_index = ''
+                while not is_index(roman_index) and not is_index(arabic_index):
+
+                    roman_index = s_input('Roman index?',otherterms[0])
+                    arabic_index = s_input('Arabic index?',otherterms[1])
+                    otherterms[0] = ''
+                    otherterms[1] = ''
+                for page in returned:
+                    converted_page = page.replace('a.',roman_index+'.')
+                    converted_page = converted_page.replace('b.',arabic_index+'.')
+                    converted_page = converted_page.replace('c.',arabic_index+'.')
+                    self.enter(ind=Index(converted_page),ek=returned[page]['keys'],et=returned[page]['text'],right_at=True)
+                    
 
         if mainterm in ['alphabets']:
 

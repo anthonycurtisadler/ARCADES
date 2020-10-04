@@ -1,8 +1,8 @@
 """TRUTH TABLE GENERATOR
  by ANTHONY CURTIS ADLER"""
 
-left_mark = '('
-right_mark = ')'
+left_mark = '{'
+right_mark = '}'
 
 
 def contains (phrase,chars):
