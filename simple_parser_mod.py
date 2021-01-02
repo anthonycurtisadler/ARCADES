@@ -1,8 +1,8 @@
 """TRUTH TABLE GENERATOR
  by ANTHONY CURTIS ADLER"""
 
-left_mark = '{'
-right_mark = '}'
+left_mark = '('
+right_mark = ')'
 
 
 def contains (phrase,chars):
@@ -102,7 +102,7 @@ def split_into_phrases (phrase):
      elif '!@|@!' in phrase:
           # For OR 
           phrases = ['@']+''.join(phrase).split('!@|@!')
-     print('PHRASE',phrase)
+ 
 
      return [x for x in phrases]
 

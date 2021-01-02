@@ -22,6 +22,9 @@ curses.KEY_TAB = 9
 class MovingWindow:
 
      def __init__ (self,textlist=None):
+          
+          self.textlist=textlist
+          
           pass
               
 

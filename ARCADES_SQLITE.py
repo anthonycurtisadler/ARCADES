@@ -194,11 +194,6 @@ def si_input (prompt=EMPTYCHAR,
         display.noteprint(alert)
 
 
-
-
-
-
-
 def check_hyperlinks(entry=[],purge=False):
 
     """Checks to see if hyperlinks
@@ -11005,6 +11000,12 @@ class Console (Note_Shelf):
         global override
 
         if mainterm in ['indexer']:
+            check_spelling_was = self.check_spelling
+            if not predicate[1]:
+                #TO disable spelling
+                self.check_spelling = False
+
+            correct = lambda x:x.replace('[BREAK]','\n\n')
 
             def is_index(x):
 
@@ -11015,6 +11016,64 @@ class Console (Note_Shelf):
                     return False
             if not self.index_maker:
                 self.index_maker = Index_Maker()
+
+            def get_if(x,left=None,right=None):
+
+                if left and right:
+                    if left in x and right in x:
+                        return x.split(left)[1].split(right)[0].strip(),\
+                               x.split(left)[0]+x.split(right)[1].strip()
+                    
+                return '',x.strip()
+            
+            def format_keys (x,tags=False,full_name=False,name_to_text=True):
+
+                def if_split(x,splitter):
+
+                    if splitter in x:
+                        return x.split(splitter)[0].strip(),x.split(splitter)[1].strip()+' '
+                    return x,''
+
+                name, text = get_if(x,left='<',right='>')
+                name = name.strip()
+                text = text.strip()
+                if name:
+                    x = name+"'s"+' '+text
+                else:
+                    x = text
+                
+
+                x = x.split(';;')[0].strip()
+                head, tail = if_split(x,'_')
+                
+                x = tail + head
+                
+                
+
+                enclosed, key = get_if(x,left='(',right=')')
+                key = key.strip()
+                if ',' in key and key.count(',')==1:
+                    last_name, first_name = key.split(',')[0].strip(), key.split(',')[1].strip()
+                    first_name = first_name + ' '
+                else:
+                    last_name, first_name = key,''
+                if full_name:
+                    key = first_name+last_name
+                else:
+                    key = last_name
+                if tags and enclosed:
+
+                    key = key + '/' + enclosed
+                return key 
+                
+            def format_all_keys (key_set,tags=False,full_name=False,name_to_text=False):
+
+                return_set = set()
+                for key in key_set:
+                    return_set.add(format_keys(key,tags,full_name))
+                return return_set
+
+                
             
             returned = self.index_maker.console()
             if isinstance(returned,dict) and len(list(returned.keys()))>0:
@@ -11026,12 +11085,32 @@ class Console (Note_Shelf):
                     arabic_index = s_input('Arabic index?',otherterms[1])
                     otherterms[0] = ''
                     otherterms[1] = ''
-                for page in returned:
+                for counter, page in enumerate(returned):
+                    print(str(counter)+'/'+str(len(returned)))
+                    
                     converted_page = page.replace('a.',roman_index+'.')
                     converted_page = converted_page.replace('b.',arabic_index+'.')
                     converted_page = converted_page.replace('c.',arabic_index+'.')
-                    self.enter(ind=Index(converted_page),ek=returned[page]['keys'],et=returned[page]['text'],right_at=True)
-                    
+                    inp_yes = ''
+                    if not predicate[0]:
+                        
+                        inp_yes = input('INPUT '+converted_page+' or (Q)uit or (S)top querying?')
+                        
+                        if inp_yes:
+                            inp_yes = inp_yes[0].upper()
+                            
+                    if inp_yes == 'Q':
+                        break
+                    if inp_yes == 'S':
+                        predicate[0] = True
+                    if predicate[0] or inp_yes in YESTERMS:
+                        self.enter(ind=Index(converted_page),ek=format_all_keys(returned[page]['keys'],
+                                                                                tags=predicate[1],
+                                                                                full_name=predicate[2],
+                                                                                name_to_text=predicate[3]),
+                                   et=correct(returned[page]['text']),right_at=True)
+                        
+            self.check_spelling=check_spelling_was      
 
         if mainterm in ['alphabets']:
 

@@ -48,18 +48,31 @@ class TutorialManager:
                entry = input('PLUS+RETURN for advance, PLUS+PLUS+RETURN to show next \n'
                              *(len(self.tutorials[header]['message'])>1)
                              +'SPACE+RETURN to stop showing this message, '
-                             +'SPACE+SPACE+RETURN to quit tutorial, \n or MINUS+RETURN to SHOW TUTORIAL MENU  ')
+                             +'SPACE+SPACE+RETURN to quit tutorial, \n EQUAL+RETURN TO SHOW TITLES'
+                             +' or MINUS+RETURN to SHOW TUTORIAL MENU  ')
                if entry == ' ':
                     self.tutorials[header]['status'] = False
                elif entry == '-':
                     self.all_tutorials()
                elif entry == '  ':
                     self.activated = False
+               elif entry == '=':
+                    self.show_titles(header)
                elif entry == '+':
                     self.tutorials[header]['message'] = self.tutorials[header]['message'][1:]
                elif entry == '++':
                     self.tutorials[header]['message'] = self.tutorials[header]['message'][1:]
                     self.show(header)
+
+     def show_titles(self,header):
+          
+          if header in self.tutorials:
+               text = ''
+               for counter,x in enumerate(self.tutorials[header]['message']):
+                    text+='('+str(counter)+') '+x.split('/**/')[0].replace('_',' ').replace('\n','')+'\n'
+               display.noteprint((header,text),param_width=75)
+               
+          
      def all_tutorials(self):
 
           
@@ -70,7 +83,7 @@ class TutorialManager:
                                                if len(self.tutorials[h]['message'])>0],
                                               key=lambda x:len(self.tutorials[x]['message']))))
                for counter, x in enumerate(headers):
-                    header_text += '('+str(counter+1)+') '+headers[counter]+'\n'
+                    header_text += '('+str(counter+1)+') '+headers[counter]+' ['+str(len(self.tutorials[x]['message']))+']\n'
                display.noteprint(('TUTORIALS',header_text))
                x = input('ENTER THE NUMBER OF THE TUTORIAL TO BEGIN, Q TO QUIT, \n OR R TO RESTORE TUTORIALS ')
                if x.upper() == 'Q':
@@ -951,7 +964,7 @@ SWITCHING_BETWEEN_PROJECTS/**/
      
           self.add('INITIATE',
               """
-MOVING_NOTES_BETWEEN_NOTEBOOKS_WITH_THE_COPY_BUFFER/**/
+MOVING_NOTES_BETWEEN_NOTEBOOKS_WITH_THE_COPYBUFFER/**/
      Each active notebook is a unique notebook-object.
      ARCADES, however, also allows you to store notes in a common register shared by all the notebooks.
 

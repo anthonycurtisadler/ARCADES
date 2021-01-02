@@ -44,6 +44,8 @@ class AlphabetManager:
         self.display = Display()
         self.load()
         self.load('de')
+        self.load('xl')
+        self.load('heb')
 
     def load (self,language='gr'):
 
@@ -157,8 +159,8 @@ if __name__ == '__main__':
 
     alph_man = AlphabetManager()
 
-    print(alph_man.interpret("This [*de]Wa$er ist gu:te[de*] is a test [*gr]hexis[gr*]Oh yes[*heb]adonai[heb*] it is[*gr]filo'sofia[gr*]NOW"))
-    print(alph_man.interpret("This is a test [*gr]hexis[gr*]Oh yes[*heb]adonai[heb*] it is[*gr]filo'sofia[gr*]NOW"))
+    print(alph_man.interpret("This [*de]Wa$er ist gu:te[de*] is a test [*gr]hexis[gr*]Oh yes[*heb]ADAM[heb*] it is[*gr]filo'sofia[gr*]NOW"))
+    print(alph_man.interpret("This is a test [*xl]he: a: o: xis  o.p*[xl*]Oh yes[*heb]adonai[heb*] it is[*gr]filo'sofia[gr*]NOW"))
     alph_man.console()
                     
 

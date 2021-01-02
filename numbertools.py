@@ -93,3 +93,73 @@ def format_range(page_set):
 
     return to_return
 
+def de_range(page_string):
+
+    #ONLY WORKS FOR POSITIVE VALUES
+    returnset = set()
+
+    segments = [x.strip() for x in page_string.split(',')]
+    for segment in segments:
+
+        arabic_from, arabic_to, roman_from, roman_to = 0,0,0,0
+
+        if not '-' in segment:
+            returnset.add(segment)
+        else:
+            from_value, to_value = segment.split('-')[0],segment.split('-')[1]
+            if from_value.isnumeric():
+                arabic_from = int(from_value)
+            else:
+                roman_from = rom_to_int(from_value)
+            if arabic_from and to_value.isnumeric() and int(to_value)>arabic_from:
+                arabic_to = int(to_value)
+            if roman_from and not to_value.isnumeric() and rom_to_int(to_value)>roman_from:
+                roman_to = rom_to_int(to_value)
+
+            if roman_from and roman_to:
+                for x in range(roman_from,roman_to+1):
+                    returnset.add(int_to_roman(x))
+            if arabic_to and arabic_from:
+                for x in range(arabic_from,arabic_to+1):
+                    returnset.add(str(x))
+    return returnset
+
+                        
+def abbreviate_range(range_string):
+    
+    rehyphen = lambda x,y:str(x)+'-'+str(y)
+    def return_dif(x,y,two_or_more=False):
+        x = str(x)
+        y = str(y)
+        if not len(x)==len(y):
+            return x+'-'+y
+        else:
+            for index in range(len(x)-two_or_more):
+                if x[index]!=y[index]:
+                    break
+            return x+'-'+y[index:]
+     
+            
+    # for positive values only 
+    if '-' not in range_string:
+        return range_string
+    left_value,right_value = range_string.split('-')
+    if not (left_value+right_value).isnumeric():
+        return range_string
+    if not right_value>left_value:
+        return rehyphen(left_value,right_value)
+    left_value,right_value = int(left_value),int(right_value)
+    if 0<=left_value<100:
+        return rehyphen(left_value,right_value)
+    elif left_value%100==0:
+        return rehyphen(left_value,right_value)
+    elif 0<left_value%100<10 and right_value-left_value<10:
+        return return_dif(left_value,right_value)
+    else:
+        return return_dif(left_value,right_value,two_or_more=True)
+        
+def convert_range(ranges,split_phrase=',',join_phrase=', '):
+
+    return join_phrase.join([abbreviate_range(x.strip()) for x in ranges.split(split_phrase)])
+
+        

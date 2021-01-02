@@ -10,6 +10,7 @@ class Alphabet:
         self.mod_word = all_alphabets[language]['function']
         self.help_script = all_alphabets[language]['helpscript']
         self.orientation = all_alphabets[language]['orientation']
+        self.add_regular_latin = all_alphabets[language]['latin']
 
         self.definitions = {}
 
@@ -19,18 +20,33 @@ class Alphabet:
         #together with the marks that interpret the given diacritics = determinant 
         #{char1:[head1a#determinant1a,head1b#determinant1b]}
         self.det_chars = set()
+        found_heads = set()
         for line in self.letters.split('\n'):
             if line:
                 head,body = line.split('|')[0],line.split('|')[1]
                 char,determinant = body.split('#')[0],body.split('#')[1]
                 self.det_chars.update(set(determinant))
 
+                if self.add_regular_latin and char not in found_heads:
+                    if char in self.definitions:
+                        if (char,'') not in self.definitions[char]:
+                            self.definitions[char].append((char,''))
+                    else:
+                        self.definitions[char] = [(char,'')]
+                    found_heads.add(char)
+                
+                        
+
                 if char not in self.definitions:
                     self.definitions[char] = [(head,determinant.replace(' ',''))]
                 else:
+                    for x in self.definitions:
+                        if (head,determinant.replace(' ','')) in self.definitions[x]:
+                            print('ALREADY FOUND',x,(head,determinant.replace(' ','')))
                     self.definitions[char].append((head,determinant.replace(' ','')))
-        #String containing all the chars in the Roman alphabet appearing as keys in the dictionary
                     
+                   
+        #String containing all the chars in the Roman alphabet appearing as keys in the dictionary
         self.all_chars = ''.join(list(set(self.definitions.keys())))
 
     def get_segments (self,phrase):
@@ -142,9 +158,11 @@ class Alphabet:
             segments = self.get_segments(word)
 
             output.append(self.interpret(segments))
-        result = ' '.join(output)
-        if not self.orientation:
-            result = ''.join(reversed(result))
+        if self.orientation:
+            result = ' '.join(output)
+        else:
+            result = ' '.join(reversed(output))
+ 
             
         return result
 
@@ -176,7 +194,7 @@ class Alphabet:
 
 if __name__ == "__main__":
 
-    greek_keyboard = Alphabet('de')
+    greek_keyboard = Alphabet('heb')
     while True:
         print(greek_keyboard.transcribe(input('?')))
         print(greek_keyboard.help())  

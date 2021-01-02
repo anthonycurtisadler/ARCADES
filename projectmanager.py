@@ -106,8 +106,12 @@ class ProjectManager:
                print(self.projects)
  
 
+     # to activate/deactivate archive mode
+     def set_archive (self,value):
+          if isinstance(value,bool):
+               self.project_suffix = 'archive'*value
+     
           
-               
      
      # methods for accessing the database
 
@@ -134,7 +138,7 @@ class ProjectManager:
      def delete_project_DB (self,project=None):
           self.cursor.execute("DELETE FROM project_names "+
                               "WHERE notebook=? AND project=?;",
-                              (self.notebookname,project,))
+                              (self.notebookname,project+self.project_suffix,))
           self.connection.commit()
 
      def add_index_DB (self,project=None,index=None):
@@ -284,22 +288,22 @@ class ProjectManager:
 
                if not type(lastup)==type(None):
                     lastup = str(lastup)
-                    value_tuple = (lastup, self.notebookname, project,)
+                    value_tuple = (lastup, self.notebookname, project+self.project_suffix,)
                     self.cursor.execute("UPDATE simple_properties "+
                                         "SET lastup=? WHERE notebook=? and project=?;",value_tuple)
                if not type(uptohere)==type(None):
                     uptohere = str(uptohere)
-                    value_tuple = (uptohere, self.notebookname, project,)
+                    value_tuple = (uptohere, self.notebookname, project+self.project_suffix,)
                     self.cursor.execute("UPDATE simple_properties "+
                                         "SET uptohere=? WHERE notebook=? and project=?;",value_tuple)
 
                if not type(mainterm)==type(None):
-                    value_tuple = (mainterm, self.notebookname, project,)
+                    value_tuple = (mainterm, self.notebookname, project+self.project_suffix,)
                     self.cursor.execute("UPDATE simple_properties "+
                                         "SET mainterm=? WHERE notebook=? and project=?;",value_tuple)
 
                if not type(series_enter)==type(None):
-                    value_tuple = (series_enter, self.notebookname, project,)
+                    value_tuple = (series_enter, self.notebookname, project+self.project_suffix,)
                     self.cursor.execute("UPDATE simple_properties "+
                                         "SET series_enter=? WHERE notebook=? and project=?;",value_tuple)
                if not type(opened)==type(None):
@@ -308,7 +312,7 @@ class ProjectManager:
                          opened = 'TRUE'
                     else:
                          opened = 'FALSE'
-                    value_tuple = (opened, self.notebookname, project,)
+                    value_tuple = (opened, self.notebookname, project+self.project_suffix,)
                     self.cursor.execute("UPDATE simple_properties "+
                                         "SET opened=? WHERE notebook=? and project=?;",value_tuple)
 

@@ -488,7 +488,7 @@ rsheet, resumesheet | resumes existing sheet
 closesheetshelf |close the sheet shelf
 tosheetshelf|frompad,topad|add a pad to the shelf for storage
 selectsheet |resume a pad in the sheetshelf
-indexer| |Calls index generator
+indexer|/$ suspend query  /& tags /* full name |Calls index generator
 
 ||
 ||"""

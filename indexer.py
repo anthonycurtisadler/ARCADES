@@ -7,20 +7,37 @@ import pdfplumber, os, string, simple_parser_mod as parser, pickle
 import copy
 import nltk
 from nltk import word_tokenize
+from openpyxl import load_workbook
 
 
 from lexical import English_frequent_words
 from spellchecker import SpellChecker
-from globalconstants import YESTERMS
-from numbertools  import format_range, rom_to_int, int_to_roman
+
+from numbertools  import format_range, rom_to_int,\
+     int_to_roman,de_range,abbreviate_range,convert_range
+from scroll import Select
+from globalconstants import YESTERMS 
+
+from indexformat import FormatIndex
+from stack import Stack
+
+SEARCH_HELP ="""
+
+&=AND, |=OR, ~=NOT, PARENTHESES
+_AT THE START OF A TITLE
+$AT THE START OF A LITERAL
 
 
-
-
+"""
 
 
 first_romans = [int_to_roman(x) for x in range(1,300) if x]
-NAME_WORDS = ['von','van','de','della','la','da','les','los','las']
+NAME_WORDS = ['von','van','de','della','la','da','del']
+SUBHEAD_WORDS = ['and','of','as','vs.','for','a','the','into','is','from','of','then','than']
+
+BREAK_PHRASE = '[BREAK]'
+BREAK_PHRASE_LEN = len(BREAK_PHRASE)
+                    
 
 max_title_length = 15
 
@@ -30,11 +47,154 @@ index_folder = os.altsep+'indexer'+os.altsep
 speller = SpellChecker()
 os.system('color F0')
 
-YESTERMS += [' ']
-string.punctuation += '—'
-DIVIDER = '__________________________________________________________'
+YESTERMS += [' ','Y']
+string.punctuation += '—'+'“'+'”'+'‘'+'’'+''
+string.punctuation = string.punctuation.replace('-','')
+string.punctuation = string.punctuation.replace('’','')
+string.punctuation = string.punctuation.replace("'",'')
+                        
+DIVIDER = '__________________________________________________________'+'\n'
 
-from colorama import Fore, Back, Style 
+from colorama import Fore, Back, Style
+
+def line_form (x,length=70,breaker=';'):
+
+                """Formats  a section of text for each line is no more than legnth"""
+                
+
+                return_lines = []
+                last_line = ''
+                last_line_length = 0
+                break_len = len(breaker)
+                
+
+                for l in x.split(breaker):
+                    if last_line_length + len(l) < length:
+                        last_line+=l+breaker
+                        last_line_length += len(l)+break_len
+                        
+                    else:
+                        return_lines.append(last_line)
+                        last_line = l+breaker
+                        last_line_length = len(l)+break_len
+                return_lines.append(last_line)
+                return '\n'.join(return_lines)
+            
+def page_sort_function(x):
+
+    """For order roman and italic pages"""
+
+    if not isinstance(x,str):
+        return x
+
+    if x.isnumeric():
+        return int(x)
+    if not set(x)-{'i','x','v','l','c','d'}:
+        return -100+rom_to_int(x)
+    else:
+        return x
+    
+def format_result(search_term='',page_set=None,page_dict=None,rejected=None):
+
+    """For formatting the results of an index and its subterms for cutting and
+        pasting into excel so that it can be interpreted properly"""
+
+    as_line = ''
+    if page_set:
+        print('{'+format_range(page_set)+'}')
+        as_line += '{'+format_range(page_set)+'}'+'\t'
+    else:
+        as_line += '\t'
+    if page_dict:
+        classified_list = []
+        for classifier in page_dict:
+            if page_dict[classifier]:
+                classified_list.append(classifier.split('/')[0]+'{'+format_range(page_dict[classifier])+'}')
+        print(';'.join(classified_list))
+        as_line += ';'.join(classified_list)
+    if rejected:
+        print('REJECTED ','{-'+','.join(rejected)+'}')
+    return as_line
+
+def numeric_input(prompt='',lower=None,upper=None,alert=True):
+
+    """For inputting a numeric value"""
+
+    while True:
+        x = input(prompt)
+        if x.isnumeric():
+            if (lower and int(x)<lower)  or (upper and int(x)>upper):
+                print('VALUE OUT OF BOUNDS! MUST BE BETWEEN '+str(lower)+' AND '+str(upper)+'!')
+            else:
+                break
+        elif alert:
+            print('VALUE MUST BE AN INTEGER!')
+    return x
+
+def type_input(prompt='',must_be=['Y','N',' '],truncate=True,upper=True,return_empty=True, alert=True):
+
+    """For inputting limited to a selection of single letter values"""
+    
+    while True:
+        x = input(prompt)
+        if x and truncate:
+            x = x[0]
+        if x and upper:
+            x = x.upper()
+            
+        if x in must_be or (not x and return_empty):
+            return x
+        elif alert:
+            print('VALUE MUST BE '+','.join(must_be).replace(' ','BLANK')+',RETURN'*return_empty)
+        
+
+def yes_no_input(prompt=''):
+
+    """For yes or no inputs"""
+
+    return type_input(prompt) in [' ','Y']
+
+
+def get_if(x,left=None,right=None,get_all=False):
+
+    """Extracts the segment from a text surrounded by left and right.
+    Returns extract, text"""
+
+    if not get_all:
+
+        if left and right:
+            if left in x and right in x:
+                return x.split(left)[1].split(right)[0].strip(),\
+                       x.split(left)[0]+right.join(x.split(right)[1:])
+            
+            return '',x.strip()
+    all_found = []
+    if left and right:
+        counter = 0
+        while  counter < 10 and left in x and right in x:
+            counter += 1 
+            found, x = get_if(x,left,right,get_all=False)
+            all_found.append(found)
+        return list(set(all_found)), x
+    return [],''
+            
+            
+
+def purge_small (phrase,purge_list,italics=True):
+
+    """Purge all words from the purge list.
+        and remove italic markers"""
+    
+    if italics:
+        phrase = phrase.replace('/&it/','').replace('/it$/','')
+        
+    
+    surround = lambda a:' '+a+' '
+    phrase = surround(phrase)
+    for x in purge_list:
+        if surround(x) in phrase:
+            phrase = phrase.replace(surround(x),' ')
+    return phrase.strip() 
 
 def some_letters (x):
 
@@ -47,6 +207,23 @@ def some_letters (x):
             return True
     return False
 
+def strip_punctuation (phrase,left=True,right=True):
+
+    """Strips punctuation to right or left of phrase"""
+
+    if left:
+        while phrase:
+            if phrase[0] in string.punctuation:
+                phrase = phrase[1:]
+            else:
+                break
+    if right:
+        while phrase:
+            if phrase[-1] in string.punctuation:
+                phrase = phrase[:-1]
+            else:
+                break
+    return phrase 
 
 
 def extract_page_number (text,from_top=False):
@@ -138,7 +315,20 @@ def last_is_date (x):
         return True
     return is_date(x.split(',')[-1])
 
+def sort_all_pages (all_pages):
+    
+        roman_pages = [int_to_roman(x)
+                               for x in sorted([rom_to_int(x) for x in all_pages
+                                                if not x.isnumeric()])]
+        arabic_pages = [str(x) for x in sorted([int(x) for x in all_pages
+                                                        if x.isnumeric()])]
+        all_pages = roman_pages + arabic_pages
+        return all_pages
+
 SMALL_WORDS = ['and','of','from','the','a','but','as','if','is','was','because','has']
+for x in list(SMALL_WORDS):
+    SMALL_WORDS.append(x[0].upper()+x[1:])
+
 
 class Reader:
 
@@ -183,10 +373,32 @@ class Reader:
         self.title_dict = {}      #keeps track of pages in which titles are found 
         self.capital_histio = {}  #keeps track of capitalized expressions 
         self.first_words = set()  #first words in sentences
+        self.dehyphenated = {} #Keeps track of dehyphenated expressions
+        self.order_dictionary = {} #Keeps track of first appearance of phrases and words
+        self.title_translation_dictionary = {} # keeps track of likely translations of titles
+        self.author_dict = {} # keeps track of likely authors 
+        
+        
+        
 
         ##This data structure is very messy; could be simplified, cleaned up;
         ##too much redundancy.
 
+    def is_greater_than (x_page,y_page):
+
+        if not x_page.isnumeric():
+            if y_page.isnumeric():
+                return False
+            elif rom_to_int(x_page) <= rom_to_int(y_page):
+                return False
+            else:
+                return True
+        elif not y_page.isnumeric():
+            return True 
+        else: return not int(x_page) <= int(y_page)
+
+
+        
         
     def get_pages_for_sentences(self,sentence_list=None):
 
@@ -209,8 +421,8 @@ class Reader:
         def get_parameters ():
 
             """Query user for the parameters for intepreting"""
-            from_top = input('Is the page number on top of the page?') in YESTERMS
-            add_italic_caps = input('Include italicized capital expressions?') in YESTERMS
+            from_top = yes_no_input(prompt='Is the page number on top of the page?') 
+            add_italic_caps = yes_no_input(prompt='Include italicized capital expressions?')
 
             return from_top, add_italic_caps
 
@@ -231,8 +443,7 @@ class Reader:
             all_fonts = set()
             query = True
             for counter, page in enumerate(text.pages[from_this:to_that]):
-                print(DIVIDER)
-                print(counter)
+                print(DIVIDER+counter)
                 found = get_all_fonts_from_page(page)
                 print(found)
                 if query:
@@ -249,7 +460,7 @@ class Reader:
             return_set = set()
             print('ALL FONTS: ',','.join(font_set))
             for f in sorted(font_set):
-                if input('EXCLUDE'+f+'? ') in YESTERMS:
+                if yes_no_input('EXCLUDE'+f+'? '):
                     return_set.add(f)
             return return_set
 
@@ -276,6 +487,13 @@ class Reader:
             filename+= '.pdf'
         excluded_fonts = set()
         sentence_pages = set()
+        last_title = None
+        from_last_title = 0
+        from_last_cap_phrase = 0
+        char_set = set()
+        last_char = ''
+        last_cap_phrase = ''
+        
 
             
         
@@ -313,18 +531,82 @@ class Reader:
                     x = 0
             return x
 
-        
+        def de_hyphen (x):
+
+            if '-' not in x:
+                return x
+            if x.count('-') == 1 and x.split('-')[1].islower():
+                dh = x.replace('-','')
+                if  not speller.unknown({dh}):
+                    x=dh
+                return x
+            else:
+                
+                return de_hyphen(x.split('-')[0])+'-'+de_hyphen('-'.join(x.split('-')[1:]))
+
+        def add_capitalized (capitalized_words, last_cap_phrase='',page_no=0,position_at=0):
+
+            # To add a capitalized phrase to the dictionary
+            cap_phrase = ''
+
+            if len (capitalized_words)>1:
+                if capitalized_words[-1] in NAME_WORDS:
+                    capitalized_words = capitalized_words[0:-1]
+            while capitalized_words:
+                
+                if ((capitalized_words and
+                     capitalized_words[0]
+                     in self.first_words)):
+                    capitalized_words = capitalized_words[1:]
+                else:
+                    break
                     
-        
-        
+                
+            if len(capitalized_words)>1:
+                
+                # join together capitalized words and add them to dictionary
+                
+                cap_phrase = ' '.join(capitalized_words).strip()
+                cap_phrase = cap_phrase.replace('COPYRIGHT-PROTECTED MATERIAL','')
+                cap_phrase = cap_phrase.replace('UNCORRECTED INDEXABLE PROOFS','')
+                
+                
+            if "'s" in cap_phrase:
+                cap_phrase, other_phrase = cap_phrase.split("'s")[0],''.join(cap_phrase.split("'s")[1:]).split(' ')
+                
+                add_capitalized(other_phrase,last_cap_phrase=last_cap_phrase,page_no=page_no,position_at=position_at)
+                
+            elif capitalized_words: 
+                if exclude_first and not speller.unknown(set(capitalized_words[0].lower())):
+                    self.first_words.add(capitalized_words[0])
+                else:
+                    cap_phrase = capitalized_words[0]
+                    
+            if cap_phrase:
+                self.capitalized_phrases.add(cap_phrase)
+                if cap_phrase not in self.order_dictionary:
+                        self.order_dictionary[cap_phrase] = (page_no, position_at)
+                        
+                if cap_phrase in self.capital_histio:
+                    self.capital_histio[cap_phrase].add(page_no)
+                else:
+                    self.capital_histio[cap_phrase] = {page_no}
+                if ' ' in cap_phrase and len(cap_phrase)>15:
+                    return cap_phrase
+                return last_cap_phrase
+            return last_cap_phrase 
+
         with pdfplumber.open(directoryname+folder+filename) as pdf:
+            initiated = False 
 
             #Main procedure for analyzing the pdf and extracting text
+
+            exclude_first = yes_no_input('Exclude single capital words if in spelling dictionary?')
             
             from_this, to_that = proper_page(input('START FROM? ')), proper_page  (input('GO TO? '),to=True)
             
             from_this, to_that = get_limits(pdf,from_this,to_that)
-            if input('REVIEW ALL FONTS IN PDF? ') in YESTERMS:
+            if yes_no_input('REVIEW ALL FONTS IN PDF? '):
                 excluded_fonts = determine_exclude_set(get_all_fonts_from_text(pdf,from_this,to_that))
             for page in pdf.pages[from_this:to_that]:
                 page_start = position_at
@@ -356,8 +638,7 @@ class Reader:
                         or page_no in first_romans):
                         break
                     if query:
-                        print(text)
-                        print(DIVIDER)
+                        print(text+'\n'+DIVIDER)
                         page_no = input('Page no ?')
                         query = False
                         if page_no.isnumeric():
@@ -372,23 +653,37 @@ class Reader:
                     and last_found_page.isnumeric()
                     and int(page_no) == int(last_found_page)+1):
                     last_found_page = page_no
+                elif (initiated and last_found_page
+                      and last_found_page.isnumeric()):
+                    page_no = str(int(last_found_page)+1)
+                    print('AUTOMATIC '+page_no)
+                    last_found_page = page_no
                 else:
                     
                     print(text)
                     print(DIVIDER)
-                    inp = input('Keep '+page_no+' or X to exclude PAGE ')
-                    if not inp in YESTERMS + ['X']:
-                        page_no = input('Enter new page number?')
+                    inp = input('Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING')
+                    if not inp in YESTERMS + ['X','Q']:
+                        page_no = input('Enter new page number?').strip()
+                        if not initiated and page_no.isnumeric():
+                            initiated = yes_no_input('Initiate automatic pagination?') 
                     if inp == 'X':
                         exclude = True
+                    elif inp == 'Q':
+                        break
+                        
                     last_found_page = page_no
                     
                 if first_page:
-                    inp = input('Keep '+page_no+' or X to exclude PAGE ')
-                    if not inp in YESTERMS + ['X']:
-                        page_no = input('Enter new page number?')
-                    if inp in 'X':
+                    inp = type_input(prompt='Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING ',must_be=['X','Q','Y',' '])
+                    if not inp in YESTERMS + ['X','Q']:
+                        page_no = input('Enter new page number?').strip()
+                        if not initiated and page_no.isnumeric():
+                            initiated = yes_no_input('Initiate automatic pagination?')
+                    if inp == 'X':
                         exclude = True
+                    elif inp == 'Q':
+                         break
                     first_page = False
                     last_found_page = page_no
                 
@@ -397,13 +692,36 @@ class Reader:
                     
                     self.pages[page_no]=text
                     italics = ''
-                    
-                    
 
+                    
+                    
                     italic_found = False
+                    last_size = 0
+                    last_y0 = 0
                     for char in page.chars:
+
+                        if char['y0']>100 and char['size'] != last_size and (char['y0']==last_y0 or (abs(char['y0']-last_y0)>10))  and last_size!=0:
+                            self.all_text+= BREAK_PHRASE
+                            position_at += BREAK_PHRASE_LEN
+                        
+##                        print('LT',from_last_title,last_title)
+                        if last_title:
+                            from_last_title += 1
+                        if last_cap_phrase:
+                            from_last_cap_phrase += 1
+
+                        if from_last_title > 200:
+                            last_title = None
+                            from_last_title = 0
+                        if from_last_cap_phrase > 200:
+                            last_cap_phrase = None
+                            from_last_cap_phrase = 0
+                        if char['text'] in ['’','’']: #convert single smartquote
+                            char['text'] = "'"
+
                         if char['fontname'] not in excluded_fonts:
                             self.all_text += char['text']
+                            char_set.add(char['text'])
 
                                                 
                             if 'Italic' in char['fontname']:
@@ -412,15 +730,25 @@ class Reader:
                                 if not italic_found and italics and italics[0].isupper():
                                     italics = italics.strip()
                                     if italics.endswith(')') and '(' in italics:
-                                        italics = italics.split('(')[0].strip()                         
+                                        italics = italics.split('(')[0].strip()
+                                    italics = strip_punctuation(italics)
+                                    
                                     self.italicized_phrases.add(italics)
+                                    if italics not in self.order_dictionary:
+                                        self.order_dictionary[italics] = (page_no, position_at)
                                     if italics not in self.italic_dict:    
                                         self.italic_dict[italics] = set()
                                     self.italic_dict[italics].add(page_no)
                                     if italics not in self.title_dict:
                                         self.title_dict[italics] = set()
                                     self.title_dict[italics].add(page_no)
-                                    
+                                    if italics not in self.title_translation_dictionary:
+                                        self.title_translation_dictionary[italics]=''
+                                        last_title = italics
+                                    if italics not in self.author_dict:
+                                        if last_cap_phrase:
+                                            self.author_dict[italics] = last_cap_phrase
+                                        
                                     italics = char['text']
                                     italic_found = True 
                                 else:
@@ -438,22 +766,36 @@ class Reader:
 
                             if char['text'] == '“':
                                 if not found_left_quote:
-                                    found_left_quote = True
+                                    found_left_quote = True       
 
-                                    
-                                else:
-                                    self.quoted_phrases.add(quoted_string)
-                                    quoted_string = ''
+##                                    
+##                                else:
+##                                    char['text'] == '”'
+####                                    self.quoted_phrases.add(quoted_string)
+####                                    quoted_string = ''
+                                char['text'] = '"'
                             
                             
-                            if char['text'] in string.punctuation+string.whitespace:
-                                if word in self.words:
-                                    self.words[word].add(page_no)
-                                    self.histio[word]+=1
+                            if (char['text'].isupper() and last_char.islower())\
+                               or char['text'] in string.punctuation+string.whitespace\
+                               or (char['text'] in ['’',"'"] and last_char in string.punctuation+string.whitespace):
+                                # WHEN A WORD IS FINISHED
+                                oldword = word
+                                word = de_hyphen(word)
+                                simple_word = word.replace("'s",'')
+                                if oldword!=word:
+                                    self.dehyphenated[word] = oldword
+                                    italics=italics.replace(oldword,word)
+                                    quoted_string=quoted_string.replace(oldword,word)
+                                    sentence_string=sentence_string.replace(oldword,word)
+                                
+                                if simple_word in self.words:
+                                    self.words[simple_word].add(page_no)
+                                    self.histio[simple_word]+=1
                                     
                                 else:
-                                    self.words[word] = {page_no}
-                                    self.histio[word] = 1
+                                    self.words[simple_word] = {page_no}
+                                    self.histio[simple_word] = 1
 
                                 if word in self.words_in_sentences:
                                     self.words_in_sentences[word].add(sentence_count)
@@ -462,56 +804,35 @@ class Reader:
                                     self.words_in_sentences[word] = {sentence_count}
                                     
                                     
-                                    
                                 if word:
-                                    if ((word[0].islower() and last_capitalized)
-                                        and (not italic_found or add_italic_caps)) :
-                                        # To exclude the first word of a series of capital words
-                                        # if it is either the first word of a sentence or has an apostrophe
-                                        while capitalized_words:
-        
-                                            if ((capitalized_words and
-                                                 capitalized_words[0]
-                                                 in self.first_words) or
-                                                (capitalized_words
-                                                 and len(capitalized_words)>0
-                                                 and capitalized_words[0].endswith("'s"))):
-                                                capitalized_words = capitalized_words[1:]
-                                            else:
-                                                break
-                                                
-                                            
-                                        if len(capitalized_words)>1:
-                                            # join together capitalized words and add them to dictionary
-                                            
-                                            cap_phrase = ' '.join(capitalized_words)
-                                            self.capitalized_phrases.add(cap_phrase)
-                                            if cap_phrase in self.capital_histio:
-                                                self.capital_histio[cap_phrase].add(page_no)
-                                            else:
-                                                self.capital_histio[cap_phrase] = {page_no}
-                                                
-                                            capitalized_words = []
-                                            last_capitalized = False
-                                        elif len(capitalized_words)>0:
-                                            if not speller.unknown(set(capitalized_words[0].lower())):
-                                                self.first_words.add(capitalized_words[0])
-                                    if word[0].isupper() or word in NAME_WORDS:
-                                        capitalized_words.append(word)
-                                        last_capitalized = True
-                                       
-                                word = ''
-                                if char['text'] in string.punctuation:
-                                    capitalized_words = []
-                                    last_capitalized = False
                                 
-                                    
+                                    if (last_capitalized and  
+                                        (((not word in NAME_WORDS and word[0].islower())
+                                            and (not italic_found or add_italic_caps)) or
+                                        ((char['text']!=',' and char['text'] in string.punctuation)
+                                         or (char['text']==' ' and last_char==',')))):
+                                            # To exclude the first word of a series of capital words
+                                            # if it is either the first word of a sentence or has an apostrophe
+                                        last_cap_phrase = add_capitalized (capitalized_words,last_cap_phrase,page_no,position_at)
+                                        capitalized_words = []
+                                        last_capitalized = False
+                                        
+                                        
+                                                    
+                                    elif (not word.isnumeric()) and (not italic_found or add_italic_caps) and (word[0].isupper() and not last_capitalized):
+                                        capitalized_words.append(word)
+                                        
+                                        last_capitalized = True
+                                    elif (not word.isnumeric()) and ((not italic_found or add_italic_caps) and (last_capitalized and (word[0].isupper or word in NAME_WORDS))):
+                                        capitalized_words.append(word)
+                                        
+
+                                       
+                                    word = ''
+                                
                             else:
                                 word+=char['text']
-                            if char['text'] == '.':
-                                last_not_alpha = True
-                            if char['text'] not in string.whitespace+string.punctuation+'0123456789':
-                                last_not_alpha = False
+
 
                             if char['text'] in ' ' and last_not_alpha:
 
@@ -530,6 +851,11 @@ class Reader:
                             else:
                                 sentence_string  += char['text']
                                 sentence_pages.add(page_no)
+
+                            if char['text'] not in string.whitespace+string.punctuation+'0123456789':
+                                last_not_alpha = False
+                            else:
+                                last_not_alpha = True 
                             if found_left_paren:
                                 paren_string += char['text']
                             if found_left_bracket:
@@ -546,10 +872,18 @@ class Reader:
                                 if ',' in paren_string and is_date(paren_string.split(',')[-1]):
                                     paren_string = ','.join(paren_string.split(',')[0:-1])
                                     
+                                        
+                                    
                                 if paren_string not in self.title_dict:
                                     self.title_dict[paren_string] = {page_no}
                                 else:
                                     self.title_dict[paren_string].add(page_no)
+                            
+                                if last_title and self.title_translation_dictionary[last_title] == '':
+                                    if .5 < len(paren_string)/len(last_title) < 2 and last_title != paren_string:
+                                        self.title_translation_dictionary[last_title] = paren_string
+                                        print(last_title,paren_string)
+                                
                                 
                                
                                 found_left_paren = False
@@ -560,19 +894,41 @@ class Reader:
                                 found_left_bracket = False
                                 bracket_string = ''
                             if found_left_quote and char['text'] == '”':
+                                char['text'] = '"'
                                 quoted_string = quoted_string[1:-1]
+                                if quoted_string[-1] in [',','.',';',':']:
+                                    quoted_string = quoted_string[:-1]
+                                if quoted_string[-1] in ["'","’"]:
+                                    if quoted_string[-2] in [',','.',';',':']:
+                                        quoted_string = quoted_string[:-2]+quoted_string[-1]
+                                    
                                 self.quoted_phrases.add(quoted_string)
+                                if quoted_string not in self.title_translation_dictionary:
+                                     self.title_translation_dictionary[quoted_string]=''
+                                     last_title = quoted_string
                                 if quoted_string not in self.title_dict:
                                     self.title_dict[quoted_string] = set()
-                                    self.title_dict[quoted_string].add(page_no)
+                                if quoted_string not in self.author_dict:
+                                    if last_cap_phrase:
+                                        self.author_dict[quoted_string] = last_cap_phrase
+                                self.title_dict[quoted_string].add(page_no)
                                 found_left_quote = False
                                 quoted_string = ''
           
 
 
                             position_at +=1
+                            last_char = char['text']
+                            last_size = char['size']
+                            last_y0 = char['y0']
                     self.page_record.append((page_start,position_at,page_no))
                     self.page_dict[page_no]=(page_start,position_at)
+            for word in self.first_words:
+                if word and word[0].isupper() and not word.lower()+' ' in self.all_text:
+                    self.capitalized_phrases.add(word)
+
+
+                     
 
     def print_section (self,from_point=0,to_point=0,italics=True,line_len=50):
 
@@ -659,12 +1015,14 @@ class Headings:
             else:
                 if last in x:
                     return_names.add(x)
-        return return_names 
+        return return_names
+
+    
                 
             
             
 
-    def divide_set (self,entry_set,before,after,add_to=False,queries='krmnaxy',obj_type=''):
+    def divide_set (self,entry_set,before,after,add_to=False,queries='krmnaxy',obj_type='',names=False):
 
         """
         Processes a set into various groups, and modifies forms of entries
@@ -678,21 +1036,112 @@ class Headings:
         input_phrase = ('RETURN to KEEP\n'*('k' in queries)+
                         'SPACE+RETURN to PURGE\n'*('r' in queries)+
                         '/ to MODIFY\n'*('m' in queries)+
-                        '? to ADD SEARCH STRING\n'*('s' in queries)+
+                        '; to ADD SEARCH STRING\n'*('s' in queries)+
                         ': to CONVERT A NAME TO REGULAR FORM\n'*('n' in queries)+
                         '> to ADD AUTHOR\n'*('a' in queries)+
                         '_ to ADD SUBHEADINGS\n'*('x' in queries)+
                         '< to ADD AN ADDITIONAL HEADING\n'*('y' in queries)+
                         '^ to ADD A REFERENCE (see also)'*('z' in queries)+
+                        '{ to ADD PAGES'+
+                        'P to PURGE ALL'+
                         'Q to QUIT\n')
         
         go_on = True
         returned_entry_set = copy.copy(entry_set)
         new_x = ''
         inp = ''
-         
+
+        def get_related_for_phrase (term,entry_set):
+
+            """Gets all the terms from entry_set that
+            contain term"""
+
+            def get_all_related (word):
+                
+                if not (word in SMALL_WORDS+NAME_WORDS+[' ']) and len(word)>5: 
+                    return {x for x in entry_set 
+                            if word in x}
+                return set()
+
+            return_set = set()
+            for word in term.split(' '):
+                return_set.update(get_all_related(word))
+            if len(return_set)>10:
+                return_set = set(sorted(return_set)[0:10])
+            return return_set
         
-        for x in sorted(entry_set):
+        def is_contained (term, entryset):
+
+            """True is some value of entryset contains, but is not identical, to term"""
+
+            for x in entryset:
+                if term != x:
+                    if term.strip()+' ' in x+' ':
+                        return True
+            return False
+
+            
+
+        def get_order (x,page=False):
+
+            """Returns a value indicating order of element in text"""
+
+            if x in self.book_object.order_dictionary:
+                if not page:
+                    return self.book_object.order_dictionary[x][1]
+                else:
+                    return self.book_object.order_dictionary[x][0]
+            elif x in self.book_object.all_text:
+                return self.book_object.all_text.index(x)
+            else:
+                return 0
+            
+
+        def by_last (x):
+
+
+            return x.split(' ')[-1]
+        def dummy (x):
+            return x
+        while True:
+            temp_inp = input('(1) SORT BY ORDER OF APPEARANCE?\n'+
+                             ' 2) Sort alphabetically\n'+
+                             '(3) Sort alphabetically by last word\n\n')
+            if temp_inp in ['1','2','3']:
+                break
+        
+        temp_fun = {'1':get_order,
+                    '2':dummy,
+                    '3':by_last}[temp_inp]
+
+           
+        iterate_over = sorted(entry_set,key=lambda z: temp_fun(z))
+        new_list = []
+        skipped_list = []
+        for x in iterate_over:
+            if is_contained(x,iterate_over):
+                skipped_list.append(x)
+            else:
+                new_list.append(x)
+        iterate_over = new_list
+        print('SKIPPED')
+        print(', '.join(skipped_list))
+        
+        total_length = str(len(iterate_over))
+
+
+        page_at = None
+        if yes_no_input('SHOW ALL?'):
+            for counter, x in enumerate(iterate_over):
+                print(counter,":",x,get_order(x))
+        purge_all = False
+        
+
+        for counter, x in enumerate(iterate_over):
+            
+            x = x.strip()
+            if x in self.book_object.order_dictionary:
+                page_at = self.book_object.order_dictionary[x][0]
 
             if not inp == 'Q':
                 returned_entry_set.discard(x)
@@ -705,9 +1154,32 @@ class Headings:
             
             while go_on:
 
+
+                x_reduced = x.replace('/&it/','')\
+                            .replace('/it$/','')\
+                            .replace('“','')\
+                            .replace('”','')\
+                            .replace('"','')
+
+                print('____________________________________________________________')
+                if page_at:
+                    print (str(counter)+'/'+total_length+' PAGE= '+page_at)
+                    print('____________________________________________________________')
+                
+                
                 print(before+after+'  '+x)
                 print(input_phrase)
-                inp = input('? ')
+                print('**********RELATED PHRASES**********')
+                for counter,xx in enumerate(get_related_for_phrase(x,iterate_over)):
+                    print(str(counter+1)+' '*(10-len(str(counter+1)))+':'+xx)
+                if x_reduced in self.book_object.title_translation_dictionary:
+                    print('***********POSSIBLE TRANSLATION************')
+                    print(self.book_object.title_translation_dictionary[x_reduced])
+                if x_reduced in self.book_object.author_dict:
+                    print('***********POSSIBLE AUTHOR*****************')
+                    print(self.book_object.author_dict[x_reduced])
+                if not purge_all:
+                    inp = input('? ')
 
 
                 
@@ -717,9 +1189,15 @@ class Headings:
                     break
 
                 elif inp == 'Q':
-                    go_on = False                  
+                    go_on = False
+                    return_keep.add(x)
+
+                elif not purge_all and inp == 'P':
+                    if yes_no_input('ARE YOU SURE?'):
+                        purge_all = True
+                        
                 
-                elif inp == ' ' and 'r' in queries:
+                elif inp == 'P' or purge_all or (inp == ' ' and 'r' in queries):
                     return_purge.add(x)
                     return_keep.discard(x)
                     print(x+' PURGED')
@@ -738,7 +1216,7 @@ class Headings:
 
                 elif inp == '^' and 'z' in queries:
                     cross_reference = input('ENTER CROSSREFERENCE? ')
-                    if input('ACCEPT '+cross_reference) in YESTERMS:
+                    if yes_no_input('ACCEPT '+cross_reference):
                         if ';;' in x:
                             new_x = x.split(';;')[0]+'['+cross_reference+']'+';;'+x.split(';;')[1]
                         
@@ -764,8 +1242,13 @@ class Headings:
                             elif char:
                                 final_name += char
                         final_name = final_name.strip().replace('  ',' ').replace(' ,',',')
-                    if not input('\n\tRETURN TO ACCEPT: '+final_name+'\n'):
+                        
+                    temp_inp = input('\n\tRETURN TO ACCEPT: '+final_name+'\nRETURN*2 TO ACCEPT + ADD NEW\n')
+                    if not temp_inp or temp_inp=='  ':
                         new_x = final_name
+                    if not temp_inp:
+                        break
+                            
                 elif inp == '<' and 'y' in queries:
                     while True:
                         new_entry = input('\nENTER NEW HEAD ENTRY!')
@@ -774,6 +1257,8 @@ class Headings:
                     if new_entry:
                         return_keep.add(new_entry)
                 elif inp == '>' and 'a' in queries:
+                    if '<' in x and '>' in x:
+                        x = x.split('<')[0] + x.split('>')[1]
                     name = input('Name of author for '+x+'\n')
                     possible_names = sorted(self.get_names (name))
                     for counter, pos_name in enumerate(possible_names):
@@ -799,7 +1284,28 @@ class Headings:
                             if not input('RETURN TO KEEP: '+possible_names[int(entered)]):
                                 new_x = '<'+possible_names[int(entered)]+'>'+x
                                 break
+                elif inp == '{':
+
+                    pages, x = get_if (x,left='{',right='}')
+                    if pages:
+                        print('REPLACING '+pages)
+                    temp_inp = ''
+                    while not temp_inp:
+                        temp_inp = input('PAGE range?')
+                        try:
+                            dummy = de_range(temp_inp)
+                        except:
+                            print('INVALID INPUT!')
+                            temp_inp = ''
+                    if temp_inp:
+                        while True:
+                            op_inp = input('+,-,= or Q')
+                            if op_inp in ['+','-','=','Q']:
+                                break
+                    if not op_inp == 'Q':
+                        x += '{'+op_inp+temp_inp+'}'
                     
+                                            
                 elif inp == '_' and 'x' in queries:
                     while input('SPACE + RETURN to ENTER A SUBHEADING!'):
                         subheading = input('SUBHEADING?')
@@ -813,6 +1319,7 @@ class Headings:
                             else:
                                 new_x = x+'_'+subheading
 
+                    
                 if new_x and new_x != x and inp != '_':            
                     return_keep.add(new_x)
                     return_purge.add(x)
@@ -828,7 +1335,7 @@ class Headings:
                         return_purge.add(x)
                         print(x +' PURGED')
                     
-        if entry_set and not returned_entry_set and input('FINISH FIRST STAGE? ') in YESTERMS:
+        if entry_set and not returned_entry_set and yes_no_input('FINISH FIRST STAGE? '):
             if obj_type == 'n':
                 self.names_done = True
             if obj_type == 'ip':
@@ -843,18 +1350,15 @@ class Headings:
                 
                 
                     
-                            
-                            
-        print('TO KEEP:',','.join(return_keep))
-        print('TO PURGE:',','.join(return_purge))
+
         return return_keep, return_purge, returned_entry_set
         
-    def add (self,entered_set,obj=None,before='',after='',add_to=False,queries='krmna',obj_type=''):
+    def add (self,entered_set,obj=None,before='',after='',add_to=False,queries='krmna',obj_type='',names=False):
 
         """Divides the entered set and add the two parts into the set of terms to be kept,
         and the set of terms to be removed"""
         
-        keep, discard,returned_entry_set = self.divide_set(entered_set,before,after,add_to,queries,obj_type=obj_type)
+        keep, discard,returned_entry_set = self.divide_set(entered_set,before,after,add_to,queries,obj_type=obj_type,names=names)
         obj['keep'].update(keep)
         obj['purge'].update(discard)
         if not obj_type or obj_type == 'n':
@@ -905,21 +1409,27 @@ class Headings:
         (from purge to keep, or keep to purge)
         and calls the reform function accordingly"""
 
- 
+        print('TO KEEP',len(obj['keep']))
+        print('TO PURGE', len(obj['purge']))
+
+        if yes_no_input('Prepurge to keep?'):
+            scroll = Select(sort_function=lambda x:x.lower())
+            
+            
+            obj['keep'] = set(scroll.scroll_through(obj['keep']))
+        
 
         if obj['keep'] or obj['purge']:
-            if input('REVISE? ') in YESTERMS:
+            if yes_no_input('REVISE? '):
                 print(DIVIDER)
-                print('REVISING FROM KEEP TO PURGE')
-                print(DIVIDER)
+                print(DIVIDER+'REVISING FROM KEEP TO PURGE'+'\n'+DIVIDER)
                 self.reform(obj,
                             before='',
                             after='',
                             from_keep_to_purge=True,
                             queries=first_query)
-                print(DIVIDER)
-                print('REVISING FROM PURGE TO KEEP')
-                print(DIVIDER)
+                print()
+                print(DIVIDER+'REVISING FROM PURGE TO KEEP'+'\n'+DIVIDER)
                 self.reform(obj,
                             before='',
                             after='',
@@ -934,25 +1444,47 @@ class Headings:
         that will be used in the index,
         or resumes the determination"""
 
-        print('NAMES')
+        def split_set (x_set):
+
+            """Returns a new set with all elements in the set not
+            contains 's, or to the right or left of 's"""
+
+            return_set = set()
+            for x in x_set:
+
+                if "'s" in x:
+                    left, right = x.split("'s")[0],''.join(x.split("'s")[1:])
+                    if left:
+                        return_set.add(left)
+                    if right:
+                        return_set.add(right)
+                else:
+                    return_set.add(x)
+            return return_set 
+                        
+
 
         if not self.names_done:
 
             if not self.names['unprocessed']:
 
-                self.add(self.book_object.capitalized_phrases,
+                
+
+                self.add(split_set(self.book_object.capitalized_phrases),
                          obj=self.names,
                          before='',
                          after='',
                          queries='krmnxsyz',
-                         obj_type='n')
+                         obj_type='n',
+                         names=True)
             else:
                 self.add(self.names['unprocessed'],
                          obj=self.names,
                          before='',
                          after='',
                          queries='krmnxsyz',
-                         obj_type='n')
+                         obj_type='n',
+                         names=True)
                 
             
         else:
@@ -1069,51 +1601,62 @@ class Headings:
         if not self.run_reform(self.concepts,
                                first_query='krmnxsz',
                                second_query='kr'):
-            terms = self.book_object.nouns
-            print(len(terms))
-            terms = [x for x in terms if not x.isnumeric()]
-            
-            if input('Purge frequent?') in YESTERMS:
-                
-                terms = [x for x in terms if x not in English_frequent_words]
-            print(len(terms))
-            if input('Purge mispelled?') in YESTERMS:
-                
-                unknown = speller.unknown(terms)
-                terms = [x for x in terms if x not in unknown]
-            print(len(terms))
-            if input('Pure capital words?') in YESTERMS:
-                terms = [x for x in terms if not x[0].isupper()]
-            
+
             while True:
-
-                while True:
-                    lower, upper = None, None
-
-                    lower = input('LOWER THRESHOLD?')
-                    if lower.isnumeric():
-                        lower = int(lower)
-                    upper = input('UPPER THRESHOLD?')
-                    if upper.isnumeric():
-                        upper = int(upper)
-                    if lower and upper:
-                        break
-                terms = [x for x in terms if x in self.book_object.words and lower<=len(self.book_object.words[x])<=upper]
-                print('There are '+str(len(terms))+' terms in your set')
-                if input('Show?') in YESTERMS:
-                    print(', '.join(terms))
-                if input('Accept?') in YESTERMS:
+                temp_inp = input('(A)dd terms individually or (S)elect from text.')
+                if temp_inp  in ['A','S']:
                     break
-            self.add(set(terms),
-                     self.concepts,
-                     queries='krmnx')
-            if input('Add additional terms?') in YESTERMS:
-                new_terms = [x.strip() for x in input('?').split(',')]
-                print (', '.join(new_terms))
-                if input('ADD to concepts?') in YESTERMS:
-                    self.add(set(new_terms),
-                             self.concepts,
-                             queries='krmnxsz')
+            if temp_inp == 'S':
+                
+                terms = self.book_object.nouns
+                print(len(terms))
+                terms = [x for x in terms if not x.isnumeric()]
+                
+                if yes_no_input('Purge frequent?'):
+                    
+                    terms = [x for x in terms if x not in English_frequent_words]
+                print(len(terms))
+                if yes_no_input('Purge mispelled?'):
+                    
+                    unknown = speller.unknown(terms)
+                    terms = [x for x in terms if x not in unknown]
+                print(len(terms))
+                if yes_no_input('Pure capital words?'):
+                    terms = [x for x in terms if not x[0].isupper()]
+
+                
+                while True:
+
+                    while True:
+                        lower, upper = None, None
+
+                        lower = input('LOWER THRESHOLD?')
+                        if lower.isnumeric():
+                            lower = int(lower)
+                        upper = input('UPPER THRESHOLD?')
+                        if upper.isnumeric():
+                            upper = int(upper)
+                        if lower and upper:
+                            break
+                    terms = [x for x in terms if x in self.book_object.words and lower<=len(self.book_object.words[x])<=upper]
+                    print('There are '+str(len(terms))+' terms in your set')
+                    if yes_no_input('Show?'):
+                        print(', '.join(terms))
+                    if yes_no_input('Accept?'):
+                        break
+                self.add(set(terms),
+                         self.concepts,
+                         queries='krmnx')
+                if yes_no_input('Add additional terms?'):
+                    new_terms = [x.strip() for x in input('?').split(',')]
+                    print (', '.join(new_terms))
+                    if yes_no_input('ADD to concepts?'):
+                        self.add(set(new_terms),
+                                 self.concepts,
+                                 queries='krmnxsz')
+            else:
+                self.add(set(),self.concepts,queries='krmnxsz')
+            
             
         
         
@@ -1128,7 +1671,7 @@ class Searcher:
 
     
 
-    def get_pages (self,term,dictionary_object=None):
+    def get_pages (self,term,dictionary_object=None,alternative_object=None,literal_object=None):
 
         """Core search routine. Retrieves pages for the given term.
         """
@@ -1138,49 +1681,128 @@ class Searcher:
             term = term[1:]
         else:
             negative = False
+
+        if term.startswith('_'):
+            dictionary_object = alternative_object
+            term = term[1:]
         result = set()
 
-        if '/' in term:
-            #to search for only the portion of a word to the left of the slash
-                
-            term = term.split('/')[0]
-            all_terms = [x for x in dictionary_object.keys() if x.startswith(term)]
-            return_pages = set()
-            for term in all_terms:
-                return_pages.update(dictionary_object[term])
-            result = return_pages
-                
-        elif term in dictionary_object:
-            result = dictionary_object[term]
-            all_terms = [term]
-        else:
-            all_terms = []
+        full_words = []
+        center_words = []
+        left_of = []
+        right_of = []
+        literal_search = False
+
+        def interpret_caps(enterlist):
+
+            #TO interpret CAPPHRASES 
+
+            returnlist=[]
+            for x in enterlist:
+                if not x.isupper():
+                    returnlist.append(x)
+                else:
+                    returnlist.append(x.lower())
+                    returnlist.append(x[0].upper()+x[1:].lower())
+            return returnlist 
+        if term.count('/') == 1:
+            if term.split('/')[1]:
+                right_of.append(term.split('/')[1])
+            elif term.split('/')[0]:
+                left_of.append(term.split('/')[0])
+        elif term.count('/') == 2 and term.split('/')[1]:
+            center_words.append(term.split('/')[1])
+        elif not term.startswith('$') and '/' not in term:
+            full_words.append(term)
+        elif term.startswith('$'):
+            term = term[1:]
+            center_words = [x for x in term.split('$') if x]
+            literal_search = True 
             
-        if negative:
-            result = {x for x in self.book_object.pages.keys() if x not in result}
-        return result, all_terms
+        
+            
+        full_words = interpret_caps(full_words)
+        center_words = interpret_caps(center_words)
+        left_of = interpret_caps(left_of)
+        right_of = interpret_caps(right_of)
+
+
+        all_terms = []
+        return_pages = set()
+
+        if not literal_search:
+            if full_words:
+
+                for word in full_words:
+
+                    if word in dictionary_object:
+                        return_pages = return_pages.union(dictionary_object[word])
+                        all_terms.append(word)
+
+            all_words = center_words+left_of+right_of
+                        
+            if all_words:
+
+                for word in all_words:
         
 
-    def search_entry(self,term,dictionary_object=None):
+                    if center_words:
+                        temp_terms = [x for x in dictionary_object.keys() if word in x]
+                    elif left_of:
+                        temp_terms = [x for x in dictionary_object.keys() if x.startswith(word)]
+                    elif right_of:
+                        temp_terms = [x for x in dictionary_object.keys() if x.endswith(word)]
+                        
+                    for term in temp_terms:
+
+                        return_pages = return_pages.union(dictionary_object[term])
+                        if dictionary_object[term]:
+                            all_terms.append(term)
+        else:
+            for page in literal_object.keys():
+                is_found = True 
+                term_counter = 0
+                page_text = literal_object[page]
+                while is_found and term_counter<len(center_words):
+                    term = center_words[term_counter]
+                    if term in page_text:
+                        page_text = page_text.split(term)[1]
+                        term_counter += 1
+                    else:
+                        is_found = False
+                if is_found:
+                    return_pages.add(page)
+                    for t in center_words:
+                        all_terms.append(t)
+                    
+                
+        if negative:
+            return_pages = {x for x in self.book_object.pages.keys() if x not in return_pages}
+        return return_pages, all_terms
+        
+
+    def search_entry(self,term,dictionary_object=None,alternative_object=None,literal_object=None):
 
         """Interprets a search term and runs the search accordingly"""
 
-        
-        if '>' in term:
-            term = term.split('>')[1]
+        term = term.replace('’',"'")        
+        if '<' in term:
+            term = term.split('<')[1].split('>')[0]
         if ';;' in term:
             head, term = term.split(';;')[0], term.split(';;')[1]
             term = term.replace('%',head)
         term = term.replace('/&it/','').replace('/it$/','')
-        x = self.search (term,dictionary_object=dictionary_object)
+        term = term.replace('“','').replace('”','').replace('"','')
+        x = self.search (term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object)
         return x[0],x[1]
 
-    def search (self,search_phrase,dictionary_object):
+    def search (self,search_phrase,dictionary_object,alternative_object=None,literal_object=None):
 
         """Searches a complex search phrase
         ---allowing &=AND, |=OR, nested parentheses ---
         in the disctionary object.
         Uses the parser."""
+
         
         
 
@@ -1199,7 +1821,7 @@ class Searcher:
         parsed_phrase = parser.parse(search_phrase)
         found_terms = set()
         for term in all_terms:
-            x = self.get_pages(term,dictionary_object=dictionary_object)
+            x = self.get_pages(term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object)
             universe[term] = x[0]
             found_terms.update(set(x[1]))
             
@@ -1225,6 +1847,7 @@ class Index_Maker:
         self.index_name = ''
         self.index_made = False
         self.index_text = ''
+        self.reverse_index_text = ''
         self.project_object = None
         self.searcher_object = None
         self.reverse_table = {}
@@ -1232,7 +1855,11 @@ class Index_Maker:
                       'titles':{},
                       'concepts':{}}
         self.return_dict = {}
-        self.override = False
+        self.override = True
+
+
+            
+
 
     def reverse_index (self):
 
@@ -1250,7 +1877,7 @@ class Index_Maker:
                         else:
                             self.reverse_table[page].add(typed_entry)
 
-    def input_term (self):
+    def input_term (self,inp=None):
 
         menu = """
 (0) LOAD TEXT %%
@@ -1272,18 +1899,297 @@ class Index_Maker:
 (16) CORRECT INDEX
 (17) SAVE INDEX
 (18) LOAD INDEX
-(19) SAVE AS TEXT FILE 
+(19) SAVE INDEX AS TEXT FILE 
 (20) SEARCH TEXT BY PAGES
 (21) SEARCH TEXT BY SENTENCES/ SHOW PAGES
 (22) SEARCH TEXT BY SENTENCES/ SHOW SENTENCES
 (23) OVERRIDE ERROR EXCEPTION
 (24) RETURN INDEX
 (25) QUIT
+(26) SAVE AS TEXT
+(27) LOAD AS TEXT
+(28) CHANGE STATUS
+(29) SHOW DEHYPHENATED WORDS
+(30) SHOW FIRST WORDS
+(31) PRE-PURGE NAMES
+(32) LOAD FROM EXCEL TO NAMES
+(33) LOAD FROM EXCEL TO TITLES
+(34) LOAD FROM EXCEL TO CONCEPTS
+(35) MULTISEARCH
+
 
 """
-      
+ 
+        
+        def bracket(text,terms):
+
+            """Surrounds all terms in text with brackets..."""
+
+            for word in terms:
+                text = text.replace(word,'<<'+word+'>>')\
+                       .replace('<<<<','<<').replace('>>>>','>>')
+            text = text.replace('>> <<',' ').replace('>><<','')
+            return text
+
+        def side_marks (text):
+
+            """Adds sidemarks indicating found elements"""
+
+                
+            
+            returnlines = []            
+
+            for section in text.split(BREAK_PHRASE):
+
+                returnlines.append('')
+                
+                
+                lines = section.split('\n')
+                max_line_length = max([len(x) for x in lines])
+                for line in lines:
+                    fragments,dummy = get_if(line,'<<','>>',True)
+                    if '<<' in line:
+                        line = '  ===>>> ' + line + (max_line_length-len(line))*' '+'    <<'+','.join(fragments)+'>>'
+                    else:
+                        line = '         ' + line
+                    returnlines.append(line)
+            return '\n'.join(returnlines)
+
+        def recommend_classifiers(text,classifier_dict):
+
+            """Recommends appropriate index subterms for a given page of text"""
+            
+            surround = lambda a:' '+a+' '
+            recommendations = set()
+            for x in classifier_dict.keys():
+
+                if '/' in x:
+
+                    classifier, search_term = x.split('/')[0],x.split('/')[1]
+                else:
+                    classifier = purge_small(x, SUBHEAD_WORDS)
+                    search_term = classifier
+                search_terms = search_term.split(' ')
+                
+                
+                for y in search_terms:
+                    if surround(y) in surround(text):
+                        recommendations.add(x)
+            return recommendations
+                    
+           
+
+        def abridge_page (text,around=3):
+
+
+            """Keeps only lines of page
+            surrounding found terms"""
+            
+            text = text.split('\n')
+            side_marked = set()
+            to_keep = set()
+            return_list = []
+            for line_number, line in enumerate(text):
+                if '===>>>' in line:
+                    side_marked.add(line_number)
+            for line in side_marked:
+                for x in range(line-around,line+around+2):
+                    to_keep.add(x)
+            for line in sorted(to_keep):
+                if 0 <= line < len(text):
+                    return_list.append(text[line])
+            return '\n'.join(return_list)
+            
+                    
+
+        def pre_purge (iterate_over=None):
+
+            """For a preliminary sifting of a set of items"""
+            
+        
+            four_or_more_words = [x for x in iterate_over if x.count(' ')>=3]
+            three_words = [x for x in iterate_over if x.count(' ')==2]
+            two_words = [x for x in iterate_over if x.count(' ')==1]
+            one_word = [x for x in iterate_over if x.count(' ')==0]
+
+
+            scroll = Select(sort_function=lambda x:x.lower())
+            four_or_more_words = set(scroll.scroll_through(four_or_more_words))
+            three_words = set(scroll.scroll_through(three_words))
+            two_words = set(scroll.scroll_through(two_words))
+            one_word = set(scroll.scroll_through(one_word))
+            word_set = one_word.union(two_words).union(three_words).union(four_or_more_words)
+            return word_set
+
+
+        def read_excel (filename=''):
+
+            """To read an excel file containing terms to index.
+            TERM;;OPT SEARCH PHRASE{OPT PAGES} \t SUBTERM1;SUBTERM2;SUBTERM3
+            """
+
+            def check(x,check_for=['()','{}','[]','<>']):
+                for cf in check_for:
+                    if x.count(cf[0])!=x.count(cf[1]):
+                        print(x,' IS IRREGULAR WITH RESPECT TO ',cf)
+                return x
+
+
+
+            try:
+
+                wb = load_workbook(directoryname+index_folder+filename+'.xlsx')
+                ws = wb[wb.sheetnames[0]]
+            except:
+
+                print('FILE ERROR: CANNOT LOAD '+filename)
+
+
+            if ws:
+                while True:
+                    min_row = input('Start from ROW?')
+                    max_row = input('Go to ROW?')
+                    if (min_row.isnumeric() or not min_row) or (max_row.isnumeric() or not max_row):
+                        break
+                if min_row:
+                    min_row = int(min_row)
+                if max_row:
+                    max_row = int(max_row)
+                all_entries = []
+                if min_row:
+                    y=min_row
+                else:
+                    y=1
+                
+                while True:
+                    
+                    first_cell = ws.cell(row=y,column=1)
+                    second_cell = ws.cell(row=y,column=2)
+                    if first_cell:
+                        first_cell = first_cell.value
+                    if not first_cell or (max_row and y>max_row):
+                        break
+                     
+                    if second_cell:
+                        second_cell = second_cell.value
+                
+                    if first_cell:
+                        all_entries.append(check(first_cell.strip()))
+                        head_search = ''
+                        if ';;' in first_cell:
+                            first_cell, head_search = first_cell.split(';;')[0],first_cell.split(';;')[1]
+                        else:
+                            head_search = '&'.join([x.strip() for x in first_cell.split(',')[0].split(' ') if x])
+                        
+                    if second_cell:
+                        
+                        
+                        for sub_phrase in second_cell.strip().split(';'):
+                            sub_phrase = sub_phrase.strip()
+                            if sub_phrase:
+                                search_phrase,sub_phrase = get_if(sub_phrase,left='<',right='>')
+                                heading = first_cell.strip()+'_'+sub_phrase
+                                if search_phrase:
+                                    if not head_search:
+                                        heading+=';;'+search_phrase
+                                    else:
+                                        heading+=';;'+head_search+'&'+'('+search_phrase+')'
+                                all_entries.append(check(heading))
+                    y += 1
+                return all_entries
+            return []
+                           
+
+
+        def run_search (inp='20',search_term=None,quit_immediately=False,show_reversed=False):
+
+            """Runs the search of time inp
+            """
+
+            while True:
+
+                classifier_phrase = ''
+                formatted = ''
+        
+                if inp == '20':
+                    obj = self.text_object.words
+                    alt_obj = self.text_object.title_dict
+                    temp_ob = 'concepts'
+                    lit_obj = self.text_object.pages
+                    
+                    
+                else:
+                    obj = self.text_object.words_in_sentences
+                    alt_obj = None
+                    lit_obj = None
+                if not self.searcher_object:
+                    self.searcher_object = Searcher(self.text_object)
+                if not search_term:
+                    search_term = input('SEARCH TERM or Q(uit) ')
+                if not search_term.strip() or search_term == 'Q':
+                    if search_term == 'Q':
+                        inp = ''
+                    break
+##                
+##                if inp == '20' and search_term.startswith('_'):
+##                    search_term = search_term[1:]
+##                    obj = self.text_object.title_dict
+
+                if '\t' in search_term:
+                    search_term, classifier_phrase = search_term.split('\t')[0:2]
+                x = self.searcher_object.search_entry(search_term,obj, alt_obj, lit_obj)
+                results,terms = x[0], x[1]
+                
+                if inp == '20':
+
+                    print('RESULTS: ',format_range(results))
+                else:
+                    print('RESULTS: ',', '.join(sorted([str(x)+'/'+self.text_object.sentence_dict[x][2] for x in results])))
+                print('TERMS: ',', '.join(terms))
+                if results:
+                    page_set, page_dict, rej_pages =None, None, None 
+                    tt_inp = input('SHOW or (A)ll or (S)elect? ')
+                    if tt_inp in YESTERMS+['A','S']:
+                        
+                        if inp == '21':
+                            page_set,page_dict,rej_pages = show_pages (sorted(list(self.text_object.get_pages_for_sentences(results)),
+                                                                 key=page_sort_function),
+                                                          terms=terms,show_all=(tt_inp=='A' or tt_inp=='S'),
+                                                          select=(tt_inp=='S'),abridge=(tt_inp=='A' or tt_inp=='S'),classifier_phrase=classifier_phrase,
+                                                                       show_reversed=show_reversed)
+                        elif inp == '22':
+                            
+                            page_set,page_dict,rej_pages = show_pages (sorted(list(results),key=page_sort_function),
+                                                          sentences=True,
+                                                          terms=terms,
+                                                          show_all=(tt_inp=='A'or tt_inp=='S'),
+                                                          select=(tt_inp=='S'),classifier_phrase=classifier_phrase,
+                                                                       show_reversed=show_reversed)
+                        else:
+                            page_set,page_dict,rej_pages = show_pages(sorted(list(results),
+                                              key=page_sort_function),
+                                                         terms=terms,
+                                                         show_all=(tt_inp=='A' or tt_inp=='S'),
+                                                         abridge=(tt_inp=='A' or tt_inp=='S'),
+                                                         select=(tt_inp=='S'),classifier_phrase=classifier_phrase,
+                                                                       show_reversed=show_reversed)
+                    print('FINAL RESULTS FOR '+','.join(terms))
+                    print()
+                    print()
+                    formatted = format_result(search_term=search_term,page_set=page_set,page_dict=page_dict,rejected=rej_pages)
+                    print(formatted)
+                    print()
+                    
+                search_term=None
+                if quit_immediately:
+                    break
+            return inp, formatted                  
 
         def reform_term (x,obj_name='names'):
+
+
+##            def uncurl(x):
+##                return unpara(x,'{','}')
 
             """Takes the entire index term,
             and returns the appropriate search phrases,
@@ -1296,26 +2202,42 @@ class Index_Maker:
             => (Frog & Life) | Toad
             
             """
+            def unpara(x,left='(',right=')'):
 
+                """Removes parentheses"""
+                
+                if not '(' in x or not ')' in x:
+                    return(x)
+                else:
+                    return x.split('(')[0]+x.split(')')[1]
+                
             search_phrase = None
             all_terms = []
+##            x = uncurl(x)
+            if '>' in x:
+                x = x.split('>')[1]
+            if '[' in x:
+                x = x.split('[')[0]
             if ';;' in x:
                 heading, search_phrase = x.split(';;')[0], x.split(';;')[1]
             else:
-                heading = x
-            if '>' in heading:
-                heading = heading.split('>')[1]
-            if '[' in heading:
-                heading = heading.split('[')[0]
-            if obj_name == 'names':
+                heading = unpara(x)
+
+            if obj_name in ['names','concepts']:
                 if ',' in heading:
                     heading, body = heading.split(',')[0],heading.split(',')[1:]
                     all_terms = [heading] + body
             if not all_terms:
                 if '_' in heading:
-                    all_terms = [x for x in heading.split('_') if x]
-                    heading = ' & '.join(all_terms)
-                elif obj_name == 'names':
+                    if heading.split('_')[1].strip().startswith('-'):
+                        heading = heading.split('_')[1].strip()+heading.split('_')[0].strip()
+                    else:
+                        head_phrase = heading.split('_')[0]
+                        sub_phrase = heading.split('_')[1]
+                        sub_phrase = purge_small(sub_phrase, SUBHEAD_WORDS)
+                        sub_phrase_terms = [x for x in sub_phrase.split(' ') if x]
+                        heading = '&'.join([head_phrase]+sub_phrase_terms)
+                elif obj_name in ['names','concepts']:
                     all_terms = [x for x in heading.split(' ') if x]
                     heading = ' & '.join(all_terms)
             if search_phrase:
@@ -1325,9 +2247,12 @@ class Index_Maker:
                 if '%%' in search_phrase:
                     search_phrase = search_phrase.replace('%%',' & '.join(all_terms))
                 heading = search_phrase
+                search_phrase = True
+            else:
+                search_phrase = False
             if '/&it/' in heading or '/it$/' in heading:
                 heading = heading.replace('/&it/','').replace('/it$/','')
-            return heading 
+            return heading,search_phrase
             
         replace_term = '%%%%%%'
         for x in [self.index,
@@ -1341,8 +2266,22 @@ class Index_Maker:
             else:
                 menu = menu.replace(replace_term,'*')
             replace_term = replace_term[0:-1]
-        print(menu)
-        inp = input('?')
+
+
+
+
+        new_inp = ''
+        # This is the value returned by the function;
+        # IF a command, then runs the command at next iteration
+        # If FALSE then QUITS
+        # If '' then QUERIES
+        
+
+        if not inp:
+            print(menu)
+            inp = numeric_input('?',lower=0,upper=35,alert=False)
+        
+            
 
         def complete_file_name (x,first_ending='TXTOB',second_ending='.pkl'):
 
@@ -1359,21 +2298,48 @@ class Index_Maker:
                                   first_ending+second_ending)
             return x
 
-        def show_pages (page_list=None,sentences=False):
+        def show_pages (page_list=None,sentences=False,terms=None,show_all=False,abridge=False,select=False,classifier_phrase=None,show_reversed=False):
+            
 
             """Shows pages in the index"""
+
+            if select:
+                if classifier_phrase:
+                    classifiers = classifier_phrase
+                else:
+                    classifiers = input('What classifiers will you use?\nCLASSIER1/TERM1 TERM2 etc,CLASSIFER2,...')
+                if ';' in classifiers:
+                    splitter = ';'
+                else:
+                    splitter = ','
+                classifiers = {x for x in classifiers.split(splitter) if x.strip()}
+            else:
+                classifiers = set()
+                
+            return_pages_classified= {}
             
-            page_list_saved = page_list
+            for c in classifiers:
+                return_pages_classified[c] = set()
+            
+            return_pages = set()
+            rejected = set()
+            finished_page_stack = Stack()
+            classifier_stack = Stack()
+
+            if page_list:
+                page_list_saved = list(page_list)
+            else:
+                page_list_saved = None
 
             if not sentences:
 
-                all_pages = self.text_object.pages.keys()
-                roman_pages = [int_to_roman(x)
-                               for x in sorted([rom_to_int(x) for x in all_pages
-                                                if not x.isnumeric()])]
-                italic_pages = [str(x) for x in sorted([int(x) for x in all_pages
-                                                        if x.isnumeric()])]
-                all_pages = roman_pages + italic_pages
+                all_pages = sort_all_pages(self.text_object.pages.keys())
+##                roman_pages = [int_to_roman(x)
+##                               for x in sorted([rom_to_int(x) for x in all_pages
+##                                                if not x.isnumeric()])]
+##                arabic_pages = [str(x) for x in sorted([int(x) for x in all_pages
+##                                                        if x.isnumeric()])]
+##                all_pages = roman_pages + arabic_pages
 
             else:
 
@@ -1383,7 +2349,6 @@ class Index_Maker:
                 page_at = 0
             else:
                 page_at = all_pages.index(page_list[0])
-                page_list = page_list[1:]
             max_len = len(all_pages)
 
             def convert (x):
@@ -1395,36 +2360,166 @@ class Index_Maker:
                     return x
                 return self.text_object.sentence_dict[x][2]
 
+            def get_dehyphenated (terms):
+
+                """Returns words that are found in the text with the hyphen removed"""
+                to_add = []
+                for x in terms:
+                    if x in self.text_object.dehyphenated:
+                        to_add.append(self.text_object.dehyphenated[x])
+                if isinstance(terms,list):
+                    return terms+to_add
+                return terms.union(set(to_add))
+
+            def add_classification(xx,page_at):
+
+                """Adds a classification of an index subtype to
+                the dictionary keeping track of these"""
+                
+                if not xx in return_pages_classified:
+                                    return_pages_classified[xx]={convert(all_pages[page_at])}
+                else:
+                    return_pages_classified[xx].add(convert(all_pages[page_at]))
+                print('ADDED',xx,convert(all_pages[page_at]))
+                classifier_stack.add((xx,convert(all_pages[page_at])))
+
+            def delete_classification(xx,page):
+
+                """Deletes classification"""
+                
+                if xx:
+                    if xx in return_pages_classified:
+                        return_pages_classified[xx].discard(page)
+                        
+                        print('DELETED',xx,page)
+                    
+                else:
+                    return_pages.discard(page)
+
+            
+            def classify ():
+
+                """Queries for subclassification of a given index term"""
+
+                all_classes = sorted(set(return_pages_classified.keys()).union(classifiers))
+                recommended = recommend_classifiers(show_text,return_pages_classified)
+                recommend = ''
+                if recommended:
+                    print('RECOMMENDED =',','.join(recommended))
+                    recommend = sorted(recommended)[0]
+                    
+                for counter, p in enumerate(all_classes):
+                    print(counter,(p in recommended)*'*'+p)
+                
+                    
+                x = input('SPACE to CLASSIFY AS '+recommend+' or ENTER NEW or (A)dd?')
+                if x == 'A':
+                    return_pages.add(convert(all_pages[page_at]))
+                    classifier_stack.add(('',convert(all_pages[page_at])))
+                    print(convert(all_pages[page_at]),' ADDED')
+                else:
+                    if x == ' ':
+                        add_classification(recommend,page_at)
+                    else:
+                        for xx in x.split(','):
+                            if xx.isnumeric() and 0<=int(xx)<len(all_classes):
+                                xx = all_classes[int(xx)]
+                            else:
+                                xx = xx.strip()
+                            add_classification(xx,page_at)
+
+
+            def format_indexed_terms (terms,classes=['names','titles','concepts']):
+
+                surround = lambda x:'('+x+')'
+
+                def reform (x,delete=False):
+
+                    """Elimiates bracketed type and search phrase from term"""
+
+                    if delete:
+                        dummy,x = get_if(x,'(',')')
+                    x= x.split(';;')[0]
+                    return x
+                
+                sorted_terms = {}
+                for c in classes:
+                    sorted_terms[c] = set()
+                    
+
+            
+                for x in terms:
+                    for c in classes:
+                        if surround(c) in x:
+                            
+                            sorted_terms[c].add(reform(x,delete=True))
+                            
+                text_list = []
+                for c in classes:
+
+                    text_list.append(line_form('<<<'+c+'>>>'+': \n'+'\n'.join(sorted(sorted_terms[c],key=lambda x:x.lower()))))
+                    text_list.append('')
+                return '\n'.join(text_list)
+
+
+
+
+
+    
+
             while all_pages:
+
+
+                
                 indexed_terms = {}
-                if self.reverse_table:
+                
+                if show_reversed and self.reverse_table:
                     if convert(all_pages[page_at]) in self.reverse_table:
                         indexed_terms = self.reverse_table[convert(all_pages[page_at])]
                 if not sentences:
                     show_text = self.text_object.get_page(all_pages[page_at])
                 else:
                     show_text = self.text_object.get_sentence(all_pages[page_at])
+
+                
                 words_from_terms = ' '.join(indexed_terms).replace('.','')
+                
                 for char in string.punctuation:
                     words_from_terms = words_from_terms.replace(char,' ')
                 words_from_terms = [x for x in words_from_terms.split(' ')
-                                    if x and x not in SMALL_WORDS]
-                for word in words_from_terms:
-                    show_text = show_text.replace(word,'<<'+word+'>>')\
-                                .replace('<<<<','<<').replace('>>>>','>>')
-                show_text = show_text.replace('>> <<',' ').replace('>><<','')
+                                    if x and x not in SMALL_WORDS and len(x)>4]
+                if not words_from_terms and terms:
+                    words_from_terms = terms
+
+                words_from_terms = get_dehyphenated(words_from_terms)
+                
+                show_text = bracket(show_text,words_from_terms)
+                
+                show_text = side_marks (show_text)
+                if abridge:
+                    show_text = abridge_page(show_text)
                 
                 
-                print(DIVIDER+'\n'+str(all_pages[page_at])+'/'+convert(all_pages[page_at])+'\n'+DIVIDER+'\n'+show_text+'\n')
+                
+                print(DIVIDER+str(all_pages[page_at])+'/'+convert(all_pages[page_at])+'\n'+DIVIDER+show_text+'\n')
                 if self.reverse_table:
                     if convert(all_pages[page_at]) in self.reverse_table:
-                        print(','.join(indexed_terms))
+                        print(format_indexed_terms(indexed_terms))
                 if not page_list and not page_list_saved:
-                    inp =  input('<> PAGE # (Q)uit ')
+                    inp = ''
+                    while True:
+                            try:
+                                inp = input('<> PAGE # (Q)uit (A)dd (C)lassify')
+                                if inp:
+                                    inp = inp[0].upper()
+                                break
+                            except:
+                                print('ERROR')
+                    
                 
                     if not inp:
                         page_at += 1
-                    if inp == 'Q':
+                    elif inp == 'Q':
                         break
                     elif inp == '<':
                         page_at -= 1
@@ -1436,15 +2531,72 @@ class Index_Maker:
                         page_at = 0
                     elif page_at == -1:
                         page_at = max_len - 1
+                    elif inp in ['A',' ']:
+                        return_pages.add(convert(all_pages[page_at]))
+                        classifier_stack.add(('',convert(all_pages[page_at])))
+                        print(convert(all_pages[page_at]),' ADDED')
+                    elif inp == 'C':
+                        classify()
+
+                                
+                    elif not inp in ['A',' ','C']:
+                        rejected.add(convert(all_pages[page_at]))
+
+                
                 else:
                     if not page_list:
-                        page_list = page_list_saved
-                    page_at = all_pages.index(page_list[0])
-                    page_list = page_list[1:]
-                    inp = input('ANY KEY to ADVANCE or (Q)uit')
-                    if inp == 'Q':
-                        break
+                        if not show_all:
+                            page_list = page_list_saved
+                        else:
+                            break
                     
+                    
+                    if not show_all or (show_all and select):
+                        inp = ''
+                        while True:
+                            try:
+                                inp = input('ANY KEY to ADVANCE or (Q)uit (A)dd (C)lassify (B)ack (U)ndo')
+                                if inp == 'U' and classifier_stack.exists():
+                                    popped = classifier_stack.pop()
+                                    c,p = popped[0],popped[1]
+                                    delete_classification(c,p)
+                                    
+                                                       
+                                elif inp:
+                                    inp = inp[0].upper()
+                                    break
+                                else:
+                                    break
+                            except:
+                                print('ERROR')
+                        if not inp  in ['A',' ','C','U']:
+                            rejected.add(convert(all_pages[page_at]))
+                        if inp == 'Q':
+                            break
+                        elif inp in ['B','<']:
+                            if finished_page_stack.exists():
+                                popped = finished_page_stack.pop()
+                                page_at = all_pages.index(popped)
+                                page_list = [popped]+page_list
+                                
+                        elif inp in ['A',' ']:
+                            return_pages.add(convert(all_pages[page_at]))
+                            classifier_stack.add(('',convert(all_pages[page_at])))
+                            print(convert(all_pages[page_at]),' ADDED')
+                        elif inp == 'C':
+                            classify()
+                        if not page_list:
+                            break
+                                
+                    format_result(search_term='',page_set=return_pages,page_dict=return_pages_classified,rejected=rejected)
+                    print('DONE',format_range(set(finished_page_stack.show())))
+                    
+                    if page_list and not inp in ['B','<','U']:
+                        finished_page_stack.add(page_list[0])
+                        page_list = page_list[1:]
+                        if page_list:
+                            page_at = all_pages.index(page_list[0])
+            return return_pages, return_pages_classified,rejected 
                     
         #FOR SELECTION THE ACTION CORRESPONDING TO THE INPUT 
 
@@ -1456,15 +2608,50 @@ class Index_Maker:
                 self.project_name = input('Name of file to save to? ')
                 self.project_name = complete_file_name (self.project_name,first_ending='PROB')
                 
-            if (input('SAVE TO '+self.project_name)
-                in ['yes','y','Y','Yes',' ']):
+            if yes_no_input('SAVE TO '+self.project_name):
                 if self.project_object:
                     self.project_file = open(directoryname+index_folder+self.project_name,'wb')
                     pickle.dump(self.project_object,
                                 self.project_file)
                     self.project_file.close()
+        elif inp == '31':
+            if yes_no_input('Pre-purge names?'):
+                self.text_object.capitalized_phrases = pre_purge(self.text_object.capitalized_phrases)
                     
-                    
+        elif inp in  ['32','33','34']:
+ 
+            
+            while True:
+                filename = input('Filename?')
+                if filename:
+                    break
+
+            obj = {'32':self.project_object.names,
+                   '33':self.project_object.titles,
+                   '34':self.project_object.concepts}[inp]
+            
+
+            all_headers = read_excel(filename=filename)
+            scroll = Select()
+            all_headers = scroll.scroll_through(all_headers)
+
+            while True:
+                temp_inp = input('(A)dd or (R)eplace')
+                if temp_inp in ['A','R']:
+                    break
+            if temp_inp in 'A':
+
+                for x in all_headers:
+                    print('ADDING ',x)
+                    obj['keep'].add(x)
+            else:
+                obj['keep'] = set(all_headers)
+                
+            
+           
+                        
+                
+
         elif inp == '1':
 
             #Open project
@@ -1478,9 +2665,9 @@ class Index_Maker:
 
         elif inp == '0':
 
-                if not self.text_object or input('Overwrite existing TEXT OBJECT?') in YESTERMS:
+                if not self.text_object or yes_no_input('Overwrite existing TEXT OBJECT?'):
 
-                    if input('Load existing TEXT OBJECT ') in YESTERMS:
+                    if yes_no_input('Load existing TEXT OBJECT '):
                         self.text_filename = complete_file_name(input('Name of project to open?'))
                         tempfile = open(directoryname+index_folder+self.text_filename,'rb')
                         self.text_object = pickle.load(tempfile)
@@ -1491,7 +2678,7 @@ class Index_Maker:
                         self.text_object = Reader()
                         pdf_filename = input('PDF TO READ? ')
                         self.text_object.load(pdf_filename)
-                        if not input('SAVE as '+complete_file_name(pdf_filename)+'? ') in YESTERMS:
+                        if not yes_no_input('SAVE as '+complete_file_name(pdf_filename)+'? '):
                             self.text_filename = complete_file_name(input('Save as? '))
                         else:
                             self.text_filename = complete_file_name(pdf_filename)
@@ -1500,12 +2687,12 @@ class Index_Maker:
                         pickle.dump(self.text_object,tempfile)
                         tempfile.close()
                     if not self.project_object:
-                        if input('Initiate new project? ') in YESTERMS:
+                        if yes_no_input('Initiate new project? '):
                             self.project_object = Headings(self.text_object)
                             self.searcher_object = Searcher(self.text_object)
 
                     if not self.index:
-                        if input('LOAD INDEX? ') in YESTERMS:
+                        if yes_no_input('LOAD INDEX? '):
                             inp = input('INDEX NAME? ')
                             self.index_name = complete_file_name (inp,first_ending='IND')
                             tempfile = open(directoryname+index_folder+self.index_name,'rb')
@@ -1523,6 +2710,9 @@ class Index_Maker:
                 print('YOU MUST FIRST LOAD TEXT BEFORE YOU CAN INITIATE A PROJECT!')
 
         elif inp == '5':
+
+            
+                    
             if self.project_object:
                 self.project_object.define_names()
                 self.names = True
@@ -1542,31 +2732,131 @@ class Index_Maker:
 
         elif inp in ['20','21', '22']:
 
-            if inp == '20':
-                obj = self.text_object.words
-            else:
-                obj = self.text_object.words_in_sentences
-            if not self.searcher_object:
-                self.searcher_object = Searcher(self.text_object)
-            search_term = input('SEARCH TERM: ')
-            x = self.searcher_object.search_entry(search_term,obj)
-            results,terms = x[0], x[1]
-            if inp == '20':
+            print(SEARCH_HELP)
 
-                print('RESULTS: ',', '.join(sorted(results)))
-            else:
-                print('RESULTS: ',', '.join(sorted([str(x)+'/'+self.text_object.sentence_dict[x][2] for x in results])))
-            print('TERMS: ',', '.join(terms))
-            if results and input('SHOW? ') in YESTERMS:
-                if inp == '21':
-                    show_pages (sorted(list(self.text_object.get_pages_for_sentences(results))))
-                elif inp == '22':
-                    
-                    show_pages (sorted(list(results)),sentences=True)
-                else:
-                    show_pages(sorted(list(results)))
+            show_reversed = False
+            if self.reverse_table:
+                show_reversed = yes_no_input('Show indexed terms on each page?')
+
+            new_inp = run_search (inp,search_term=None,show_reversed=show_reversed)[0]
             
+
+        elif  inp == '35':
+            inp = int(numeric_input('Enter search mode.\n1) Pages\n(2) Pages/sentences\n(3) Sentences\n',lower=1,upper=3)) + 19
+            inp = str(inp)
+            filename = input('FILENAME?')
+            
+            
+            tempfile = open(directoryname+index_folder+filename+'.txt','r',
+                            encoding='utf-8')
+            file_text = tempfile.read()
+            all_terms = reversed(file_text.split('\n'))
+##            except:
+##                print('FILELOAD FAILED')
+
+            
+            
+            all_results = []
+            
+            term_stack = Stack()
+            for x in all_terms:
+                term_stack.add(x)
+            
+
+            
+            while term_stack.exists():
+                x = term_stack.pop()
+                go_on = True
+                while go_on:
+                    switched = False # FOr when a new search term is used
+                    if '\t' in x:
+                        head, body = x.split('\t')[0:2]
+                    else:
+                        head = x
+                        body = ''
                     
+
+
+                    
+                    if ';;' in head:
+                        head_term, search_term = head.split(';;')[0:2]
+                    else:
+                        head_term, search_term = head, head
+
+                        if '<' in head and '>' in head:
+                            author, head_term = get_if(head,'<','>')
+
+                            head_term, search_term = '<'+author+'>'+head_term, '_'+head_term
+                        else:
+                            
+                            if ';' in search_term:
+                                search_term = search_term.split(';')[0]
+                            if ',' in search_term:
+                                search_term = search_term.split(',')[0]
+                            parenthetical,search_term = get_if(search_term,left='(',right=')')
+                            if parenthetical == 's':
+                                search_terms = search_term+'|'+search_term+'s'
+                    
+                        
+                    t_inp = input('RETURN TO USE '+search_term+' OR ENTER NEW')
+                    if t_inp.strip():
+                        search_term = t_inp
+                        switched = True 
+                    empty, temp_result = run_search(inp,search_term=search_term,quit_immediately=True)
+                    temp_result = head_term + temp_result
+                        
+                    print('RESULT =',temp_result)
+                    while True:
+                        temp_inp = type_input('[K]eep, Add [T]erm, [P}ass, [E]dit, [S]witch mode, [R}erun, [Q]uit_and_keep or (A)bort',must_be=['K',' ','T','R','Q','A','P','E','S'],return_empty=False)
+                        if not temp_inp in ['E','S','T']:
+                            break
+                        else:
+                            if temp_inp == 'E':
+                                while True:
+                                    print(temp_result)
+                                    tt_result = input('?')
+                                    ttt_inp = type_input('Accept or (B)reak',must_be=YESTERMS+['B'],return_empty=True)
+                                    if ttt_inp:
+                                        if not ttt_inp == 'B':
+                                            temp_result = tt_result
+                                        break
+                            elif temp_inp == 'T':
+                                while True:
+                                    new_term = input('?')
+                                    if new_term:
+                                        break
+                                if new_term.strip():
+                                    ttt_inp = yes_no_input('Accept '+new_term+' or RETURN')
+                                    if ttt_inp:
+                                        term_stack.add(new_term)
+                                   
+                                        
+                            else:
+                                inp = int(numeric_input('Enter search mode.\n1) Pages\n(2) Pages/sentences\n(3) Sentences\n',lower=1,upper=3)) + 19
+                                inp = str(inp)
+                                print('NEW MODE =',inp)
+                                
+                                
+                                        
+                            
+                    if temp_inp in ['K','Q','P']:
+                        if not temp_inp == 'P':
+                            all_results.append(temp_result)
+                        go_on = False
+                    elif temp_inp == 'A':
+                        temp_inp = 'Q'
+                        go_on = False
+                    print('ALL RESULTS')
+                    print(DIVIDER)
+                    print('\n'.join(all_results))
+                    print(DIVIDER)
+                if temp_inp == 'Q':
+                      break
+                        
+                    
+                    
+            
+            
             
 
         elif inp == '8':
@@ -1577,21 +2867,80 @@ class Index_Maker:
             to_search_object = {'names':self.text_object.words,
                           'titles':self.text_object.title_dict,
                           'concepts':self.text_object.words}
+            alternate_object = self.text_object.words
 
             
-            query = input('Query?') in YESTERMS
+            query = yes_no_input('Query?')
+            upper_threshold = int(numeric_input(prompt='Last indexed page?'))
+
+            def exclude_pages (page_set,threshold):
+
+
+                for x in set(page_set):
+                    if x.isnumeric() and int(x)>threshold:
+                        page_set.remove(x)
+                return page_set
+            print_during = yes_no_input('Output results while searching?')
 
             for obj_name in self.index:
-                if input('Create index for '+obj_name+'? ') in YESTERMS:
+                if yes_no_input('\nCreate index for '+obj_name+'? '):
                     searching_set = object_dict[obj_name]
                     searching_object = to_search_object[obj_name]
+                    alternative_object = to_search_object['titles']
                     searching_set = sorted(searching_set)
                     length_of_set = str(len(searching_set))
                     for counter,x in enumerate(searching_set):
-                        print(str(counter)+'/'+length_of_set+' : '+x +'='+reform_term(x,obj_name=obj_name))
                         
-                        
-                        results = self.searcher_object.search_entry(reform_term(x,obj_name=obj_name),searching_object)[0]
+                        subtract_set_results = False
+                        add_set_results = False 
+
+                        if '_' not in x:
+                            set_result_phrase, x = get_if(x,left='{',right='}')
+                        else:
+                            before,after = x.split('_')
+                            before_search,before_phrase = get_if (before,left='{',right='}')
+                            after_search,after_phrase = get_if (after,left='{',right='}')
+                            set_result_phrase = after_search
+                            x = before_phrase.strip()+'_'+after_phrase
+
+                        reformed, searchphrase = reform_term(x,obj_name=obj_name)
+                        if not searchphrase:
+                            try:
+                                results = self.searcher_object.search_entry(reformed,searching_object,alternative_object)[0]
+                            except:
+                                print(x,'/',reformed,'/','FAILED')
+                        else:
+                            try:
+                                results = self.searcher_object.search_entry(reformed,alternate_object)[0]
+                            except:
+                                print(x,'/',reformed,'/','FAILED')
+                        if set_result_phrase:
+                            operation = '='
+                            # + adds pages to existing set, - removes them, = or NOTHING sets to equal,
+                            # and % deletes all pages
+                            if set_result_phrase[0] in ['+','-','=','%']:
+                                operation = set_result_phrase[0]
+                                set_result_phrase = set_result_phrase[1:]
+                            if set_result_phrase:
+                                set_result_pages = de_range(set_result_phrase)
+                            if operation == '=':
+                                results = set_result_pages
+                            elif operation == '+':
+                                results = results.union(set_result_pages)
+                            elif operation == '%':
+                                #to exclude all values
+                                results = set()
+                            else:
+                                results -= set_result_pages
+                                 
+    
+                                 
+                        if print_during:  
+                            print(str(counter)+'/'+length_of_set+' : '+x +'='+reformed)
+                            print('    =>'+format_range(results))
+                        else:
+                            print(str(counter)+'.',end='')
+ 
                         
                         if query:
                             kept_results = set()
@@ -1607,7 +2956,10 @@ class Index_Maker:
                                 if not query:
                                     break
                             results = kept_results
-                        self.index[obj_name][x] = set(results)
+
+                        #TO RECORD RESULTS 
+                        self.index[obj_name][x] = exclude_pages(set(results),threshold=upper_threshold)
+
 
                     
                             
@@ -1622,126 +2974,115 @@ class Index_Maker:
                            1:'TITLES',
                            2:'CONCEPTS'}[counter]
 
-                print(DIVIDER)
-                print(heading)
-                print(DIVIDER)
+                print(DIVIDER+heading+'\n'+DIVIDER)
                 
                 for counter2,term in enumerate(object_type['keep']):
                     print(str(counter2)+': '+term)
                 
                 print(DIVIDER)
                 
-                
-            
-
-##                for index_type in ['names','titles','concepts']:
-##                    print(index_type)
-##                    print('_______________________________')
-##                    for counter, term in enumerate(self.index[index_type].keys()):
-##
-##                        print(str(counter)+': '+term+ ':' + ', '.join(sorted(self.index[index_type][term])))
-##                    print()
-##                    print()
-                    
+                   
         elif inp == '12':
 
-            result_list = []
-            single_entry = ''
-            last_first_element = ''
-            def text_format (x):
-
-                x = x.split(';;')[0]
-                if '_' in x:
-                    x = x.count('_')*'\t'+x.split('_')[-1]
-                return x 
-
-                
-
-            all_entries = [x for x in list(self.index['names'].keys())+
-                                    list(self.index['titles'].keys())+
-                                    list(self.index['concepts'].keys())]
-            type_list = ['N']*len(self.index['names'].keys())\
-                        +['T']*len(self.index['titles'].keys())\
-                        +['C']*len(self.index['concepts'].keys())
-
-            index_entries = []
-            for counter in range(len(all_entries)):
-                index_entries.append((all_entries[counter],type_list[counter]))
+            formatted_index = FormatIndex(self.index)
+            formatted_index.generate_dictionary()
+            self.index_text = formatted_index.print_dictionary()
+            if yes_no_input('DO YOU WANT TO SHOW RESULTS?'):
+                print(self.index_text)
             
-                
 
-            index_entries = sorted([(x[0],x[1]) for x in index_entries],
-                                   key=lambda x: x[0].replace('<','').lower())
-        
-            
-            
-            for counter, full_entry in enumerate(index_entries):
-                index_type = {'N':'names',
-                              'T':'titles',
-                              'C':'concepts'}[full_entry[1]]                    
-                entry = full_entry[0]
-                cross_reference = ''
-                if '[' in entry and '[' in entry:
-                    cross_reference = entry.split('[')[1].split(']')[0]
-                    entry = entry.split('[')[0]+entry.split(']')[1]
-                    
-                first_element = entry.split('>')[0].split('_')[0].split('[')[0].split(';;')[0].replace('<','')
-                
-                if first_element != last_first_element:
-                    result_list.append(single_entry[:-1])
-                    single_entry = first_element+','
-                    last_first_element = first_element
-                else:
-                    entry_copy = entry
-                    second_element = entry_copy[len(first_element)+1:].split(';;')\
-                                     [0].split('[')[0].replace('>','').replace('<','')
-                    single_entry += second_element+",of:"
-                    
+        elif inp in ['10','11','26']:
 
 
-                heading = text_format (entry)
-                pages = self.index[index_type][entry]
-                
-                page_results = format_range(pages) +';'
-                single_entry += page_results[0:-1]
-                if cross_reference:
-                    single_entry += '; see also '+cross_reference
-
-
-            result_list.append(single_entry)
-            single_entry = ''
-            self.index_text = ('\n'.join(result_list))
-            print(self.index_text)
-            
-                    
-                         
-
-        elif inp in ['10','11']:
-
-
-            if inp == '10':
+            if inp in ['10','26']:
                 file_type = 'keep'
             else:
                 file_type = 'purge'
-            def display (display_obj,heading=''):
+            def display (display_obj,heading='',show_counter=False):
+                displaylist = []
 
                 print(heading)
                 print()
                 for counter, x in enumerate(sorted(display_obj)):
 
-                    print(counter,x)
+                    print((str(counter)+': ')*show_counter+x)
+                    displaylist.append(x)
                 print('_______________________________')
                 print()
+                return displaylist
 
             if self.project_object:
 
-                display(self.project_object.names[file_type],'NAMES')
-                display(self.project_object.titles[file_type],'TITLES')
-                display(self.project_object.concepts[file_type],'CONCEPTS')
+                if inp == '10':
+
+                    show_counter = yes_no_input('SHOW COUNTER?')
+                    
+
+                    display(self.project_object.names[file_type],'NAMES',show_counter=show_counter)
+                    display(self.project_object.titles[file_type],'TITLES',show_counter=show_counter)
+                    display(self.project_object.concepts[file_type],'CONCEPTS',show_counter=show_counter)
+                if inp == '26':
+                    while True:
+
+                        sub_inp = type_input(prompt='WHAT FILE TO SAVE? \n (N)ames, (T)titles, (C)concepts, or (A)bort',must_be=['N','T','C'])
+
+                        if not sub_inp == 'A':
+
+                            if sub_inp == 'N':
+                                results = display(self.project_object.names[file_type],'NAMES')
+                            elif sub_inp == 'T':
+                                results = display(self.project_object.titles[file_type],'TITLES')
+                            elif sub_inp == 'C':
+                                results = display(self.project_object.concepts[file_type],'CONCEPTS')
+                            
+                            resulttext = '\n'.join(results)
+                            print(resulttext)
+                            filename = input('FILENAME or RETURN for PROJECTNAME?')
+                            if not filename:
+                                filename = self.project_name
+                            filename += {'N':'_NAMES',
+                                         'T':'_TITLES',
+                                         'C':'_CONCEPTS'}[sub_inp]
+                            tempfile = open(directoryname+index_folder+filename+'.txt','w',
+                                            encoding='utf-8')
+                            tempfile.write(resulttext)
+                            tempfile.close()
+  
+                    
+                        
+        elif inp in ['27']:
+                sub_inp = type_input(prompt='WHAT FILE TO LOAD? \n (N)ames, (T)titles, (C)concepts, or (A)bort',must_be=['N','T','C','A'])
+                if not sub_inp == 'A':
+                    heading ={'N':'_NAMES',
+                              'T':'_TITLES',
+                              'C':'_CONCEPTS'}[sub_inp]
+                    working_obj = {'N':self.project_object.names,
+                              'T':self.project_object.titles,
+                              'C':self.project_object.concepts}[sub_inp]
+                    filename = input('FILENAME or RETURN for PROJECTNAME?')
+                    if not filename:
+                        filename = self.project_name
+                    
+                    tempfile = open(directoryname+index_folder+filename+heading+'.txt','r',
+                                    encoding='utf-8')
+                    file_text = tempfile.read()
+                    file_set = file_text.split('\n')
+
+                    for x in working_obj['keep']:
+                        if x not in file_set: 
+                            working_obj['purge'].add(x)
+                    working_obj['keep'] = set(file_set)
+                    for x in file_set:
+                        if x in working_obj['purge']:
+                            working_obj['purge'].remove(x)
+
 
         elif inp in ['13']:
 
-            show_pages()
+            
+            if self.reverse_table:
+                show_reversed = yes_no_input('Show indexed terms on each page?')
+            show_pages(show_reversed=show_reversed)
 
             
         elif inp in ['14']:
@@ -1749,43 +3090,137 @@ class Index_Maker:
             self.reverse_index()
 
         elif inp in ['15']:
-    
-            for page in self.reverse_table:
-                print(page,':',','.join(self.reverse_table[page]))
 
+##            def line_form (x,length=70,breaker=';'):
+##
+##                """Formats  a section of text for each line is no more than legnth"""
+##                
+##
+##                return_lines = []
+##                last_line = ''
+##                last_line_length = 0
+##                break_len = len(breaker)
+##                
+##
+##                for l in x.split(breaker):
+##                    if last_line_length + len(l) < length:
+##                        last_line+=l+breaker
+##                        last_line_length += len(l)+break_len
+##                        
+##                    else:
+##                        return_lines.append(last_line)
+##                        last_line = l+breaker
+##                        last_line_length = len(l)+break_len
+##                return_lines.append(last_line)
+##                return '\n'.join(return_lines)
+                    
+                        
+
+                    
+
+            classify_terms = yes_no_input('Classify indexed terms?')
+
+            def print_reverse_index (classify=classify_terms):
+
+                """Prints out a reverse index"""
+
+                surround = lambda x:'('+x+')'
+                
+
+                def reform (x,delete=False):
+
+                    """Elimiates bracketed type and search phrase from term"""
+
+                    if delete:
+                        dummy,x = get_if(x,'(',')')
+                    x= x.split(';;')[0]
+                    return x
+                
+
+                def format_reversed_terms (terms,classes=['names','titles','concepts'],classify=classify_terms,delete=True):
+
+                    """Formats the reversed index entry for a given page"""
+
+                    if classify:
+                        
+                        sorted_terms = {}
+                        for c in classes:
+                            sorted_terms[c] = set()
+                            
+
+                    
+                        for x in terms:
+                            for c in classes:
+                                if surround(c) in x:
+                                    
+                                    sorted_terms[c].add(reform(x,delete=delete))
+                                    
+                        text_list = []
+                        for c in classes:
+
+                            text_list.append(line_form('<<<'+c+'>>>'+': \n'+'\n'.join(sorted(sorted_terms[c],key=lambda x:x.lower()))))
+                            text_list.append('')
+                        return '\n'.join(text_list)
+
+                    else:
+
+                        return line_form(';'.join(sorted([reform(x,delete) for x in terms])))
+                        
+               
+                text_list = []
+                for page in sort_all_pages(self.reverse_table.keys()):
+                    
+
+                    text_list.append('_'*80)
+                    text_list.append('PAGE ='+page)
+                    if page in self.reverse_table:
+
+                        text_list.append(format_reversed_terms(self.reverse_table[page],classify=classify_terms))
+                    else:
+                        print(page,'NOT FOUND')
+                    
+                return text_list
+            self.reverse_index_text = '\n'.join(print_reverse_index(classify_terms))
+            print(self.reverse_index_text)
+            
+        
         elif inp in ['16']:
 
             for index_type in self.index:
 
                 print('REVIEWING '+index_type+'\n'+DIVIDER)
                 for entry in self.index[index_type]:
-                    inp = input('REVIEW OR (D)ELETE '+entry)
+                    inp = type_input(prompt='(R)EVIEW, (Q)UIT, OR (D)ELETE '+entry,must_be=['R','Q','R'])
                     if inp == 'D':
                         del self.index[index_type][entry]
                         
-                    elif inp in YESTERMS:
+                    elif inp == 'R':
                         for page in sorted((self.index[index_type][entry])):
                             
                             show_text = self.text_object.get_page(page)
                             words_from_terms = entry
                             for char in string.punctuation:
                                 words_from_terms = words_from_terms.replace(char,' ')
-                            words_from_terms = [x for x in words_from_terms.split(' ') if x and x not in SMALL_WORDS]
-                            for word in words_from_terms:
-                                show_text = show_text.replace(word,'<<'+word+'>>').replace('<<<<','<<').replace('>>>>','>>')
-                            show_text = show_text.replace('>> <<',' ').replace('>><<','')
+                            words_from_terms = [x for x in words_from_terms.split(' ') if x and not x in SMALL_WORDS]
+                            words_from_terms = get_dehyphenated(words_from_terms)
+                            show_text = bracket(show_text,words_from_terms)
+                            show_text = side_marks(show_text)
+                            
                             print(DIVIDER+'\n'
                                   +'[['+page+']]'+'\n'
                                   +DIVIDER+'\n'
                                   +show_text+DIVIDER)
-                            if input('REJECT?') in YESTERMS:
+                            if yes_no_input('SPACE OR Y(ES) to REJECT?'):
                                 self.index[index_type][entry].remove(page)
                         inp = input('PAGES TO ADD?')
                         if inp:
                             pages = inp.split(',')
                             for p in pages:
                                 if p in self.text_object.pages.keys():
-                                    self.index[index_type][entry].add(page)
+                                    print('Adding ',p)
+                                    self.index[index_type][entry].add(p)
+                    elif inp == 'Q':
+                        break 
                         
         elif inp in ['17']:
             self.index_name = complete_file_name (self.project_name.replace('PROB','').replace('.pkl',''),first_ending='IND')
@@ -1801,7 +3236,7 @@ class Index_Maker:
 
         elif inp in ['18']:
 
-            if input('LOAD INDEX? ') in YESTERMS:
+            if yes_no_input('LOAD INDEX? '):
                         inp = input('INDEX NAME? ')
                         self.index_name = complete_file_name (inp,first_ending='IND')
                         tempfile = open(directoryname+index_folder+self.index_name,'rb')
@@ -1809,20 +3244,49 @@ class Index_Maker:
                         tempfile.close()
 
         elif inp in ['19']:
-            if input('SAVE FINAL INDEX as TEXTFILE') in YESTERMS:
+
+            def save_text_file (x,first_ending='FIN'):
+
+                """To save given text file"""
+
+                
                 filename = complete_file_name(self.project_name.replace('PROB','').replace('.pkl',''),
-                                              first_ending='FIN',
+                                              first_ending=first_ending,
                                               second_ending='.txt')
                 while True:
-                    if input('SAVE to '+filename+'? ') in YESTERMS:
+                    if yes_no_input('SAVE to '+filename+'? '):
                         break
                     else:
                         filename = complete_file_name(input('Filename? '),
-                                                      first_ending='FIN',
+                                                      first_ending=first_ending,
                                                       second_ending='.txt')
-                tempfile = open(directoryname+index_folder+filename,'w')
-                tempfile.write(self.index_text)
+                tempfile = open(directoryname+index_folder+filename,'w',
+                                encoding='utf-8')
+                tempfile.write(x)
                 tempfile.close()
+
+            t_inp = type_input('(I)ndex or (R)everse index',must_be=['I','R'],return_empty=True)
+            if t_inp == 'I':
+                if self.index_text:
+                    if yes_no_input('SAVE FORMATTED INDEX as TEXTFILE'):
+                        save_text_file (self.index_text)
+                        print('SAVED')
+                else:
+                    print('INDEX NOT YET FORMATTED!')
+            elif t_inp == 'R' and self.reverse_index_text:
+                if self.reverse_index_text:
+                    if yes_no_input('SAVE RETURN INDEX as TEXTFULE'):
+                        save_text_file (self.reverse_index_text,first_ending='REV')
+                else:
+                    print('REVERSE INDEX NOT YET FORMATTED!')
+                    
+               
+
+        
+
+                
+
+
 ##        elif inp in ['25']:
 ##            if input('QUIT? ') in YESTERMS:
 ##                return False
@@ -1830,9 +3294,40 @@ class Index_Maker:
             self.override = not self.override
             print('OVERRIDE ',{True:'ON',
                    False:'OFF'}[self.override])
+
+        elif inp in ['28']:
+            prompt = """
+TO CHANGE STATUS 
+
+(n)ames
+(i)italicized phrases
+(q)uoted phrases
+(p)arenthetical phrases 1
+p(a)renthetical phrases 2"""
+            
+            while True:
+                obj_type = input(prompt)
+
+                if obj_type == 'n':
+                    print('NAMES')
+                    self.project_object.names_done = not self.project_object.names_done
+                elif obj_type == 'i':
+                    self.project_object.italicized_phrases_done = not self.project_object.italicized_phrases_done
+                elif obj_type == 'q':
+                    self.project_object.quoted_phrases_done = not self.project_object.quoted_phrases_done
+                elif obj_type == 'p':
+                    self.project_object.paren_phrases1_done = not self.project_object.paren_phrases1_done
+                elif obj_type == 'a':
+                    self.project_object.paren_phrases2_done = not self.project_object.paren_phrases2_done
+                else:
+                    break
+        elif inp in ['29']:
+
+            for x in sorted(self.text_object.dehyphenated):
+                print (x,'=',self.text_object.dehyphenated[x])
         elif inp in ['25']:
             self.reverse_index()
-            if input('Pages as indexes? ') in YESTERMS:
+            if yes_no_input('Pages as indexes? '):
                 page_as_index = True
             else:
                 page_as_index = False
@@ -1876,39 +3371,33 @@ class Index_Maker:
                 self.return_dict[page_index]={'keys':page_keys,
                                          'text':page_text}
             
-##            for page in self.return_dict:
-##                print(DIVIDER)
-##                print(page)
-##                print(', '.join(self.return_dict[page]['keys']))
-##                print(DIVIDER)
-##                print(self.return_dict[page]['text'])
-##                input('?')
-            if input ('Quit and return index? ') in YESTERMS:
+            if yes_no_input('Quit and return index? '):
                 return False
             
             
             
-        return True 
+        return new_inp 
             
     def console (self):
 
         """To call up the console and initiate main loop"""
-        
-        
+
+        inp = ''
         while True:
 
             if self.override:
                 try:
-                    
-                    if not self.input_term():
+                    inp = self.input_term(inp)
+                    if inp is False:
                         break
                     
                 except:
-                    pass
+                    print('ERROR')
             else:
-                if not self.input_term():
+                inp = self.input_term(inp)
+                if inp is False:
                         break
-        if self.return_dict and input('Return index? ') in YESTERMS:
+        if self.return_dict and yes_no_input('Return index? '):
             return self.return_dict
         return {}
             

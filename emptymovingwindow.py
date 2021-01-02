@@ -50,7 +50,7 @@ help_script =  ['F1 = to change background color']+ \
                ['SHIFT F1 = to change foreground color'] + \
                ['F2 = to enter a note']+['F3 = to switch modes']+\
                ['shift F3 = to switch linetype']+\
-               ['F4 = to contract or extend the workpad']+\
+               ['F4 = to change character display mode']+\
                ['TAB = to toggle through notes']+\
                ['F5 = to define movement']+\
                ['F6 = to define drawing multiplier']+\
@@ -77,7 +77,8 @@ help_script =  ['F1 = to change background color']+ \
                ['123456789/!@#$%^&*( to add to vert/hor divisions']+\
                ['0/9 to reset vert/hor division']+\
                ['? to switch symmetry for divisions'] + \
-               ['insert/delete = to add/delete note from stack']
+               ['insert/delete = to add/delete note from stack']+\
+               ['\ to SELECT or UNSELECT a NOTE']
                
 
 
