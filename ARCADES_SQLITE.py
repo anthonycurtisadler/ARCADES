@@ -54,7 +54,10 @@ import emptymovingwindow
 import extract                                                          #pylint 9.64/10
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
-from indexer import Index_Maker
+try:
+    from indexer import Index_Maker
+except:
+    print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL PDFPLUMBER!')
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output

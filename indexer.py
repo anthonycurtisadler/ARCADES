@@ -2,8 +2,12 @@
 # To help determine the key words, establish page numbers,
 # and format the final index. 
 
+try:    
+    import pdfplumber
+except:
+    print('MUST INSTALL PDFPLUMBER')
 
-import pdfplumber, os, string, simple_parser_mod as parser, pickle
+import os, string, simple_parser_mod as parser, pickle
 import copy
 import nltk
 from nltk import word_tokenize
@@ -26,6 +30,13 @@ SEARCH_HELP ="""
 &=AND, |=OR, ~=NOT, PARENTHESES
 _AT THE START OF A TITLE
 $AT THE START OF A LITERAL
+^SEARCH BY SENTENCE
+[#=RANGE] =  / For literal searches
+[#>>VALUE] COUNT >
+[#<<VALUE] COUNT <
+
+[-PAGERANGE] NOT in PAGES / For all searches
+[+PAGERANGE] IN PAGES
 
 
 """
@@ -1676,11 +1687,81 @@ class Searcher:
         """Core search routine. Retrieves pages for the given term.
         """
 
+        def twine (x,y):
+
+            def conv (x):
+                if isinstance(x,set):
+                    return sorted(list(x),key=lambda x: page_sort_function(x))
+                return x
+            x,y = conv(x), conv(y)
+
+            returnlist = []
+            for c in range(min([len(x),len(y)])):
+                returnlist.append((x[c],y[c]))
+            return returnlist
+
+        def untwine (x):
+
+            returnlist_one = []
+            returnlist_two = []
+            
+            for t in x:
+                returnlist_one.append(t[0])
+                returnlist_two.append(t[1])
+            return returnlist_one,returnlist_two
+                
+        def reduce_twine (x,y):
+
+           returnlist = []
+           for yy in y:
+
+               if yy[0] in x:
+                   returnlist.append(yy)
+           return returnlist
+        
+
+            
+
+        
+
         if term.startswith('~'):
             negative = True
             term = term[1:]
         else:
             negative = False
+            
+        count_min = None
+        count_max = None
+        count_equals = []
+        count_not_equals = []
+        
+        must_not_be = set()
+        must_be = set()
+
+        qualifiers, term = get_if (term,'[',']',get_all = True)
+
+        for qualifier in qualifiers:
+            if qualifier.startswith('#'):
+                qualifier = qualifier[1:]
+                if qualifier:
+                    if qualifier[0] in ['=','~']:
+                        working_list = {'=':count_equals,
+                                        '~':count_not_equals}[qualifier[0]]
+                        qualifier = qualifier[1:]
+                        for q in de_range(qualifier):
+                            working_list.append(int(q))
+                    elif qualifier[0] == '>':
+                        count_min = int(qualifier[1:])
+                    elif qualifier[0] == '<':
+                        count_max = int(qualifier[1:])
+            elif qualifier.startswith('+'):
+                must_be = de_range(qualifier[1:])
+            elif qualifier.startswith('-'):
+                must_not_be = de_range(qualifier[1:])
+
+        
+            
+            
 
         if term.startswith('_'):
             dictionary_object = alternative_object
@@ -1759,6 +1840,7 @@ class Searcher:
                         if dictionary_object[term]:
                             all_terms.append(term)
         else:
+            
             for page in literal_object.keys():
                 is_found = True 
                 term_counter = 0
@@ -1771,23 +1853,68 @@ class Searcher:
                     else:
                         is_found = False
                 if is_found:
-                    return_pages.add(page)
-                    for t in center_words:
-                        all_terms.append(t)
                     
+                    if len(center_words) == 1 and (count_min or count_max or count_equals or count_not_equals):
+                        is_really_found = True
+                        number_of = literal_object[page].count(center_words[0])
+                        if count_min:
+                            if number_of < count_min:
+                                is_really_found = False
+                        if count_max:
+                            if number_of > count_max:
+                                is_really_found = False
+                        if count_equals:
+                            if number_of not in count_equals:
+                                is_really_found = False
+                        if count_not_equals:
+                            if number_of in count_not_equals:
+                                is_really_found = False
+                        if is_really_found:
+                            return_pages.add(page)
+                            for t in center_words:
+                                all_terms.append(t)
+                    else:
+                        return_pages.add(page)
+                        for t in center_words:
+                            all_terms.append(t)
+
+        
+        return_sentences = None
+        sentence_page_pairs = None
+        
+        if return_pages:
+            if isinstance(list(return_pages)[0],int):
+                return_sentences = return_pages 
+                return_pages = self.book_object.get_pages_for_sentences(return_pages)
+                sentence_page_pairs = twine(return_pages,return_sentences)
+        
+                
+                
+                
+                
                 
         if negative:
             return_pages = {x for x in self.book_object.pages.keys() if x not in return_pages}
+        return_pages = {x for x in return_pages if (not must_be or x in must_be) and (not must_not_be or x not in must_not_be)}
+        if sentence_page_pairs:
+            return_sentences = untwine(reduce_twine(return_pages,sentence_page_pairs))[1]
+            return_pages = set(return_sentences)
+        
+        
         return return_pages, all_terms
         
 
     def search_entry(self,term,dictionary_object=None,alternative_object=None,literal_object=None):
 
         """Interprets a search term and runs the search accordingly"""
-
+        term = term.replace('<<','##LT##').replace('>>','##GT##')
+        
         term = term.replace('’',"'")        
         if '<' in term:
             term = term.split('<')[1].split('>')[0]
+        term = term.replace('##LT##','<').replace('##GT##','>')
+        
+        
         if ';;' in term:
             head, term = term.split(';;')[0], term.split(';;')[1]
             term = term.replace('%',head)
@@ -1796,7 +1923,7 @@ class Searcher:
         x = self.search (term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object)
         return x[0],x[1]
 
-    def search (self,search_phrase,dictionary_object,alternative_object=None,literal_object=None):
+    def search (self,search_phrase,dictionary_object,alternative_object=None,literal_object=None,sentence_object=None):
 
         """Searches a complex search phrase
         ---allowing &=AND, |=OR, nested parentheses ---
@@ -2139,12 +2266,15 @@ class Index_Maker:
                     search_term, classifier_phrase = search_term.split('\t')[0:2]
                 x = self.searcher_object.search_entry(search_term,obj, alt_obj, lit_obj)
                 results,terms = x[0], x[1]
-                
+
                 if inp == '20':
 
                     print('RESULTS: ',format_range(results))
                 else:
-                    print('RESULTS: ',', '.join(sorted([str(x)+'/'+self.text_object.sentence_dict[x][2] for x in results])))
+                    print('RESULTS: ',', '.join(sorted([str(x)+'/'+self.text_object.sentence_dict[x][2] for x in results])))           
+
+
+                
                 print('TERMS: ',', '.join(terms))
                 if results:
                     page_set, page_dict, rej_pages =None, None, None 
@@ -2887,78 +3017,92 @@ class Index_Maker:
                     searching_set = object_dict[obj_name]
                     searching_object = to_search_object[obj_name]
                     alternative_object = to_search_object['titles']
+                    sentence_object = self.text_object.words_in_sentences
                     searching_set = sorted(searching_set)
                     length_of_set = str(len(searching_set))
                     for counter,x in enumerate(searching_set):
+                        try:
                         
-                        subtract_set_results = False
-                        add_set_results = False 
+                            subtract_set_results = False
+                            add_set_results = False 
 
-                        if '_' not in x:
-                            set_result_phrase, x = get_if(x,left='{',right='}')
-                        else:
-                            before,after = x.split('_')
-                            before_search,before_phrase = get_if (before,left='{',right='}')
-                            after_search,after_phrase = get_if (after,left='{',right='}')
-                            set_result_phrase = after_search
-                            x = before_phrase.strip()+'_'+after_phrase
-
-                        reformed, searchphrase = reform_term(x,obj_name=obj_name)
-                        if not searchphrase:
-                            try:
-                                results = self.searcher_object.search_entry(reformed,searching_object,alternative_object)[0]
-                            except:
-                                print(x,'/',reformed,'/','FAILED')
-                        else:
-                            try:
-                                results = self.searcher_object.search_entry(reformed,alternate_object)[0]
-                            except:
-                                print(x,'/',reformed,'/','FAILED')
-                        if set_result_phrase:
-                            operation = '='
-                            # + adds pages to existing set, - removes them, = or NOTHING sets to equal,
-                            # and % deletes all pages
-                            if set_result_phrase[0] in ['+','-','=','%']:
-                                operation = set_result_phrase[0]
-                                set_result_phrase = set_result_phrase[1:]
-                            if set_result_phrase:
-                                set_result_pages = de_range(set_result_phrase)
-                            if operation == '=':
-                                results = set_result_pages
-                            elif operation == '+':
-                                results = results.union(set_result_pages)
-                            elif operation == '%':
-                                #to exclude all values
-                                results = set()
+                            if '_' not in x:
+                                set_result_phrase, x = get_if(x,left='{',right='}')
                             else:
-                                results -= set_result_pages
-                                 
-    
-                                 
-                        if print_during:  
-                            print(str(counter)+'/'+length_of_set+' : '+x +'='+reformed)
-                            print('    =>'+format_range(results))
-                        else:
-                            print(str(counter)+'.',end='')
- 
-                        
-                        if query:
-                            kept_results = set()
-                            for page in results:
-                                print(self.text_object.get_page(page))
-                                print('_______________________________________________')
-                                inp = input('RETURN to KEEP, BLANK+RETURN TO REJECT, Q to KEEP AND STOP QUERYING')
-                                if inp == 'Q':
-                                    query = False
-                                    kept_results.add(page)
-                                elif not inp:
-                                    kept_results.add(page)
-                                if not query:
-                                    break
-                            results = kept_results
+                                before,after = x.split('_')
+                                before_search,before_phrase = get_if (before,left='{',right='}')
+                                after_search,after_phrase = get_if (after,left='{',right='}')
+                                set_result_phrase = after_search
+                                x = before_phrase.strip()+'_'+after_phrase
 
-                        #TO RECORD RESULTS 
-                        self.index[obj_name][x] = exclude_pages(set(results),threshold=upper_threshold)
+                            reformed, searchphrase = reform_term(x,obj_name=obj_name)                     
+
+                            
+                            if not searchphrase:
+                                try:
+                                    results = self.searcher_object.search_entry(reformed,searching_object,alternative_object)[0]
+                                except:
+                                    print(x,'/',reformed,'/','FAILED')
+                            elif not reformed.startswith('^'):
+                                try:
+                                    results = self.searcher_object.search_entry(reformed,searching_object,alternative_object)[0]
+                                except:
+                                    print(x,'/',reformed,'/','FAILED')
+                            else:
+                                
+                                try:
+                                    results = self.text_object.get_pages_for_sentences(self.searcher_object.search_entry(reformed[1:],sentence_object)[0])
+                                except:
+                                    print(x,'/',reformed,'/','FAILED')
+                            if set_result_phrase:
+                                operation = '='
+                                # + adds pages to existing set, - removes them, = or NOTHING sets to equal,
+                                # and % deletes all pages
+                                if set_result_phrase[0] in ['+','-','=','%']:
+                                    operation = set_result_phrase[0]
+                                    set_result_phrase = set_result_phrase[1:]
+                                if set_result_phrase:
+                                    set_result_pages = de_range(set_result_phrase)
+                                if operation == '=':
+                                    results = set_result_pages
+                                elif operation == '+':
+                                    results = results.union(set_result_pages)
+                                elif operation == '%':
+                                    #to exclude all values
+                                    results = set()
+                                else:
+                                    results -= set_result_pages
+                                     
+        
+                                     
+                            if print_during:  
+                                print(str(counter)+'/'+length_of_set+' : '+x +'='+reformed)
+                                print('    =>'+format_range(results))
+                            else:
+                                print(str(counter)+'.',end='')
+                                
+
+     
+                            
+                            if query:
+                                kept_results = set()
+                                for page in results:
+                                    print(self.text_object.get_page(page))
+                                    print('_______________________________________________')
+                                    inp = input('RETURN to KEEP, BLANK+RETURN TO REJECT, Q to KEEP AND STOP QUERYING')
+                                    if inp == 'Q':
+                                        query = False
+                                        kept_results.add(page)
+                                    elif not inp:
+                                        kept_results.add(page)
+                                    if not query:
+                                        break
+                                results = kept_results
+
+                            #TO RECORD RESULTS 
+                            self.index[obj_name][x] = exclude_pages(set(results),threshold=upper_threshold)
+                        except:
+                            print(counter,x,'FAILED')
 
 
                     
@@ -2986,9 +3130,14 @@ class Index_Maker:
 
             formatted_index = FormatIndex(self.index)
             formatted_index.generate_dictionary()
-            self.index_text = formatted_index.print_dictionary()
+            if yes_no_input('DO YOU WANT TO CHECK CROSS REFERENCES?'):
+                formatted_index.check_cross_references()
+            self.index_text = formatted_index.print_dictionary(exclude_empty=yes_no_input('EXCLUDE EMPTY?'),exclude_not_matching=yes_no_input('EXCLUDE UNMATCHED CROSSREFERENCES?'))
             if yes_no_input('DO YOU WANT TO SHOW RESULTS?'):
                 print(self.index_text)
+
+            
+                
             
 
         elif inp in ['10','11','26']:
@@ -3079,6 +3228,7 @@ class Index_Maker:
 
         elif inp in ['13']:
 
+            show_reversed = False
             
             if self.reverse_table:
                 show_reversed = yes_no_input('Show indexed terms on each page?')

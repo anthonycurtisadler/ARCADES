@@ -75,6 +75,12 @@ class Entry:
             self.ref_first_name = ''
         self.search_phrase, entry = get_right(entry)
         self.see_also, self.head_phrase = get_if(entry,'[',']')
+        if ';' in entry:
+            if 'see ' in ''.join(entry.split(';')[1]):
+                self.see_also = ''.join(entry.split(';')[1:]).split('see ')[1]
+                self.head_phrase = entry
+        else:
+            self.see_also, self.head_phrase = '', entry
         self.sub_head, self.main_head = get_right(self.head_phrase,div_char='_')
         self.descriptor, self.main_head = get_if(self.main_head,'(',')')
         
@@ -104,6 +110,8 @@ class Entry:
 
 class FormatIndex:
 
+    
+
     def __init__ (self,index_object=None):
 
         self.index_object = index_object
@@ -114,8 +122,50 @@ class FormatIndex:
         self.comma_before_double_quotes = True
         self.single_quote = '’'
         self.double_quote = '”'
+        self.cross_references = set()
+        self.cross_reference_head = set()
+        self.unmatching_heads = set()
+        self.unmatching_cross_references = set()
 
-    
+    def get_cross_references (self):
+
+        for dict_obj in [self.index_object['names'],self.index_object['concepts'],self.index_object['titles']]:
+            for obj in dict_obj:
+                name_inf = Entry(obj)
+                if name_inf.see_also:
+                    self.cross_references.add(name_inf.see_also.split('_')[0])
+                    self.cross_reference_head.add((name_inf.see_also.split('_')[0],name_inf.main_head))
+                    
+        
+
+    def check_cross_references (self):
+
+        letters_only = lambda x:x.replace(' ','').replace(',','')
+
+
+        
+
+        if not self.cross_references:
+            self.get_cross_references()
+            
+            
+
+        
+        cross_ref_copy = {letters_only(x) for x in self.cross_references}
+        
+
+        for dict_obj in [self.index_object['names'],self.index_object['concepts'],self.index_object['titles']]:
+            for obj in dict_obj:
+                name_inf = Entry(obj)
+                if not name_inf.see_also:
+                    cross_ref_copy.discard(letters_only(name_inf.main_head))
+        
+        print('ALL CROSS REFERENCES ',','.join(self.cross_references))
+        self.unmatching_cross_references = {x for x in self.cross_references if letters_only(x) in cross_ref_copy}
+        print('NO CROSS REFERENCES FOUND FOR ',','.join(self.unmatching_cross_references))
+        self.unmatching_heads = {x[1] for x in self.cross_reference_head if x[0] in self.unmatching_cross_references}
+
+   
     def generate_dictionary (self):
 
         for mode, dict_obj in enumerate([self.index_object['names'],self.index_object['concepts']]):
@@ -146,15 +196,26 @@ class FormatIndex:
                         self.headings[name_inf.main_head]['subheadings'][name_inf.sub_head] = {'pages':dict_obj[name]}
                         self.headings[name_inf.main_head]['pages_in_subheadings'].update(dict_obj[name])
                     else:
-                        self.headings[name_inf.main_head] = {'descriptor':name_inf.descriptor,
-                                                             'pages':self.index_object['names'][name],
-                                                             'works':{},
-                                                             'pages_in_titles':set(),
-                                                             'subheadings':{},
-                                                             'pages_in_subheadings':set(),
-                                                             'type':'HEADNAME'}
-                        self.headings[name_inf.main_head]['subheadings'][name_inf.sub_head] = {'pages':dict_obj[name]}
-                        self.headings[name_inf.main_head]['pages_in_subheadings'] = dict_obj[name]
+                        if mode == 0:
+                            self.headings[name_inf.main_head] = {'descriptor':name_inf.descriptor,
+                                                                 'pages':self.index_object['names'][name],
+                                                                 'works':{},
+                                                                 'pages_in_titles':set(),
+                                                                 'subheadings':{},
+                                                                 'pages_in_subheadings':set(),
+                                                                 'type':'HEADNAME'}
+                            self.headings[name_inf.main_head]['subheadings'][name_inf.sub_head] = {'pages':dict_obj[name]}
+                            self.headings[name_inf.main_head]['pages_in_subheadings'] = dict_obj[name]
+                        else:
+                            self.headings[name_inf.main_head] = {'descriptor':name_inf.descriptor,
+                                                                 'pages':self.index_object['concepts'][name],
+                                                                 'works':{},
+                                                                 'pages_in_titles':set(),
+                                                                 'subheadings':{},
+                                                                 'pages_in_subheadings':set(),
+                                                                 'type':'HEADNAME'}
+                            self.headings[name_inf.main_head]['subheadings'][name_inf.sub_head] = {'pages':dict_obj[name]}
+                            self.headings[name_inf.main_head]['pages_in_subheadings'] = dict_obj[name]
 
             
         for title in self.index_object['titles']:
@@ -192,7 +253,7 @@ class FormatIndex:
                     self.headings[name]['pages_in_titles'].update(self.index_object['titles'][title])
 
 
-    def print_dictionary (self):
+    def print_dictionary (self,exclude_empty=False,exclude_not_matching=False):
 
         all_heads = sorted(self.headings.keys(),key=lambda x:sort_function(x))
         returnlist = []
@@ -201,6 +262,8 @@ class FormatIndex:
         
 
         for x in all_heads:
+
+            
             
 
             linetext = ''
@@ -222,64 +285,80 @@ class FormatIndex:
                     x = x.replace(self.double_quote+',',','+self.double_quote)
                 return x
             
+            if not exclude_not_matching or x not in self.unmatching_heads:
 
+            
+                for mode in [0,1]:
 
-            for mode in [0,1]:
+                    if mode == 0 or (mode == 1 and self.headings[x]['works']):
 
-                if mode == 0 or (mode == 1 and self.headings[x]['works']):
-
-                    # mode=0 for the MAIN HEADING of CONCEPTS, NAMES
-                    # mode=1 for the WORKS listed under AUTHORS 
-                    
-                    
-                    
+                        # mode=0 for the MAIN HEADING of CONCEPTS, NAMES
+                        # mode=1 for the WORKS listed under AUTHORS 
                         
-                    if mode == 0:
-
                         
+                        
+                            
+                        if mode == 0:
 
-                        if self.headings[x]['pages']-self.headings[x]['pages_in_titles']-self.headings[x]['pages_in_subheadings']:
+                            
+
+                            if self.headings[x]['pages']-self.headings[x]['pages_in_titles']-self.headings[x]['pages_in_subheadings']:
+                                linetext += x
+                                if self.headings[x]['descriptor']:
+                                    linetext += '('+self.headings[x]['descriptor']+')'
+                                linetext += ', '
+                                linetext += format_range(self.headings[x]['pages']-self.headings[x]['pages_in_titles']-self.headings[x]['pages_in_subheadings']).replace(',',', ')
+                                linetext += '; '
+                            else:
+                                linetext += x
+                                linetext += '; '
+                            if self.headings[x]['subheadings']:
+
+                                for sub_head in sorted(self.headings[x]['subheadings'],key=lambda x:sort_function(x)):
+                                    fr = format_range(self.headings[x]['subheadings'][sub_head]['pages']).replace(',',', ')
+                                    if fr:
+                                        linetext += sub_head
+                                        linetext += ', '
+                                        linetext += fr
+                                        linetext += '; '
+                                    elif not exclude_empty:
+                                        linetext += sub_head + ' EMPTY; '
+                                    else:
+                                        print('NO PAGES FOR '+sub_head)
+                                        
+                            if linetext.endswith('; '):
+                                linetext = linetext[:-2]        
+                            if linetext and some_numeric(linetext):
+                                returnlist.append(correct(linetext))
+                            else:
+                                print('SKIPPED ',linetext)
+                            linetext = ''
+
+                        else:
+                            
                             linetext += x
                             if self.headings[x]['descriptor']:
                                 linetext += '('+self.headings[x]['descriptor']+')'
-                            linetext += ', '
-                            linetext += format_range(self.headings[x]['pages']-self.headings[x]['pages_in_titles']-self.headings[x]['pages_in_subheadings']).replace(',',', ')
-                            linetext += '; '
-                        else:
-                            linetext += x
-                            linetext += '; '
-                        if self.headings[x]['subheadings']:
-
-                            for sub_head in sorted(self.headings[x]['subheadings'],key=lambda x:sort_function(x)):
-                                linetext += sub_head
-                                linetext += ', '
-                                linetext += format_range(self.headings[x]['subheadings'][sub_head]['pages']).replace(',',', ')
-                                linetext += '; '
-                        if linetext.endswith('; '):
-                            linetext = linetext[:-2]        
-                        if linetext and some_numeric(linetext):
-                            returnlist.append(correct(linetext))
-                        else:
-                            print('SKIPPED ',linetext)
-                        linetext = ''
-
-                    else:
-                        
-                        linetext += x
-                        if self.headings[x]['descriptor']:
-                            linetext += '('+self.headings[x]['descriptor']+')'
-                        linetext += ', works by: '
-                        for work in sorted(self.headings[x]['works'],key=lambda x:sort_function(x)):
-                            linetext += work
-                            linetext += ', '
-                            linetext += format_range(self.headings[x]['works'][work]['pages']).replace(',',', ')
-                            linetext += '; '
-                        if linetext.endswith('; '):
-                            linetext = linetext[:-2]
-                        if linetext:
-                            returnlist.append(correct(linetext))
-                        linetext = ''
-            
+                            linetext += ', works by: '
+                            for work in sorted(self.headings[x]['works'],key=lambda x:sort_function(x)):
+                                fr = format_range(self.headings[x]['works'][work]['pages']).replace(',',', ')
+                                if fr:
+                                    linetext += work
+                                    linetext += ', '
+                                    linetext += fr
+                                    linetext += '; '
+                                elif not exclude_empty:
+                                    linetext += work + 'EMPTY; '
+                                else:
+                                    print('NO PAGES FOR '+work)
+                            if linetext.endswith('; '):
+                                linetext = linetext[:-2]
+                            if linetext:
+                                returnlist.append(correct(linetext))
+                            linetext = ''
+            else:
+                print('NO CROSS REFERENCE FOR',x)
+                
 
         return '\n'.join(returnlist)
     
