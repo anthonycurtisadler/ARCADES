@@ -50,7 +50,7 @@ index_folder = os.altsep+'indexer'+os.altsep
 speller = SpellChecker()
 os.system(DISPLAY_COLOR)
 
-print(READ_ME)
+
 
 YESTERMS += [' ','Y']
 string.punctuation += '—'+'“'+'”'+'‘'+'’'+''
@@ -2817,11 +2817,7 @@ class Index_Maker:
                     obj['keep'].add(x)
             else:
                 obj['keep'] = set(all_headers)
-                
-            
-           
-                        
-                
+                             
 
         elif inp == '1':
 
@@ -3039,13 +3035,7 @@ class Index_Maker:
                         print(x,'SKIPPED')
                         go_on = False
                     
-                    
-                            
-                    
-                    
-            
-            
-            
+          
 
         elif inp == '8':
             
@@ -3299,32 +3289,7 @@ class Index_Maker:
 
         elif inp in ['15']:
 
-##            def line_form (x,length=70,breaker=';'):
-##
-##                """Formats  a section of text for each line is no more than legnth"""
-##                
-##
-##                return_lines = []
-##                last_line = ''
-##                last_line_length = 0
-##                break_len = len(breaker)
-##                
-##
-##                for l in x.split(breaker):
-##                    if last_line_length + len(l) < length:
-##                        last_line+=l+breaker
-##                        last_line_length += len(l)+break_len
-##                        
-##                    else:
-##                        return_lines.append(last_line)
-##                        last_line = l+breaker
-##                        last_line_length = len(l)+break_len
-##                return_lines.append(last_line)
-##                return '\n'.join(return_lines)
-                    
-                        
-
-                    
+                 
 
             classify_terms = yes_no_input('Classify indexed terms?')
 
@@ -3591,6 +3556,7 @@ p(a)renthetical phrases 2"""
         """To call up the console and initiate main loop"""
 
         inp = ''
+        print(READ_ME)
         while True:
 
             if self.override:

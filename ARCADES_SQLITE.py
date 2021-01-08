@@ -57,7 +57,7 @@ from indexutilities import index_is_reduced, index_reduce, index_expand
 try:
     from indexer import Index_Maker
 except:
-    print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL PDFPLUMBER!')
+    print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output
@@ -14717,7 +14717,7 @@ INTROSCRIPT = INTROSCRIPT.replace(PERCENTAGE, BLANK*int((OPENING_WIDTH-150)/2))
 
 
 display = Display()
-for dir_name in  ['notebooks','textfiles','registry','diagnostics','pictures','programs']:
+for dir_name in  ['notebooks','textfiles','registry','diagnostics','pictures','programs','indexer','pdfs']:
     result = make_new_directory(dir_name)
     if result:
         display.noteprint((result,''))
