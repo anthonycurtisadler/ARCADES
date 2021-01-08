@@ -6,6 +6,56 @@ from numbertools  import format_range as fr, rom_to_int, int_to_roman,\
 import string
 SUBHEAD_WORDS = ['and','of','as','vs.','for','a','the','into']
 DELETE_CHARS = (string.punctuation+string.whitespace).replace(',','').replace('(','').replace(')','')
+normal_letters = 'abcdefghijklmnopqrstuvwxyz'
+normal_letters = normal_letters + normal_letters.upper()+string.punctuation+string.whitespace
+from indexconfiguration import LEFT_ITALIC, RIGHT_ITALIC
+
+
+
+
+from ALLALPHABETS import extended_latin
+
+class SpecialCharacters:
+
+    def __init__ (self,letters=extended_latin):
+
+        if letters:
+
+            self.letter_dict = self.create_letter_substitution_dict(letters)
+        
+
+    def create_letter_substitution_dict (self,letters):
+
+        returndict = {}
+        
+        for x in letters.split('\n'):
+            if '|' in x:
+                
+                from_this, to_that = x.split('|')
+                if to_that[0] in normal_letters:
+                    returndict[from_this]=to_that[0]
+        return returndict
+
+    def convert_letter(self,x):
+        if x in self.letter_dict:
+            return self.letter_dict[x]
+        if not x in normal_letters + '0123456789':
+            
+            while True:
+                new_char = input('SPECIAL CHAR '+x+' NOT FOUND; ENTER NEW!')
+                if new_char in normal_letters + '0123456789':
+                    self.letter_dict[x]=new_char
+                    return new_char
+              
+                    
+        return x
+        
+    def convert_word (self,x):
+        
+        return ''.join([self.convert_letter(l) for l in x])
+    
+            
+converter = SpecialCharacters()
 
 def format_range(x):
     return convert_range(fr(x),join_phrase=',')
@@ -45,15 +95,19 @@ def get_right (x,div_char=';;'):
         return '',x.strip()
 
 def sort_function (x):
-
+    
     #FOLLOWING CMS 16 'LETER by LETTER'
 
+    x = x.replace(LEFT_ITALIC,'').replace(RIGHT_ITALIC,'')
+    x = converter.convert_word(x)
     
     x = truncate_small(x)
     x = x.replace('(',',(')
     
+    
     for c in DELETE_CHARS:
             x = x.replace(c,'')
+    x 
     x = x.lower()
     return tuple(x.split(','))
 
@@ -99,7 +153,7 @@ class Entry:
         if self.see_also:
             to_return += 'SEE_ALSO='+self.see_also+';'
         if self.main_head:
-            to_return += 'MAIN_HEAD='+self.main_head+';'
+            to_return += ('MAIN_HEAD='+self.main_head+';').replace(':;',':').replace(',',', ').replace('  ',' ')
         if self.sub_head:
             to_return += 'SUB_HEAD='+self.sub_head
         if self.descriptor:
@@ -267,9 +321,9 @@ class FormatIndex:
             
 
             linetext = ''
-            if last_letter.lower() != x[0].lower():
+            if last_letter.lower() != x.replace(LEFT_ITALIC,'').replace(RIGHT_ITALIC,'')[0].lower():
                 returnlist.append('')
-            last_letter = x[0]
+            last_letter = x.replace(LEFT_ITALIC,'').replace(RIGHT_ITALIC,'')[0]
             skip_empty = True
             
             def some_numeric(x):
@@ -289,6 +343,7 @@ class FormatIndex:
 
             
                 for mode in [0,1]:
+                    first_skipped = False
 
                     if mode == 0 or (mode == 1 and self.headings[x]['works']):
 
@@ -331,7 +386,8 @@ class FormatIndex:
                             if linetext and some_numeric(linetext):
                                 returnlist.append(correct(linetext))
                             else:
-                                print('SKIPPED ',linetext)
+                                first_skipped = True
+                                
                             linetext = ''
 
                         else:
@@ -340,15 +396,20 @@ class FormatIndex:
                             if self.headings[x]['descriptor']:
                                 linetext += '('+self.headings[x]['descriptor']+')'
                             linetext += ', works by: '
+                            work_found = False
+                            total_works = 0
                             for work in sorted(self.headings[x]['works'],key=lambda x:sort_function(x)):
+                                total_works += 1
                                 fr = format_range(self.headings[x]['works'][work]['pages']).replace(',',', ')
                                 if fr:
                                     linetext += work
                                     linetext += ', '
                                     linetext += fr
                                     linetext += '; '
+                                    work_found = True
                                 elif not exclude_empty:
                                     linetext += work + 'EMPTY; '
+                                    
                                 else:
                                     print('NO PAGES FOR '+work)
                             if linetext.endswith('; '):
@@ -356,6 +417,14 @@ class FormatIndex:
                             if linetext:
                                 returnlist.append(correct(linetext))
                             linetext = ''
+                            if first_skipped and not work_found:
+                                print('NO ENTRIES OR WORKS FOUND FOR ',x)
+                            elif not work_found and self.headings[x]['works']:
+                                print('NO WORKS FOUND FOR',x,' in ',total_works,'WORKS')
+                            
+                    elif mode == 1:
+                        if first_skipped:
+                            print('SKIPPED ',x)
             else:
                 print('NO CROSS REFERENCE FOR',x)
                 
