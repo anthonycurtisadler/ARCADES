@@ -752,7 +752,7 @@ class Console:
                 for counter,x in enumerate(all_files):
 
                     print(counter,':',x,'<LOADED>'*((x[:-4] in existing_files) or x in existing_files),self.get_page_range_local(x))
-
+                return all_files 
         
         def load (self,files_to_load):
 
@@ -762,9 +762,12 @@ class Console:
                                           text_title=pdf_filename)
                     print(pdf_filename,'LOADED')
             
-        def select_files_to_load (self):
+        def select_files_to_load (self,all_files=None):
 
-            self.show_directory()
+             
+            
+
+            all_files = self.show_directory()
             while True:
                 choose = input('? WHICH FILES DO YOU WANT TO LOAD? GIVE A RANGE OF NUMBERS?  ')
                 if not choose:
