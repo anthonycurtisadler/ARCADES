@@ -1,6 +1,6 @@
 #pylint: disable=C0103, W0108, W0201, E1101, R0913, R0914, R0912, R0915, W0123, W0122, W0631, W0107, R1702, W0621, W0612
 #pylint rated 9.83/10 with exclusions
-"""NOTESCRIPTION"""
+"""NOTESCRI"""
 
 
 import codecs
@@ -86,6 +86,7 @@ import presets
 from projectmanager import ProjectManager
 from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
+import reader 
 from registry import Registry
 from sequences import Sequences
 from sequencedefaultdictionary import SequenceDefaultDictionary
@@ -5001,7 +5002,8 @@ class Note_Shelf:
               re_entering=False,
               returnnote=False,
               carrying_keys=True,
-              usedefaultkeys=True):
+              usedefaultkeys=True,
+              poetic=False):
 
         """ For entering in new notes into the note base.
         If keyset and/or text is not passed into the function,
@@ -5277,7 +5279,8 @@ class Note_Shelf:
         lasttext = EMPTYCHAR
         splitting = False
         returns_entered = 0
-        poetrytoggled = False
+        poetrytoggled = poetic
+        
         
         if et == EMPTYCHAR:
             print(POUND*7+self.defaults.get('size')*UNDERLINE+VERTLINE)
@@ -5595,7 +5598,7 @@ class Note_Shelf:
                             'size': self.defaults.get('size'),
                             'date': [str(datetime.datetime.now())]}
             else:
-                temp_size = max([len(x_temp)+20 for x_temp in text.split(EOL)])
+                temp_size = max([len(x_temp)+30 for x_temp in text.split(EOL)])
                 metatext = {'user': self.defaults.get('user'),
                             'size': temp_size,
                             'date': [str(datetime.datetime.now())]}
@@ -11001,6 +11004,22 @@ class Console (Note_Shelf):
                         totalterms=0):
 
         global override
+
+        if mainterm in ['reader']:
+
+            self.reader = reader.Console()
+            notes = self.reader.run()
+            while notes.exists():
+                n = notes.pop()
+                print(','.join(n[0]),'|',n[1])
+                if input('ADD?'):
+                    self.enter (ek=n[0],
+                                et=n[1],
+                                poetic=True)
+                    
+                    
+            
+            
 
         if mainterm in ['indexer']:
             check_spelling_was = self.check_spelling

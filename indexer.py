@@ -344,7 +344,17 @@ class Reader:
     
     
 
-    def __init__ (self):
+    def __init__ (self,database_object=None,in_italics=True,in_quotes=True,in_parens=True,in_caps=True,all_sentences=True,above=None,below=None):
+
+        self.database_object = database_object
+        self.in_italics = in_italics
+        self.in_quotes = in_quotes
+        self.all_sentences = all_sentences
+        self.in_parens = in_parens
+        self.in_caps = in_caps
+        self.above = above
+        self.below = below
+        
 
         self.page_record = [] #list of pages found in PDF
         self.sentence_record = [] #List of sentences found
@@ -381,7 +391,10 @@ class Reader:
         self.dehyphenated = {} #Keeps track of dehyphenated expressions
         self.order_dictionary = {} #Keeps track of first appearance of phrases and words
         self.title_translation_dictionary = {} # keeps track of likely translations of titles
-        self.author_dict = {} # keeps track of likely authors 
+        self.author_dict = {} # keeps track of likely authors
+
+        self.last_working_title = ''
+        self.working_text = ''
         
         
         
@@ -405,17 +418,27 @@ class Reader:
 
         
         
-    def get_pages_for_sentences(self,sentence_list=None):
+    def get_sentences(self,sentence_list=None,text_title=None):
 
         """Returns pages in which a sentence can be found"""
+
+
         
         return_pages = set()
         for s in sentence_list:
-            if s in self.sentence_dict:
-                return_pages.update(set(self.sentence_dict[s][2].split(',')))
+            if not self.database_object:
+                if s in self.sentence_dict:
+                    return_pages.update(set(self.sentence_dict[s][2].split(',')))
+            elif text_title:
+                self.database_object.cursor.execute("SELECT * FROM pages_for_sentences WHERE book=? AND sentence=",(text_title,s,))
+                x = self.database_object.cursor.fetchone()[0]
+                print('PAGES FOR SENTENCES',x)
+                return_pages.update(x)
+                
         return return_pages
+
         
-    def load (self,filename='test.pdf'):
+    def load (self,filename='test.pdf',text_title=''):
 
         """Reads a PDF file and analyzes it,
         dividing it into page, and extracting
@@ -480,7 +503,7 @@ class Reader:
         paren_string = ''
         bracket_string = ''
         quoted_string = ''
-        sentence_string = ''
+        sentence_string = []
         sentence_count = 0
         word_starting = False
         capitalized_words = []
@@ -498,18 +521,25 @@ class Reader:
         char_set = set()
         last_char = ''
         last_cap_phrase = ''
+        last_alpha_x0 = 0
+        last_alpha_y0 = 0
         
 
             
         
         word = ''
         text_to_exclude = []
+
+        if self.database_object:
+            self.database_object.add_book(text_title)
         
         
         first_page = True
         last_found_page = None
-        from_top, add_italic_caps = get_parameters()
-
+        if not self.database_object:
+            from_top, add_italic_caps = get_parameters()
+        else:
+            from_top, add_italic_caps = True, True
         def get_limits (pdf,from_this,to_that):
 
             """To make sure page limit is within bounds
@@ -548,6 +578,137 @@ class Reader:
             else:
                 
                 return de_hyphen(x.split('-')[0])+'-'+de_hyphen('-'.join(x.split('-')[1:]))
+
+        def determine_page_numeration (pdf,above=True,below=False):
+
+            page_dict = {}
+            def get_number (x,up_to=50):
+                if not isinstance(x,str):
+                    return 0
+                
+
+                number = ''
+                starting = False
+                counter = 0
+                for c in x:
+                    if counter > up_to:
+                        break
+                    if not starting and c.isnumeric():
+                        starting = True
+                        number+=c
+                    elif starting and c.isnumeric():
+                        number+=c
+                    elif starting and not c.isnumeric():
+                        return int(number)
+                    counter += 1
+                    
+                return 0
+
+            def get_possible_pages(pdf):
+                total_pages = len(pdf.pages)
+                threshold = min ([total_pages,60])
+                page_list = pdf.pages[0:threshold]+[None]*(total_pages-threshold)
+                
+                page_dict = {}
+                for counter,page in  enumerate(page_list):
+                    print('A',counter)
+                    if not page is None:
+                        text = page.extract_text()
+                        lower_number,upper_number = 0,0
+                        if text:
+                            if above:
+                                upper_number = get_number (text)
+                            if below:
+                                lower_number = get_number (''.join(reversed(text)))
+                    else:
+                        upper_number = 0
+                        lower_number = 0
+
+                    page_dict[counter] = (upper_number,lower_number)
+
+
+                
+                return page_dict 
+
+            def get_page_lists(page_dict,index=0):
+
+                
+                all_lists = []
+                working_list = []
+                before_last = None
+                last = None
+                is_adjacent = lambda x,y: y[0]-x[0] == y[1]-x[1] 
+                for counter, p in enumerate(page_dict):
+                    print('B',counter)
+                    current = (p,page_dict[p][index])
+                    
+                    if not working_list and last and is_adjacent(last,current):
+                       working_list.append((p-1,last[1]))
+                       working_list.append((p,current[1]))
+                    elif not working_list and before_last and is_adjacent(before_last,current):
+                       working_list.append((p-2,before_last[1]))
+                       working_list.append((p-1,current[1]-1))
+                       working_list.append((p,current[1]))
+                    elif working_list and working_list[-1][0]==p-1 and is_adjacent(working_list[-1],current):
+                       working_list.append((p,current[1]))
+                    elif working_list:
+                       all_lists.append(working_list)
+                       working_list = []
+                    if last:
+                        before_last = last
+                    last = current
+                  
+                if working_list:
+                    all_lists.append(working_list)
+                
+                return all_lists
+            
+            def find_longest_string (x):
+                try:
+
+                    return [y for y in x if len(y) == max([len(z) for z in x])][0]
+                except:
+                    return [(0,0,)]
+
+            def get_definition_dict (page_tuple,page_dict):
+                return_dict = {}
+                for p in page_dict:
+                    return_dict[p] = page_tuple[1]+(p-page_tuple[0])
+                return return_dict
+
+            def get_page_strings(page_dict):
+                return_dict = {}
+                lower_bound = min([page_dict[x] for x in page_dict])
+                
+                for p in list(page_dict.keys()):
+                    if page_dict[p]<1:
+                        return_dict[p] = int_to_roman(page_dict[p]-lower_bound+1)
+                    else:
+                        return_dict[p] = str(page_dict[p])
+                return return_dict           
+                     
+            possible_pages = get_possible_pages(pdf)
+            pages_one = get_page_lists(possible_pages,index=0)
+            pages_two = get_page_lists(possible_pages,index=1)
+
+            
+            
+            longest = find_longest_string(pages_one+pages_two)[-1]
+            pages = get_definition_dict(longest,possible_pages)
+
+            pages = get_page_strings(pages)
+
+            return pages
+            
+            
+            
+        
+             
+
+                
+                
+
+            
 
         def add_capitalized (capitalized_words, last_cap_phrase='',page_no=0,position_at=0):
 
@@ -599,101 +760,148 @@ class Reader:
                 if ' ' in cap_phrase and len(cap_phrase)>15:
                     return cap_phrase
                 return last_cap_phrase
-            return last_cap_phrase 
+            return last_cap_phrase
+
+        
 
         with pdfplumber.open(directoryname+folder+filename) as pdf:
-            initiated = False 
+            initiated = False
+            average_spacing = 0
+            identified_pages = None
+            char_list = []
+            
+            self.all_text = ''
+
+
+            if self.database_object or yes_no_input('GET PAGES AUTOMATICALLY?'):
+                
+                if not self.above and not self.below:
+                    above = yes_no_input('PAGE NUMBER ABOVE?')
+                else:
+                    above = self.above
+                if not self.below:
+                    below = not above or yes_no_input('PAGE NUMBER BELOW?')
+                else:
+                    below = self.below 
+                identified_pages = determine_page_numeration (pdf,above=above,below=below)
+
+
+            
 
             #Main procedure for analyzing the pdf and extracting text
 
-            exclude_first = yes_no_input('Exclude single capital words if in spelling dictionary?')
+            exclude_first = self.database_object or yes_no_input('Exclude single capital words if in spelling dictionary?')
+
+            if not identified_pages and not self.database_object:
             
-            from_this, to_that = proper_page(input('START FROM? ')), proper_page  (input('GO TO? '),to=True)
+                from_this, to_that = proper_page(input('START FROM? ')), proper_page  (input('GO TO? '),to=True)
+            else:
+                from_this, to_that = 0,1000000
             
             from_this, to_that = get_limits(pdf,from_this,to_that)
-            if yes_no_input('REVIEW ALL FONTS IN PDF? '):
+             
+            if not self.database_object and yes_no_input('REVIEW ALL FONTS IN PDF? '):
                 excluded_fonts = determine_exclude_set(get_all_fonts_from_text(pdf,from_this,to_that))
-            for page in pdf.pages[from_this:to_that]:
+            for pdf_page, page in enumerate(pdf.pages[from_this:to_that]):
                 page_start = position_at
+                
+                def up_list(x,y):
+                    for z in y:
+                        x.append(z)
                 
                 text = page.extract_text()
 
-                tokenized_text = word_tokenize(text)
-                words_with_tokens = nltk.pos_tag(tokenized_text)
-                all_nouns = set()
+                if not self.database_object:
 
-                for w in words_with_tokens:
+                    try:
 
-                    if w[1] in ['NN','NNS']:
-                        all_nouns.add(w[0])
-                
-                self.nouns.update(all_nouns)
-                
+                        tokenized_text = word_tokenize(text)
+                        words_with_tokens = nltk.pos_tag(tokenized_text)
+                        all_nouns = set()
+
+                        for w in words_with_tokens:
+
+                            if w[1] in ['NN','NNS']:
+                                all_nouns.add(w[0])
                         
+                        self.nouns.update(all_nouns)
+                    except:
+                        print("TOKENIZER ERROR")
+                    
+                            
                 
                 
                 query = False
                 once_through = False
                 exclude = False
-                while True:
-                    page_no = extract_page_number(text,from_top=from_top).strip()
-                    print(page_no)
-                    if (not page_no.replace(' ','')
-                        or page_no.isnumeric()
-                        or page_no in first_romans):
-                        break
-                    if query:
-                        print(text+'\n'+DIVIDER)
-                        page_no = input('Page no ?')
-                        query = False
-                        if page_no.isnumeric():
+                if not identified_pages:
+
+                    while True:
+                        page_no = extract_page_number(text,from_top=from_top).strip()
+                        print(page_no)
+                        if (not page_no.replace(' ','')
+                            or page_no.isnumeric()
+                            or page_no in first_romans):
                             break
-                    
+                        if query:
+                            print(text+'\n'+DIVIDER)
+                            page_no = input('Page no ?')
+                            query = False
+                            if page_no.isnumeric():
+                                break
                         
-                    if not once_through:
-                        query = True
-                        from_top = not from_top
-                        once_through = True
-                if (page_no.isnumeric() and last_found_page
-                    and last_found_page.isnumeric()
-                    and int(page_no) == int(last_found_page)+1):
-                    last_found_page = page_no
-                elif (initiated and last_found_page
-                      and last_found_page.isnumeric()):
-                    page_no = str(int(last_found_page)+1)
-                    print('AUTOMATIC '+page_no)
-                    last_found_page = page_no
-                else:
-                    
-                    print(text)
-                    print(DIVIDER)
-                    inp = input('Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING')
-                    if not inp in YESTERMS + ['X','Q']:
-                        page_no = input('Enter new page number?').strip()
-                        if not initiated and page_no.isnumeric():
-                            initiated = yes_no_input('Initiate automatic pagination?') 
-                    if inp == 'X':
-                        exclude = True
-                    elif inp == 'Q':
-                        break
+                            
+                        if not once_through:
+                            query = True
+                            from_top = not from_top
+                            once_through = True
+                    if (page_no.isnumeric() and last_found_page
+                        and last_found_page.isnumeric()
+                        and int(page_no) == int(last_found_page)+1):
+                        last_found_page = page_no
+                    elif (initiated and last_found_page
+                          and last_found_page.isnumeric()):
+                        page_no = str(int(last_found_page)+1)
+                        print('AUTOMATIC '+page_no)
+                        last_found_page = page_no
+                    else:
                         
-                    last_found_page = page_no
-                    
-                if first_page:
-                    inp = type_input(prompt='Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING ',must_be=['X','Q','Y',' '])
-                    if not inp in YESTERMS + ['X','Q']:
-                        page_no = input('Enter new page number?').strip()
-                        if not initiated and page_no.isnumeric():
-                            initiated = yes_no_input('Initiate automatic pagination?')
-                    if inp == 'X':
-                        exclude = True
-                    elif inp == 'Q':
-                         break
-                    first_page = False
-                    last_found_page = page_no
+                        print(text)
+                        print(DIVIDER)
+                        inp = input('Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING')
+                        if not inp in YESTERMS + ['X','Q']:
+                            page_no = input('Enter new page number?').strip()
+                            if not initiated and page_no.isnumeric():
+                                initiated = yes_no_input('Initiate automatic pagination?') 
+                        if inp == 'X':
+                            exclude = True
+                        elif inp == 'Q':
+                            break
+                            
+                        last_found_page = page_no
+                            
+                        if first_page:
+                            inp = type_input(prompt='Keep '+page_no+' or X to exclude PAGE, OR Q(uit) to STOP READING ',must_be=['X','Q','Y',' '])
+                            if not inp in YESTERMS + ['X','Q']:
+                                page_no = input('Enter new page number?').strip()
+                                if not initiated and page_no.isnumeric():
+                                    initiated = yes_no_input('Initiate automatic pagination?')
+                            if inp == 'X':
+                                exclude = True
+                            elif inp == 'Q':
+                                 break
+                            first_page = False
+                            last_found_page = page_no
                 
-                if not exclude:
-                    italic_pages.append(page_no)
+                if identified_pages or not exclude:
+
+                    if identified_pages:
+                        page_no = identified_pages[pdf_page]
+                        print(pdf_page,page_no)
+
+                    if self.in_italics:
+                        
+                        italic_pages.append(page_no)
                     
                     self.pages[page_no]=text
                     italics = ''
@@ -703,11 +911,42 @@ class Reader:
                     italic_found = False
                     last_size = 0
                     last_y0 = 0
+                    hard_return = True
                     for char in page.chars:
+                        
+                       
 
                         if char['y0']>100 and char['size'] != last_size and (char['y0']==last_y0 or (abs(char['y0']-last_y0)>10))  and last_size!=0:
-                            self.all_text+= BREAK_PHRASE
-                            position_at += BREAK_PHRASE_LEN
+                            up_list(char_list,BREAK_PHRASE)
+                            
+##                            self.all_text+= BREAK_PHRASE
+##                            position_at += BREAK_PHRASE_LEN
+                        if char['size'] == last_size and (last_y0-char['y0'])>10:
+
+##
+##                            
+##                            self.all_text+='\n'*abs(int((last_y0-char['y0'])/10))
+                            up_list(char_list,'\n'*abs(int((last_y0-char['y0'])/10)))
+                            
+##                            position_at += abs(int((last_y0-char['y0'])/10))
+##                            self.all_text+=' '*int(char['x0']/10)
+                            up_list(char_list,' '*int(char['x0']/10))
+##                            position_at += int(char['x0']/10)
+                            hard_return = True 
+                            
+                        
+                        if  char['size'] == last_size and char['y0']==last_y0 and (char['text']+last_char).isalpha():
+                            new_spacing = char['x0']-last_x0
+                            if new_spacing > average_spacing:
+                                average_spacing = new_spacing
+                        if last_alpha_y0 == char['y0'] and (char['x0']-last_alpha_x0)>average_spacing:
+                            if average_spacing > 0:
+                                add_to = int((char['x0']-last_alpha_x0)/average_spacing)*' '
+                                up_list(char_list,add_to)
+##                                
+##                                self.all_text += add_to
+##                                position_at += len(add_to)
+##                           
                         
 ##                        print('LT',from_last_title,last_title)
                         if last_title:
@@ -725,60 +964,65 @@ class Reader:
                             char['text'] = "'"
 
                         if char['fontname'] not in excluded_fonts:
-                            self.all_text += char['text']
+##                            self.all_text += char['text']
+                            up_list(char_list,char['text'])
                             char_set.add(char['text'])
 
-                                                
-                            if 'Italic' in char['fontname']:
-                                self.italicized_chars.add(position_at)
-                                
-                                if not italic_found and italics and italics[0].isupper():
-                                    italics = italics.strip()
-                                    if italics.endswith(')') and '(' in italics:
-                                        italics = italics.split('(')[0].strip()
-                                    italics = strip_punctuation(italics)
+                            if self.in_italics:                   
+                                if 'Italic' in char['fontname']:
+                                    self.italicized_chars.add(page_start+len(char_list))
                                     
-                                    self.italicized_phrases.add(italics)
-                                    if italics not in self.order_dictionary:
-                                        self.order_dictionary[italics] = (page_no, position_at)
-                                    if italics not in self.italic_dict:    
-                                        self.italic_dict[italics] = set()
-                                    self.italic_dict[italics].add(page_no)
-                                    if italics not in self.title_dict:
-                                        self.title_dict[italics] = set()
-                                    self.title_dict[italics].add(page_no)
-                                    if italics not in self.title_translation_dictionary:
-                                        self.title_translation_dictionary[italics]=''
-                                        last_title = italics
-                                    if italics not in self.author_dict:
-                                        if last_cap_phrase:
-                                            self.author_dict[italics] = last_cap_phrase
+                                    if not italic_found and italics and italics[0].isupper():
+                                        italics = italics.strip()
+                                        if italics.endswith(')') and '(' in italics:
+                                            italics = italics.split('(')[0].strip()
+                                        italics = strip_punctuation(italics)
                                         
-                                    italics = char['text']
-                                    italic_found = True 
+                                        self.italicized_phrases.add(italics)
+                                        if italics not in self.order_dictionary:
+                                            self.order_dictionary[italics] = (page_no,page_start+len(char_list))
+                                        if italics not in self.italic_dict:    
+                                            self.italic_dict[italics] = set()
+                                        self.italic_dict[italics].add(page_no)
+                                        if italics not in self.title_dict:
+                                            self.title_dict[italics] = set()
+                                        self.title_dict[italics].add(page_no)
+                                        if italics not in self.title_translation_dictionary:
+                                            self.title_translation_dictionary[italics]=''
+                                            last_title = italics
+                                        if italics not in self.author_dict:
+                                            if last_cap_phrase:
+                                                self.author_dict[italics] = last_cap_phrase
+                                            
+                                        italics = char['text']
+                                        italic_found = True 
+                                    else:
+                                        italics += char['text']
+                                        italic_found = True
                                 else:
-                                    italics += char['text']
-                                    italic_found = True
-                            else:
-                                if italic_found and char['text'] not in string.whitespace:
-                                    italic_found = False
+                                    if italic_found and char['text'] not in string.whitespace:
+                                        italic_found = False
 
-                            if char['text'] == '(':
-                                found_left_paren = True
-                                
-                            if char['text'] == '[':
-                                found_left_bracket = True
+                            if self.in_parens:
 
-                            if char['text'] == '“':
-                                if not found_left_quote:
-                                    found_left_quote = True       
+                                if char['text'] == '(':
+                                    found_left_paren = True
+                                    
+                                if char['text'] == '[':
+                                    found_left_bracket = True
 
-##                                    
-##                                else:
-##                                    char['text'] == '”'
-####                                    self.quoted_phrases.add(quoted_string)
-####                                    quoted_string = ''
-                                char['text'] = '"'
+                            if self.in_quotes:
+
+                                if char['text'] == '“':
+                                    if not found_left_quote:
+                                        found_left_quote = True       
+
+    ##                                    
+    ##                                else:
+    ##                                    char['text'] == '”'
+    ####                                    self.quoted_phrases.add(quoted_string)
+    ####                                    quoted_string = ''
+                                    char['text'] = '"'
                             
                             
                             if (char['text'].isupper() and last_char.islower())\
@@ -790,47 +1034,76 @@ class Reader:
                                 simple_word = word.replace("'s",'')
                                 if oldword!=word:
                                     self.dehyphenated[word] = oldword
-                                    italics=italics.replace(oldword,word)
-                                    quoted_string=quoted_string.replace(oldword,word)
-                                    sentence_string=sentence_string.replace(oldword,word)
-                                
-                                if simple_word in self.words:
-                                    self.words[simple_word].add(page_no)
-                                    self.histio[simple_word]+=1
-                                    
-                                else:
-                                    self.words[simple_word] = {page_no}
-                                    self.histio[simple_word] = 1
+                                    if self.in_italics:
+                                        italics=italics.replace(oldword,word)
+                                    if self.in_quotes:
+                                        quoted_string=quoted_string.replace(oldword,word)
+                                    if self.all_sentences:
+                                        sentence_string=list(''.join(sentence_string).replace(oldword,word))
 
-                                if word in self.words_in_sentences:
-                                    self.words_in_sentences[word].add(sentence_count)
+
+                                if self.database_object:
+                                    if simple_word and simple_word != word:
+                                        self.database_object.cursor.execute("INSERT OR REPLACE INTO words (book,word,page) VALUES (?,?,?);",(text_title,simple_word,page_no))
+##                                        self.database_object.add_word(book=text_title,
+##                                                                      word=simple_word,
+##                                                                      page=page_no)
+                                    if word:
+##                                        self.database_object.add_word(book=text_title,
+##                                                                          word=word,
+##                                                                          page=page_no)
+                                        self.database_object.cursor.execute("INSERT OR REPLACE INTO words (book,word,page) VALUES (?,?,?);",(text_title,word,page_no))
                                     
                                 else:
-                                    self.words_in_sentences[word] = {sentence_count}
+                                    
+                                    if simple_word in self.words:
+                                        
+                                        self.words[simple_word].add(page_no)
+                                        self.histio[simple_word]+=1
+                                        
+                                    else:
+                                        self.words[simple_word] = {page_no}
+                                        self.histio[simple_word] = 1
+
+                                if self.all_sentences:
+
+                                    if self.database_object:
+
+                                        self.database_object.cursor.execute("INSERT OR REPLACE INTO words_sentences (book,word,sentence) VALUES (?,?,?);",(text_title,simple_word,sentence_count))
+
+                                    else:
+                                        
+                                        if word in self.words_in_sentences:
+                                            self.words_in_sentences[word].add(sentence_count)
+                                            
+                                        else:
+                                            self.words_in_sentences[word] = {sentence_count}
                                     
                                     
                                 if word:
+
+                                    if self.in_caps:
                                 
-                                    if (last_capitalized and  
-                                        (((not word in NAME_WORDS and word[0].islower())
-                                            and (not italic_found or add_italic_caps)) or
-                                        ((char['text']!=',' and char['text'] in string.punctuation)
-                                         or (char['text']==' ' and last_char==',')))):
-                                            # To exclude the first word of a series of capital words
-                                            # if it is either the first word of a sentence or has an apostrophe
-                                        last_cap_phrase = add_capitalized (capitalized_words,last_cap_phrase,page_no,position_at)
-                                        capitalized_words = []
-                                        last_capitalized = False
-                                        
-                                        
-                                                    
-                                    elif (not word.isnumeric()) and (not italic_found or add_italic_caps) and (word[0].isupper() and not last_capitalized):
-                                        capitalized_words.append(word)
-                                        
-                                        last_capitalized = True
-                                    elif (not word.isnumeric()) and ((not italic_found or add_italic_caps) and (last_capitalized and (word[0].isupper or word in NAME_WORDS))):
-                                        capitalized_words.append(word)
-                                        
+                                        if (last_capitalized and  
+                                            (((not word in NAME_WORDS and word[0].islower())
+                                                and (not italic_found or add_italic_caps)) or
+                                            ((char['text']!=',' and char['text'] in string.punctuation)
+                                             or (char['text']==' ' and last_char==',')))):
+                                                # To exclude the first word of a series of capital words
+                                                # if it is either the first word of a sentence or has an apostrophe
+                                            last_cap_phrase = add_capitalized (capitalized_words,last_cap_phrase,page_no,page_start+len(char_list))
+                                            capitalized_words = []
+                                            last_capitalized = False
+                                            
+                                            
+                                                        
+                                        elif (not word.isnumeric()) and (not italic_found or add_italic_caps) and (word[0].isupper() and not last_capitalized):
+                                            capitalized_words.append(word)
+                                            
+                                            last_capitalized = True
+                                        elif (not word.isnumeric()) and ((not italic_found or add_italic_caps) and (last_capitalized and (word[0].isupper or word in NAME_WORDS))):
+                                            capitalized_words.append(word)
+                                            
 
                                        
                                     word = ''
@@ -838,146 +1111,239 @@ class Reader:
                             else:
                                 word+=char['text']
 
+                            if self.all_sentences:
 
-                            if char['text'] in ' ' and last_not_alpha:
 
-                                sentence_string  += char['text']
+                                if char['text'] in ' ' and last_not_alpha:
 
-                                self.sentence_record.append((sentence_starts_at,
-                                                             position_at,
-                                                             sentence_count))
-                                self.sentence_dict[sentence_count] = (sentence_starts_at,
-                                                                      position_at,','.join(sentence_pages))
-                                self.sentences.add(sentence_string)                    
-                                sentence_count += 1
-                                sentence_pages = set()
-                                sentence_string = ''
-                                sentence_starts_at = position_at
-                            else:
-                                sentence_string  += char['text']
-                                sentence_pages.add(page_no)
+                                    up_list(sentence_string,char['text'])
+
+                                    if not self.database_object:
+                                        
+
+                                        self.sentence_record.append((sentence_starts_at,
+                                                                     page_start+len(char_list),
+                                                                     sentence_count))
+                                        
+                                        self.sentences.add(''.join(sentence_string))
+                                        self.sentence_dict[sentence_count] = (sentence_starts_at,
+                                                                              page_start+len(char_list),','.join(sentence_pages))
+                                    else:
+
+                                        self.database_object.cursor.execute("INSERT OR REPLACE INTO sentences (book,sentence,from_here,to_there) VALUES (?,?,?,?);",
+                                                                            (text_title,sentence_count,sentence_starts_at,page_start+len(sentence_string)))
+                                        self.database_object.cursor.execute("INSERT OR REPLACE INTO pages_for_sentences (book,sentence,page) VALUES (?,?,?);",
+                                                                            (text_title,sentence_count,page_no))
+                                        
+                                    sentence_count += 1
+                                    sentence_pages = set()
+                                    sentence_string = []
+                                    sentence_starts_at = page_start+len(char_list)
+                                else:
+                                    up_list(sentence_string,char['text'])
+                                    sentence_pages.add(page_no)
 
                             if char['text'] not in string.whitespace+string.punctuation+'0123456789':
                                 last_not_alpha = False
                             else:
-                                last_not_alpha = True 
-                            if found_left_paren:
-                                paren_string += char['text']
-                            if found_left_bracket:
-                                
-                                bracket_string += char['text']
-                            if found_left_quote:
-                                quoted_string += char['text']
-                            
+                                last_not_alpha = True
 
-                            if found_left_paren and char['text'] == ')':
-                                paren_string = paren_string[1:-1]
-                                
-                                self.parenthetical_phrases.add(paren_string)
-                                if ',' in paren_string and is_date(paren_string.split(',')[-1]):
-                                    paren_string = ','.join(paren_string.split(',')[0:-1])
+                            if self.in_parens:
+                                if found_left_paren:
+                                    paren_string += char['text']
+                                if found_left_bracket:
                                     
+                                    bracket_string += char['text']
+                            if self.in_quotes:
+                                if found_left_quote:
+                                    quoted_string += char['text']
+                                
+
+                            if self.in_parens:
+                                if found_left_paren and char['text'] == ')':
+                                    paren_string = paren_string[1:-1]
+                                    
+                                    self.parenthetical_phrases.add(paren_string)
+                                    if ',' in paren_string and is_date(paren_string.split(',')[-1]):
+                                        paren_string = ','.join(paren_string.split(',')[0:-1])
                                         
-                                    
-                                if paren_string not in self.title_dict:
-                                    self.title_dict[paren_string] = {page_no}
-                                else:
-                                    self.title_dict[paren_string].add(page_no)
-                            
-                                if last_title and self.title_translation_dictionary[last_title] == '':
-                                    if .5 < len(paren_string)/len(last_title) < 2 and last_title != paren_string:
-                                        self.title_translation_dictionary[last_title] = paren_string
-                                        print(last_title,paren_string)
+                                            
+                                        
+                                    if paren_string not in self.title_dict:
+                                        self.title_dict[paren_string] = {page_no}
+                                    else:
+                                        self.title_dict[paren_string].add(page_no)
                                 
-                                
-                               
-                                found_left_paren = False
-                                paren_string = ''
-                            if found_left_bracket and char['text'] == ']':
-                                bracket_string = bracket_string[1:-1]
-                                self.brackets.add(bracket_string)
-                                found_left_bracket = False
-                                bracket_string = ''
-                            if found_left_quote and char['text'] == '”':
-                                char['text'] = '"'
-                                quoted_string = quoted_string[1:-1]
-                                if quoted_string[-1] in [',','.',';',':']:
-                                    quoted_string = quoted_string[:-1]
-                                if quoted_string[-1] in ["'","’"]:
-                                    if quoted_string[-2] in [',','.',';',':']:
-                                        quoted_string = quoted_string[:-2]+quoted_string[-1]
+                                    if last_title and self.title_translation_dictionary[last_title] == '':
+                                        if .5 < len(paren_string)/len(last_title) < 2 and last_title != paren_string:
+                                            self.title_translation_dictionary[last_title] = paren_string
+                                            print(last_title,paren_string)
                                     
-                                self.quoted_phrases.add(quoted_string)
-                                if quoted_string not in self.title_translation_dictionary:
-                                     self.title_translation_dictionary[quoted_string]=''
-                                     last_title = quoted_string
-                                if quoted_string not in self.title_dict:
-                                    self.title_dict[quoted_string] = set()
-                                if quoted_string not in self.author_dict:
-                                    if last_cap_phrase:
-                                        self.author_dict[quoted_string] = last_cap_phrase
-                                self.title_dict[quoted_string].add(page_no)
-                                found_left_quote = False
-                                quoted_string = ''
+                                    
+                                   
+                                    found_left_paren = False
+                                    paren_string = ''
+                                if found_left_bracket and char['text'] == ']':
+                                    bracket_string = bracket_string[1:-1]
+                                    self.brackets.add(bracket_string)
+                                    found_left_bracket = False
+                                    bracket_string = ''
+                            if self.in_quotes:
+                                if found_left_quote and char['text'] == '”':
+                                    char['text'] = '"'
+                                    quoted_string = quoted_string[1:-1]
+                                    if quoted_string[-1] in [',','.',';',':']:
+                                        quoted_string = quoted_string[:-1]
+                                    if quoted_string[-1] in ["'","’"]:
+                                        if quoted_string[-2] in [',','.',';',':']:
+                                            quoted_string = quoted_string[:-2]+quoted_string[-1]
+                                        
+                                    self.quoted_phrases.add(quoted_string)
+                                    if quoted_string not in self.title_translation_dictionary:
+                                         self.title_translation_dictionary[quoted_string]=''
+                                         last_title = quoted_string
+                                    if quoted_string not in self.title_dict:
+                                        self.title_dict[quoted_string] = set()
+                                    if quoted_string not in self.author_dict:
+                                        if last_cap_phrase:
+                                            self.author_dict[quoted_string] = last_cap_phrase
+                                    self.title_dict[quoted_string].add(page_no)
+                                    found_left_quote = False
+                                    quoted_string = ''
           
 
-
-                            position_at +=1
                             last_char = char['text']
                             last_size = char['size']
                             last_y0 = char['y0']
-                    self.page_record.append((page_start,position_at,page_no))
-                    self.page_dict[page_no]=(page_start,position_at)
+                            last_x0 = char['x0']
+                            if char['text'].strip():
+                                last_alpha_x0 = char['x0']
+                                last_alpha_y0 = char['y0']
+                    page_text = ''.join(char_list)
+                    page_len = len(char_list)
+
+                    position_at += page_len
+                    
+                    char_list = []
+                    self.all_text += page_text
+                                    
+                                    
+
+                    if self.database_object:
+                            self.database_object.add_page(book=text_title,page=page_no,from_here=page_start,to_there=position_at)
+                    else:
+                                
+                        self.page_record.append((page_start,position_at,page_no))
+                        self.page_dict[page_no]=(page_start,position_at)
             for word in self.first_words:
                 if word and word[0].isupper() and not word.lower()+' ' in self.all_text:
                     self.capitalized_phrases.add(word)
+            if self.database_object:
+                self.database_object.add_text(book_name=text_title,
+                              text=self.all_text)
 
 
                      
+    def switch_text (self,text_title):
 
-    def print_section (self,from_point=0,to_point=0,italics=True,line_len=50):
+        if self.database_object and text_title:
+            if text_title != self.last_working_title:
+                self.last_working_title = text_title
+                self.all_text = self.database_object.get_text(self.last_working_title)
+        
+    
+    def print_section (self,from_point=0,to_point=0,italics=True,line_len=50,text_title=''):
+
+        
 
         """Prints text from from_point to to_point.
         Line_len to determine the length of the line to be shown
         """
 
-        
+        def max_line_length(x):
 
-        text = self.all_text[from_point:to_point]
-        return_text = ''
-        line=''
-        for char in text:
-            if char == '\n':
-                print(line)
-                print()
-                line = ''
-            if len(line) > line_len:
-                if char == ' ':
-                    return_text += line + '\n'
-                    line = ''
-            line += char
-        return_text += line
-        return return_text
+            return max(len(x) for x in x.split('\n'))
+        def split_long_line(x):
             
-    def get_from (self,index,obj=None):
+            first_half = x[0:int(len(x)/2)]
+            second_half = x[int(len(x)/2):]
+            for c in [' ','.',',',';',':','-']:
+ 
+                if c in second_half:
+                    first_half += second_half.split(c)[0]
+                    second_half = ''.join(second_half.split(c)[1:])
+                    break
+            return first_half, second_half
+        
+        if self.database_object and text_title:
+            if text_title != self.last_working_title:
+                self.last_working_title = text_title
+                self.all_text = self.database_object.get_text(self.last_working_title)
+                
+                
+
+        
+        text = self.all_text[from_point:to_point]
+
+              
+        if max_line_length(text)>200:
+
+            return_text = ''
+            line=''
+        
+            for char in text:
+    ##            if char == '\n':
+    ##                print(line)
+    ##                print()
+    ##                line = ''
+
+                if len(line) > line_len:
+                    if char == ' ':
+                        return_text += line + '\n'
+                        line = ''
+                line += char
+            return_text += line
+            return return_text
+        text = text.split('\n')
+        temp_list = []                
+        for x in text:                                                                                                    
+            if len(x)>100:
+                tx = split_long_line(x)
+                temp_list.append(tx[0])
+                temp_list.append(tx[1])
+            else:
+                temp_list.append(x)
+        text = '\n'.join(temp_list)
+        
+        
+        return text
+            
+    def get_from (self,index,obj=None,text_title=''):
 
         """Used for printing a section of an object
         containing a collection of different ordered text
         segments, such as the dictionary of pages.
         """
+
+        if not self.database_object:
         
-        if obj==None:
-            obj=self.page_dict
+            if obj==None:
+                obj=self.page_dict
 
-        if index in obj:
-            from_point,to_point = obj[index][0],obj[index][1]
-            return self.print_section(from_point,to_point)
+            if index in obj:
+                from_point,to_point = obj[index][0],obj[index][1]
+                return self.print_section(from_point,to_point)
 
-    def get_page (self,page):
+        from_point,to_point = self.database_object.get_page_range(book_name=text_title,
+                                                                  page=index)
+        return self.print_section(from_point,to_point,text_title=text_title)
+        
+
+    def get_page (self,page,text_title=''):
 
         """Returns the text of an entire page"""
         
-        return self.get_from(page,obj=self.page_dict)
+        return self.get_from(page,obj=self.page_dict,text_title=text_title)
     def get_sentence (self,sentence):
 
         """The a sentence"""
@@ -1022,10 +1388,6 @@ class Headings:
                     return_names.add(x)
         return return_names
 
-    
-                
-            
-            
 
     def divide_set (self,entry_set,before,after,add_to=False,queries='krmnaxy',obj_type='',names=False):
 
@@ -1674,12 +2036,10 @@ class Searcher:
 
         self.book_object = book_object
 
-    
 
-    def get_pages (self,term,dictionary_object=None,alternative_object=None,literal_object=None):
 
-        """Core search routine. Retrieves pages for the given term.
-        """
+    def convert_sentences_to_pages (self,return_pages,sentence_search=None,database_object=None,text_title=None):
+
 
         def twine (x,y):
 
@@ -1712,11 +2072,43 @@ class Searcher:
                if yy[0] in x:
                    returnlist.append(yy)
            return returnlist
-        
 
-            
 
-        
+
+        """Converting sentences to pages"""
+
+        if sentence_search or isinstance(list(return_pages)[0],int):
+
+            if not database_object:
+                return_sentences = return_pages
+                return_pages[t_t] = self.book_object.get_pages_for_sentences([int(x) for x in return_pages],text_title=text_title)
+                sentence_page_pairs = twine(return_pages,return_sentences)
+                return_sentences = untwine(reduce_twine(return_pages,sentence_page_pairs))[1]
+                return_pages = set(return_sentences)
+    
+            else:
+
+                for t_t in return_pages:
+                    return_sentences = return_pages[t_t]
+                   
+                    pages_found = set()
+                    for s in return_sentences:
+                        database_object.cursor.execute("SELECT * FROM pages_for_sentences WHERE book=? AND sentence=?",(t_t,s,))
+                        x = database_object.cursor.fetchone()[-1]
+                        pages_found.add(x)                   
+
+                    
+                    return_pages[t_t] = pages_found
+                    
+        return return_pages
+    
+    
+
+    def get_pages (self,term,dictionary_object=None,alternative_object=None,literal_object=None,database_object=None,text_title=None,sentence_search=False):
+
+        """Core search routine. Retrieves pages for the given term.
+        """
+
 
         if term.startswith('~'):
             negative = True
@@ -1757,7 +2149,7 @@ class Searcher:
             
             
 
-        if term.startswith('_'):
+        if term.startswith('_') and not database_object:
             dictionary_object = alternative_object
             term = term[1:]
         result = set()
@@ -1793,47 +2185,103 @@ class Searcher:
             term = term[1:]
             center_words = [x for x in term.split('$') if x]
             literal_search = True 
-            
-        
-            
+             
         full_words = interpret_caps(full_words)
         center_words = interpret_caps(center_words)
         left_of = interpret_caps(left_of)
         right_of = interpret_caps(right_of)
 
 
-        all_terms = []
+        temp_terms = []
         return_pages = set()
+        all_terms = []
+        if database_object:
+            return_pages = {}
+            all_terms = {}
+            
 
         if not literal_search:
-            if full_words:
 
-                for word in full_words:
 
-                    if word in dictionary_object:
-                        return_pages = return_pages.union(dictionary_object[word])
-                        all_terms.append(word)
 
             all_words = center_words+left_of+right_of
-                        
+
+            temp_terms = []
+                            
             if all_words:
 
                 for word in all_words:
-        
+
+                    if not database_object:
+
+                        words_from_dictionary = dictionary_object.keys()
+                    else:
+
+                        words_from_dictionary = database_object.get_all_words()
 
                     if center_words:
-                        temp_terms = [x for x in dictionary_object.keys() if word in x]
-                    elif left_of:
-                        temp_terms = [x for x in dictionary_object.keys() if x.startswith(word)]
-                    elif right_of:
-                        temp_terms = [x for x in dictionary_object.keys() if x.endswith(word)]
                         
-                    for term in temp_terms:
+                        temp_terms = [x for x in words_from_dictionary if word in x]
+                    elif left_of:
+                        temp_terms = [x for x in words_from_dictionary if x.startswith(word)]
+                    elif right_of:
+                        temp_terms = [x for x in words_from_dictionary if x.endswith(word)]
+                        
+                    
 
-                        return_pages = return_pages.union(dictionary_object[term])
-                        if dictionary_object[term]:
-                            all_terms.append(term)
-        else:
+            for word in full_words+temp_terms:
+
+                    if not database_object:
+
+                        if word in dictionary_object:
+                            return_pages = return_pages.union(dictionary_object[word])
+                            all_terms.append(word)
+                    else:
+                        if isinstance(text_title,str):
+                            if not text_title in return_pages:
+                                return_pages[text_title] = set()
+                            if not text_title in all_terms:
+                                all_terms[text_title] = []
+                            if not sentence_search:
+                                if database_object.word_exists (text_title,word):
+                                    return_pages[text_title] = return_pages[text_title].union(database_object.get_pages_for_word(text_title,word))
+                                    all_terms[text_title].append(word)
+                            else:
+                                if database_object.word_exists (text_title,word):
+                                    return_pages[text_title] = return_pages[text_title].union(database_object.get_sentences_for_word(text_title,word))
+                                    all_terms[text_title].append(word)
+                                                                
+
+                        else:
+                            if isinstance(text_title,list):
+                                search_range = text_title
+                            else:
+                                search_range = database_object.get_books()
+
+                            for text_name in search_range:
+
+                                if not text_name in return_pages:
+                                    return_pages[text_name] = set()
+                                if not text_name in all_terms:
+                                    all_terms[text_name] = []
+                                words = database_object.get_words(text_name)
+                                if not words:
+                                    words = []
+
+                                if not sentence_search:
+                                    if database_object.word_exists (text_name,word):
+                                        return_pages[text_name] = return_pages[text_name].union(database_object.get_pages_for_word(text_name,word))
+                                        all_terms[text_name].append(word)
+                                else:
+                                    if database_object.word_exists (text_name,word):
+                                        return_pages[text_name] = return_pages[text_name].union(database_object.get_sentences_for_word(text_name,word))
+                                        all_terms[text_name].append(word)
+                                        
+                            
+                            
+                
+                
+        elif not database_object:
             
             for page in literal_object.keys():
                 is_found = True 
@@ -1872,35 +2320,46 @@ class Searcher:
                         for t in center_words:
                             all_terms.append(t)
 
-        
-        return_sentences = None
-        sentence_page_pairs = None
-        
-        if return_pages:
-            if isinstance(list(return_pages)[0],int):
-                return_sentences = return_pages 
-                return_pages = self.book_object.get_pages_for_sentences(return_pages)
-                sentence_page_pairs = twine(return_pages,return_sentences)
-        
                 
+        if not database_object:        
+            if negative:
+                return_pages = {x for x in self.book_object.pages.keys() if x not in return_pages}
+            return_pages = {x for x in return_pages
+                            if (not must_be or x in must_be)
+                            and (not must_not_be or x not in must_not_be)}
+
+
+        else:
+            for text_name in return_pages:
+
                 
-                
-                
-                
-        if negative:
-            return_pages = {x for x in self.book_object.pages.keys() if x not in return_pages}
-        return_pages = {x for x in return_pages if (not must_be or x in must_be) and (not must_not_be or x not in must_not_be)}
-        if sentence_page_pairs:
-            return_sentences = untwine(reduce_twine(return_pages,sentence_page_pairs))[1]
-            return_pages = set(return_sentences)
-        
-        
+
+                if negative:
+                    return_pages[text_name] = {x for x in self.book_object.pages.keys()
+                                               if x not in return_pages[text_name]}
+                return_pages[text_name] = {x for x in return_pages[text_name]
+                                           if (not must_be or x in must_be)
+                                           and (not must_not_be or x not in must_not_be)}
+
+
         return return_pages, all_terms
         
 
-    def search_entry(self,term,dictionary_object=None,alternative_object=None,literal_object=None):
+    def search_entry(self,term,dictionary_object=None,
+                     alternative_object=None,
+                     literal_object=None,
+                     text_title=None,
+                     database_object=None,
+                     sentence_search=False):
 
-        """Interprets a search term and runs the search accordingly"""
+        """Interprets a search term and runs the search accordingly
+
+
+        THE SEQUENCE IS
+            SEARCH_ENTRY =>
+            SEARCH =>
+            GET_PAGE """
+        
         term = term.replace('<<','##LT##').replace('>>','##GT##')
         
         term = term.replace('’',"'")        
@@ -1914,10 +2373,14 @@ class Searcher:
             term = term.replace('%',head)
         term = term.replace(LEFT_ITALIC,'').replace(RIGHT_ITALIC,'')
         term = term.replace('“','').replace('”','').replace('"','')
-        x = self.search (term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object)
-        return x[0],x[1]
+        x = self.search (term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object,
+                         text_title=text_title,database_object=database_object,
+                         sentence_search=sentence_search)
 
-    def search (self,search_phrase,dictionary_object,alternative_object=None,literal_object=None,sentence_object=None):
+         
+        return self.convert_sentences_to_pages(x[0],sentence_search=sentence_search,database_object=database_object,text_title=text_title),x[1]
+
+    def search (self,search_phrase,dictionary_object,alternative_object=None,literal_object=None,sentence_object=None,text_title=None,database_object=None,sentence_search=False):
 
         """Searches a complex search phrase
         ---allowing &=AND, |=OR, nested parentheses ---
@@ -1941,13 +2404,58 @@ class Searcher:
         all_terms = get_terms (search_phrase)
         parsed_phrase = parser.parse(search_phrase)
         found_terms = set()
-        for term in all_terms:
-            x = self.get_pages(term,dictionary_object=dictionary_object,alternative_object=alternative_object,literal_object=literal_object)
-            universe[term] = x[0]
-            found_terms.update(set(x[1]))
+
+        if not database_object:
+            for term in all_terms:
+                x = self.get_pages(term,dictionary_object=dictionary_object,
+                                   alternative_object=alternative_object,
+                                   literal_object=literal_object,
+                                   text_title=text_title,sentence_search=sentence_search)
+                universe[term] = x[0]
+                found_terms.update(set(x[1]))
+                
+            result = parser.interpret(parsed_phrase,universe)
+            return result, found_terms
+
+        if isinstance(text_title,str):
+            all_titles = [text_title]
+        elif isinstance(text_title,(list,set)):
+            all_titles = list(text_title)
             
-        result = parser.interpret(parsed_phrase,universe)
+        else:
+            all_titles = database_object.get_books()
+
+        result = {}
+        found_terms = {}
+
+        
+        for title in all_titles:
+
+            universe[title] = {}
+
+            for term in all_terms:
+                x = self.get_pages(term,dictionary_object=dictionary_object,
+                                   alternative_object=alternative_object,literal_object=literal_object,
+                                   text_title=title,database_object=database_object,
+                                   sentence_search=sentence_search)
+                if title in x[0]:
+                    universe[title][term] = x[0][title]
+                else:
+                    universe[title][term] = set()
+                
+                if not title in found_terms:
+                    found_terms [title] = set()
+                if title in x[1]:
+                    
+                    found_terms[title].update(set(x[1][title]))
+                
+            result[title] = parser.interpret(parsed_phrase,universe[title])
+        
         return result, found_terms
+            
+
+        
+            
 
 class Index_Maker:
 
@@ -1979,7 +2487,7 @@ class Index_Maker:
         self.override = True
 
 
-            
+           
 
 
     def reverse_index (self):
@@ -2225,10 +2733,9 @@ class Index_Maker:
                     y += 1
                 return all_entries
             return []
-                           
+                       
 
-
-        def run_search (inp='20',search_term=None,quit_immediately=False,show_reversed=False):
+        def run_search (inp='20',search_term=None,quit_immediately=False,show_reversed=False,database_object=None,text_title=None):
 
             """Runs the search of time inp
             """
@@ -2262,9 +2769,10 @@ class Index_Maker:
 ##                    search_term = search_term[1:]
 ##                    obj = self.text_object.title_dict
 
+
                 if '\t' in search_term:
                     search_term, classifier_phrase = search_term.split('\t')[0:2]
-                x = self.searcher_object.search_entry(search_term,obj, alt_obj, lit_obj)
+                x = self.searcher_object.search_entry(search_term,obj, alt_obj, lit_obj,database_object=None,text_title=None)
                 results,terms = x[0], x[1]
 
                 if inp == '20':
@@ -2314,6 +2822,115 @@ class Index_Maker:
                 if quit_immediately:
                     break
             return inp, formatted                  
+
+
+        def run_multi_search (x,all_results=None,inp=inp):
+
+            if not all_results:
+                all_results = []
+
+            go_on = True
+            while go_on:
+                if not skip_predetermined or not get_if(x,'{','}')[0]:
+                    
+                    switched = False # FOr when a new search term is used
+                    if '\t' in x:
+                        head, body = x.split('\t')[0:2]
+                    else:
+                        head = x
+                        body = ''
+                    
+
+
+                    
+                    if ';;' in head:
+                        head_term, search_term = head.split(';;')[0:2]
+                    else:
+                        head_term, search_term = head, head
+
+                        if '<' in head and '>' in head:
+                            author, head_term = get_if(head,'<','>')
+
+                            head_term, search_term = '<'+author+'>'+head_term, '_'+head_term
+                        else:
+                            
+                            if ';' in search_term:
+                                search_term = search_term.split(';')[0]
+                            if ',' in search_term:
+                                search_term = search_term.split(',')[0]
+                            parenthetical,search_term = get_if(search_term,left='(',right=')')
+                            if parenthetical == 's':
+                                search_terms = search_term+'|'+search_term+'s'
+                    
+                        
+                    t_inp = input('RETURN TO USE '+search_term+' OR ENTER NEW')
+                    if t_inp.strip():
+                        search_term = t_inp
+                        switched = True
+                    try:
+                        empty, temp_result = run_search(inp,search_term=search_term,quit_immediately=True)
+                    except:
+                        print('SEARCH FAILED')
+                        temp_result = ''
+                    temp_result = head_term + temp_result
+                    
+                        
+                    print('RESULT =',temp_result)
+                    while True:
+                        temp_inp = type_input('[K]eep, Add [T]erm, [P}ass, [E]dit, [S]witch mode, [R}erun, [Q]uit_and_keep or (A)bort',must_be=['K',' ','T','R','Q','A','P','E','S'],return_empty=False)
+                        if not temp_inp in ['E','S','T']:
+                            break
+                        else:
+                            if temp_inp == 'E':
+                                while True:
+                                    print(temp_result)
+                                    tt_result = input('?')
+                                    ttt_inp = type_input('Accept or (B)reak',must_be=YESTERMS+['B'],return_empty=True)
+                                    if ttt_inp:
+                                        if not ttt_inp == 'B':
+                                            temp_result = tt_result
+                                        break
+                            elif temp_inp == 'T':
+                                while True:
+                                    new_term = input('?')
+                                    if new_term:
+                                        break
+                                if new_term.strip():
+                                    ttt_inp = yes_no_input('Accept '+new_term+' or RETURN')
+                                    if ttt_inp:
+                                        term_stack.add(new_term)
+                                   
+                                        
+                            else:
+                                inp = int(numeric_input('Enter search mode.\n1) Pages\n(2) Pages/sentences\n(3) Sentences\n',lower=1,upper=3)) + 19
+                                inp = str(inp)
+                                print('NEW MODE =',inp)
+                                
+                                
+                                        
+                            
+                    if temp_inp in ['K','Q','P']:
+                        if not temp_inp == 'P':
+                            all_results.append(temp_result)
+                        go_on = False
+                    elif temp_inp == 'A':
+                        temp_inp = 'Q'
+                        go_on = False
+                    print('ALL RESULTS')
+                    print(DIVIDER)
+                    print('\n'.join(all_results))
+                    print(DIVIDER)
+                    if temp_inp == 'Q':
+                          return False, all_results
+                elif add_automatically or yes_no_input('ADD '+x):
+                    all_results.append(x)
+                    go_on = False
+                else:
+                    print(x,'SKIPPED')
+                    go_on = False
+            
+            return True, all_results
+
 
         def reform_term (x,obj_name='names'):
 
@@ -2911,16 +3528,25 @@ class Index_Maker:
         elif  inp == '35':
             inp = int(numeric_input('Enter search mode.\n1) Pages\n(2) Pages/sentences\n(3) Sentences\n',lower=1,upper=3)) + 19
             inp = str(inp)
-            filename = input('FILENAME?')
+            filename = input('FILENAME or names or titles or concepts?')
+            if filename not in ['names','titles','concepts']:
+                
             
             
-            tempfile = open(directoryname+index_folder+filename+'.txt','r',
-                            encoding='utf-8')
-            file_text = tempfile.read()
-            all_terms = reversed(file_text.split('\n'))
+                tempfile = open(directoryname+index_folder+filename+'.txt','r',
+                                encoding='utf-8')
+                file_text = tempfile.read()
+                all_terms = reversed(file_text.split('\n'))
+            else:
+                
+                all_terms =  list({'names':self.project_object.names['keep'],
+                                   'titles':self.project_object.titles['keep'],
+                                   'concepts':self.project_object.concepts['keep']}[filename])
+                
+                
 ##            except:
 ##                print('FILELOAD FAILED')
-
+           
             skip_predetermined = yes_no_input('Skip over if pages have already been identified?')
             add_automatically = skip_predetermined and yes_no_input('Automatically add if pages already identified?')
             
@@ -2932,109 +3558,45 @@ class Index_Maker:
                 term_stack.add(x)
             
 
-            
-            while term_stack.exists():
+            go_on = True
+            while go_on and term_stack.exists():
                 x = term_stack.pop()
-                go_on = True
-                while go_on:
-                    if not skip_predetermined or not get_if(x,'{','}')[0]:
-                        
-                        switched = False # FOr when a new search term is used
-                        if '\t' in x:
-                            head, body = x.split('\t')[0:2]
-                        else:
-                            head = x
-                            body = ''
-                        
+                go_on, all_results = run_multi_search(x,all_results=all_results,inp=inp)
+                
+            print('\n'.join(all_results))
+            if yes_no_input('Load back into project?'):
+                
+                if not filename in ['names','titles','concepts']:
+                    filename = type_input('Reload into?',
+                                          must_be=['names','titles','concepts'],
+                                          truncate=False,return_empty=True)
+                working_set = {'names':self.project_object.names['keep'],
+                               'titles':self.project_object.titles['keep'],
+                               'concepts':self.project_object.concepts['keep']}[filename]
+                query_when_replacing = yes_no_input('Ask before replacing?')
+                
+            
+                for counter,term in enumerate(all_results):
 
+                    print(str(counter)+':',term)
 
+                    dummy, original = get_if(term,'{','}')
+                    print(original)
+                    if original.strip() in working_set:
                         
-                        if ';;' in head:
-                            head_term, search_term = head.split(';;')[0:2]
-                        else:
-                            head_term, search_term = head, head
-
-                            if '<' in head and '>' in head:
-                                author, head_term = get_if(head,'<','>')
-
-                                head_term, search_term = '<'+author+'>'+head_term, '_'+head_term
-                            else:
-                                
-                                if ';' in search_term:
-                                    search_term = search_term.split(';')[0]
-                                if ',' in search_term:
-                                    search_term = search_term.split(',')[0]
-                                parenthetical,search_term = get_if(search_term,left='(',right=')')
-                                if parenthetical == 's':
-                                    search_terms = search_term+'|'+search_term+'s'
-                        
-                            
-                        t_inp = input('RETURN TO USE '+search_term+' OR ENTER NEW')
-                        if t_inp.strip():
-                            search_term = t_inp
-                            switched = True
-                        try:
-                            empty, temp_result = run_search(inp,search_term=search_term,quit_immediately=True)
-                        except:
-                            print('SEARCH FAILED')
-                            temp_result = ''
-                        temp_result = head_term + temp_result
-                        
-                            
-                        print('RESULT =',temp_result)
-                        while True:
-                            temp_inp = type_input('[K]eep, Add [T]erm, [P}ass, [E]dit, [S]witch mode, [R}erun, [Q]uit_and_keep or (A)bort',must_be=['K',' ','T','R','Q','A','P','E','S'],return_empty=False)
-                            if not temp_inp in ['E','S','T']:
-                                break
-                            else:
-                                if temp_inp == 'E':
-                                    while True:
-                                        print(temp_result)
-                                        tt_result = input('?')
-                                        ttt_inp = type_input('Accept or (B)reak',must_be=YESTERMS+['B'],return_empty=True)
-                                        if ttt_inp:
-                                            if not ttt_inp == 'B':
-                                                temp_result = tt_result
-                                            break
-                                elif temp_inp == 'T':
-                                    while True:
-                                        new_term = input('?')
-                                        if new_term:
-                                            break
-                                    if new_term.strip():
-                                        ttt_inp = yes_no_input('Accept '+new_term+' or RETURN')
-                                        if ttt_inp:
-                                            term_stack.add(new_term)
-                                       
-                                            
-                                else:
-                                    inp = int(numeric_input('Enter search mode.\n1) Pages\n(2) Pages/sentences\n(3) Sentences\n',lower=1,upper=3)) + 19
-                                    inp = str(inp)
-                                    print('NEW MODE =',inp)
-                                    
-                                    
-                                            
-                                
-                        if temp_inp in ['K','Q','P']:
-                            if not temp_inp == 'P':
-                                all_results.append(temp_result)
-                            go_on = False
-                        elif temp_inp == 'A':
-                            temp_inp = 'Q'
-                            go_on = False
-                        print('ALL RESULTS')
-                        print(DIVIDER)
-                        print('\n'.join(all_results))
-                        print(DIVIDER)
-                        if temp_inp == 'Q':
-                              break
-                    elif add_automatically or yes_no_input('ADD '+x):
-                        all_results.append(x)
-                        go_on = False
+                        working_set.remove(original.strip())
+                        working_set.add(term)
                     else:
-                        print(x,'SKIPPED')
-                        go_on = False
-                    
+                        working_set.add(term)
+                print(working_set)
+                                
+                        
+                        
+
+                        
+            
+            
+                
           
 
         elif inp == '8':
@@ -3574,6 +4136,8 @@ p(a)renthetical phrases 2"""
         if self.return_dict and yes_no_input('Return index? '):
             return self.return_dict
         return {}
+
+
             
      
 

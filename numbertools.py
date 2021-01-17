@@ -93,6 +93,24 @@ def format_range(page_set):
 
     return to_return
 
+def de_range_numeric(string):
+
+    returnset = set()
+    for x in string.split(','):
+        x = x.strip()
+        if '-' not in x and x.isnumeric():
+                returnset.add(int(x))
+        elif not x.isnumeric():
+            pass
+        else:
+            fh,th = x.split('-')[0:2]
+            if fh.isnumeric() and th.isnumeric() and int(fh) <  int(th):
+                for y in range(int(fh),int(th)+1):
+                    returnset.add(y)
+    return returnset
+                
+                              
+
 def de_range(page_string):
 
     #ONLY WORKS FOR POSITIVE VALUES
