@@ -805,11 +805,13 @@ class Reader:
             for pdf_page, page in enumerate(pdf.pages[from_this:to_that]):
                 page_start = position_at
                 
+                
                 def up_list(x,y):
                     for z in y:
                         x.append(z)
                 
                 text = page.extract_text()
+                
 
                 if not self.database_object:
 
@@ -914,14 +916,18 @@ class Reader:
                     hard_return = True
                     for char in page.chars:
                         
-                       
+                        if char['y0']-last_y0>50:
+                            last_y0=char['y0']
+                            last_alpha_y0 = char['y0']
+                            
+                            
 
                         if char['y0']>100 and char['size'] != last_size and (char['y0']==last_y0 or (abs(char['y0']-last_y0)>10))  and last_size!=0:
                             up_list(char_list,BREAK_PHRASE)
                             
 ##                            self.all_text+= BREAK_PHRASE
 ##                            position_at += BREAK_PHRASE_LEN
-                        if char['size'] == last_size and (last_y0-char['y0'])>10:
+                        if (last_y0-char['y0'])>10: #CHANGES
 
 ##
 ##                            
@@ -939,10 +945,11 @@ class Reader:
                             new_spacing = char['x0']-last_x0
                             if new_spacing > average_spacing:
                                 average_spacing = new_spacing
-                        if last_alpha_y0 == char['y0'] and (char['x0']-last_alpha_x0)>average_spacing:
+                        if (last_alpha_y0 == char['y0'] and (char['x0']-last_alpha_x0)>average_spacing):
                             if average_spacing > 0:
                                 add_to = int((char['x0']-last_alpha_x0)/average_spacing)*' '
                                 up_list(char_list,add_to)
+                            
 ##                                
 ##                                self.all_text += add_to
 ##                                position_at += len(add_to)
@@ -1216,7 +1223,7 @@ class Reader:
                             last_size = char['size']
                             last_y0 = char['y0']
                             last_x0 = char['x0']
-                            if char['text'].strip():
+                            if not char['text'].isnumeric():
                                 last_alpha_x0 = char['x0']
                                 last_alpha_y0 = char['y0']
                     page_text = ''.join(char_list)
