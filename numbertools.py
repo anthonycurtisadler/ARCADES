@@ -98,10 +98,9 @@ def de_range_numeric(string):
     returnset = set()
     for x in string.split(','):
         x = x.strip()
-        if '-' not in x and x.isnumeric():
+        if '-' not in x:
+            if x.isnumeric():
                 returnset.add(int(x))
-        elif not x.isnumeric():
-            pass
         else:
             fh,th = x.split('-')[0:2]
             if fh.isnumeric() and th.isnumeric() and int(fh) <  int(th):

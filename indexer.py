@@ -605,13 +605,13 @@ class Reader:
                 return 0
 
             def get_possible_pages(pdf):
-                total_pages = len(pdf.pages)
-                threshold = min ([total_pages,60])
-                page_list = pdf.pages[0:threshold]+[None]*(total_pages-threshold)
+
+                page_list = pdf.pages
                 
                 page_dict = {}
                 for counter,page in  enumerate(page_list):
-                    print('A',counter)
+                    if counter%10==0:
+                        print (counter)
                     if not page is None:
                         text = page.extract_text()
                         lower_number,upper_number = 0,0
@@ -619,7 +619,12 @@ class Reader:
                             if above:
                                 upper_number = get_number (text)
                             if below:
-                                lower_number = get_number (''.join(reversed(text)))
+                                threshold = len(text)
+                                if threshold>50:
+                                    threshold = 50 
+                                lower_number = get_number (''.join(reversed(text[-threshold:])))
+                                
+                                    
                     else:
                         upper_number = 0
                         lower_number = 0
@@ -639,7 +644,8 @@ class Reader:
                 last = None
                 is_adjacent = lambda x,y: y[0]-x[0] == y[1]-x[1] 
                 for counter, p in enumerate(page_dict):
-                    print('B',counter)
+                    if counter%10==0:
+                        print (counter)
                     current = (p,page_dict[p][index])
                     
                     if not working_list and last and is_adjacent(last,current):
