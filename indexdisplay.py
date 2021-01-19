@@ -45,6 +45,8 @@ class IndexDisplay:
         self.default_barrier = default_barrier
         self.barriers = barriers
         self.column_widths = {}
+        self.multi_column_dict = {}
+        self.multi_column_Count = None
 
         def get_size(column):
 
@@ -121,8 +123,11 @@ class IndexDisplay:
                 text = self.column_dict[column][line_no]
             else:
                 text = ''
+            
 
             text += (max([self.column_widths[column][1],self.column_widths[column][0]])-len(text))*' '
+            if '_' in text and not text.replace(' ','').replace('_','').replace('|',''):
+                text = text.replace(' ','_')
             return text 
         line = ''
         for c in self.column_dict:
@@ -143,7 +148,52 @@ class IndexDisplay:
         for r in range(from_here, to_there):
             returnlist.append(self.get_line(r))
         return '\n'.join(returnlist)
+
+
+    def load_multiple_columns (self,entry_list = None,multi_column_count=None,barrier=True):
+
+            
+
+        if not self.multi_column_dict:
+                row = 1
+                if multi_column_count:
+                    self.multi_column_count = multi_column_count
+                else:
+                    self.multi_column_count = len(entry_list)
+        else:
+            row = len(self.multi_column_dict.keys())+1
+
+        if len(entry_list) < self.multi_column_count:
+            entry_list += [',']*(self.multi_column_count-len(entry_list))
+        elif self.multi_column_count > len(entry_list):
+            etnry_list = entry_list[0:self.multi_column_count]
+            
+        line_list = []
+        for counter, el in enumerate(entry_list) :
+
+            line_list.append(overflow_text(el,maximum=self.column_size[counter][1]))
+
+        max_length = max([len(x) for x in line_list])
+        for index in range(len(line_list)):
+
+            line_list[index] = line_list[index]+['']*(max_length-len(line_list[index]))+barrier*['_'*max([len(l) for l in line_list[index]])]
+            
+        self.multi_column_dict[row] = line_list
+
+    def load_multi (self):
+
+        for row in range(1,len(self.multi_column_dict.keys())+1):
+            for column, column_text in enumerate(self.multi_column_dict[row]):
+                self.load('\n'.join(column_text),column)
     
+
+        
+
+            
+
+            
+                    
+                    
 
             
         

@@ -14,6 +14,37 @@ from numbertools  import format_range, rom_to_int,\
 
 from indexconfiguration import SMALL_WORDS, BREAK_PHRASE, DIVIDER
 from itertools import cycle
+from globalconstants import BOX_CHAR
+
+
+
+
+
+def box (x):
+
+    
+    
+
+    if isinstance(x,str):
+        box_list = x.split('\n')
+    else:
+        box_list = list(x)
+    max_len = max([len(l) for l in box_list])
+
+    for index in range(len(box_list)):
+
+        box_list[index] = BOX_CHAR['v']+box_list[index]+(max_len-len(box_list[index]))*' '+BOX_CHAR['v']
+        
+
+    top = BOX_CHAR['lu']+BOX_CHAR['h']*max_len+BOX_CHAR['ru']
+    
+    bottom = BOX_CHAR['ll']+BOX_CHAR['h']*max_len+BOX_CHAR['rl']
+    
+    return '\n'.join([top]+box_list+[bottom])
+
+    
+    
+        
 
 def sort_all_pages (all_pages):
     
@@ -607,7 +638,8 @@ class Displayer:
             BM = ''
             if page_list:
                 page_iterator = cycle(sort_all_pages(page_list))
-                go_on = True 
+                go_on = True
+                counter = 10
                 while go_on:
 
                    
@@ -639,6 +671,8 @@ class Displayer:
                     display = IndexDisplay(columns=2,automatic=False,column_size=[(0,0),(20,40)])
 
                     
+
+
                     
                     print(DIVIDER+str(page_at)+'\n'+DIVIDER)
                     display.load(show_text,0)
@@ -646,12 +680,12 @@ class Displayer:
                     comment = self.database_object.get_comment(text_title,page_at)
                     if comment:
                         display.load(comment,1)
-                    print(display.show())
+                    print(box(display.show()))
                     
                     
-                    print('\n\n\n')    
-                    inp = input("""
-RETURN FOR NEXT
+                    print('\n\n\n')
+                    short_prompt = '< PAGE R B [] {} + Q >'
+                    prompt = box("""RETURN FOR NEXT
 <    MOVE     >
 ENTER A NEW RANGE
 A SINGLE PAGE
@@ -661,8 +695,20 @@ A SINGLE PAGE
 ] to UNBOOKMARK
 { to COMMENT
 } to UNCOMMENT 
-+ TO ADD NOTE
++ TO ADD NOTE   
 (Q)uit""")
+                    
+                    if counter >0:
+                        inp = input(prompt)
+                    else:
+                        inp = input(short_prompt)
+
+                    if counter >0:
+
+                        counter -= 1
+                    
+                    
+                    
                     if not inp:
                         page_at = next(page_iterator)
                                     
@@ -738,6 +784,7 @@ class Console:
                 self.all_books = []
                 self.search_over = []
                 self.notes = Stack()
+                self.search_results = {}
 
         def get_page_range_local (self,book):
 
@@ -748,10 +795,12 @@ class Console:
                 all_files = get_files_in_directory()
                 existing_files = self.DB.get_books()
 
-
+                print_list = []
                 for counter,x in enumerate(all_files):
 
-                    print(counter,':',x,'<LOADED>'*((x[:-4] in existing_files) or x in existing_files),self.get_page_range_local(x))
+                    print_list.append(str(counter)+':'+x+'<LOADED>'*((x[:-4] in existing_files)
+                                                                     or x in existing_files)+self.get_page_range_local(x))
+                print(box('\n'.join(print_list)))
                 return all_files 
         
         def load (self,files_to_load):
@@ -769,13 +818,13 @@ class Console:
 
             all_files = self.show_directory()
             while True:
-                choose = input('? WHICH FILES DO YOU WANT TO LOAD? GIVE A RANGE OF NUMBERS?  ')
+                choose = input(box('? WHICH FILES DO YOU WANT TO LOAD? GIVE A RANGE OF NUMBERS?  '))
                 if not choose:
                     break
                 try:
                     choose=[x for x in de_range_numeric(choose)]
                 except:
-                    print('INVALID ENTRY!')
+                    print(box('INVALID ENTRY!'))
                 if choose:
                     break
             files_to_load = []
@@ -791,6 +840,67 @@ class Console:
             print('TO LOAD:','\n'.join(files_to_load))
             self.load(files_to_load)
 
+        def display_search(self,r):
+
+            r_dict = {}
+
+            ID = IndexDisplay(columns=4,automatic=True,column_size = ((0,3),(10,30),(20,60),(10,30)))
+
+            for counter, t in enumerate(r[0]):
+                if t in r[1]:
+                        row = []
+                        row.append(str(counter))
+                        row.append(t)
+                        row.append(', '.join(sort_all_pages(r[0][t])))
+                        row.append(', '.join(sorted(r[1][t],key=lambda x:x.upper())))
+                        ID.load_multiple_columns(row)
+        
+                  
+                        r_dict[counter]=t
+            ID.load_multi()
+            print(box((ID.show())))
+            return r_dict
+
+        def display_search_dict (self,entry_dict=None):
+            ID = IndexDisplay (columns=4,automatic=True,column_size=((0,3),(10,30),(30,50),(40,60)))
+
+            
+            
+
+            for counter,r in enumerate(entry_dict):
+                row = []
+                
+                row.append(str(counter))
+                row.append(entry_dict[r][0])
+                result_summary = ''
+                
+                for x in entry_dict[r][1][0]:
+                    
+                    if not entry_dict[r][1][0][x]:
+                        result_summary += '0'
+                    elif 0<len(entry_dict[r][1][0][x])<10:
+                        result_summary += str(len(entry_dict[r][1][0][x]))
+                    else:
+                        result_summary += 'X'
+                found_terms = set()
+                row.append(result_summary)
+                for x in entry_dict[r][1][1]:
+                    found_terms = found_terms.union(entry_dict[r][1][1][x])
+                row.append(', '.join(found_terms))
+                
+                
+                    
+                
+                ID.load_multiple_columns(row)
+            ID.load_multi()
+            print(box((ID.show())))
+            while True:
+                inp = input((box('SHOW SEARCH?')))
+                if inp.isnumeric() and 0<=int(inp)<len(entry_dict):
+                    self.display_search (entry_dict[int(inp)][1])
+                if not inp:
+                    break
+
 
         def get_search (self):
 
@@ -801,12 +911,16 @@ class Console:
             while go_on:
 
                     def show_list(l):
+                        print_list = []
 
-                            for counter,x in enumerate(l):
-                                    print(counter,':',x)
+                        for counter,x in enumerate(l):
+                                print_list.append(str(counter)+' : '+x)
+                        return '\n'.join(print_list)
+                    
+                            
 
-                    show_list(search_over)
-                    inp = input('RETURN to SEARCH; X to CHANGE SEARCH DOMAIN; Q TO QUIT   ')
+                    print(box(show_list(search_over)))
+                    inp = input(box('RETURN to SEARCH; X to CHANGE SEARCH DOMAIN; Q TO QUIT   '))
                     print()
                     if not inp:
                     
@@ -819,13 +933,15 @@ class Console:
                                     sentence_search = False
                             
                             r = self.searcher_object.search_entry(to_search,database_object=self.DB,text_title=search_over,sentence_search=sentence_search)
-                            r_dict = {}
-                            for counter, t in enumerate(r[0]):
-                                    if t in r[1]:
-                                            print(str(counter)+'/'+t+': '+', '.join(sort_all_pages(r[0][t]))+' / '+','.join(sorted(r[1][t],key=lambda x:x.upper())))
-                                            r_dict[counter]=t
-                            inp2 = input('SHOW? SPACE FOR ALL, RETURN FOR NONE   ')
+                            r_dict = self.display_search(r)
+
+                            ID = IndexDisplay(columns=4,automatic=True,column_size = ((0,3),(10,30),(20,60),(10,30)))
+                            
+
+                            inp2 = input(box('SHOW? SPACE FOR ALL, RETURN FOR NONE   '))
                             print()
+
+                            self.search_results[len(self.search_results.keys())] = (to_search,r)
                             
                             to_show = []
                             if inp2 == ' ':
@@ -846,7 +962,7 @@ class Console:
                             print('ALL BOOKS')
                             show_list(all_books)
                             print()
-                            inp2 = input('DEFINE NEW DOMAIN! SPACE FOR ALL, RETURN FOR NONE    ')
+                            inp2 = input(box('DEFINE NEW DOMAIN! SPACE FOR ALL, RETURN FOR NONE    '))
                             print()
                             
                             search_over = []
@@ -864,9 +980,11 @@ class Console:
             all_books = [x for x in self.DB.get_books()]
             
             while True:
+                print_list = []
                 for counter,x in enumerate(all_books):
-
-                    print(counter,':',x,self.get_page_range_local(x))
+                    
+                    print_list.append(str(counter)+':'+x+self.get_page_range_local(x))
+                print(box('\n'.join(print_list)))
                 inp = input ('Number of text to BROWSE, or (Q)uit ')   
                 if inp.isnumeric() and 0<=int(inp)<len(all_books):
                     notes = self.DS.show_pages(page_list=sort_all_pages(self.DB.get_pages(all_books[int(inp)])),show_all=False,abridge=False,text_title=all_books[int(inp)],notes=self.notes)
@@ -878,13 +996,12 @@ class Console:
             go_on = True
             while go_on:
 
-                print ("""
-
-    L(oad)into SEARCHER
-    S(earch) 
-    B(rowse)
-    H(elp)
-    Q(uit) """)
+                print(box("""L(oad)into SEARCHER
+S(earch) 
+B(rowse)
+H(elp)
+V(iew) search log
+Q(uit) """))
 
                 inp = input('? ')
                 if inp:
@@ -895,6 +1012,8 @@ class Console:
                     self.get_search()
                 elif inp == 'B':
                     self.browse()
+                elif inp == 'V':
+                    self.display_search_dict(self.search_results)
                 elif inp == 'Q':
                     go_on = False
 
