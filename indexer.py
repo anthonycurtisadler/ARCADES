@@ -955,7 +955,7 @@ class Reader:
                             
                             
 
-                        if char['y0']>100 and char['size'] != last_size and (char['y0']==last_y0 or (abs(char['y0']-last_y0)>10))  and last_size!=0:
+                        if char['y0']<300 and char['size'] != last_size and (abs(char['y0']-last_y0)>10)  and last_size!=0:
                             up_list(char_list,BREAK_PHRASE)
                             
 ##                            self.all_text+= BREAK_PHRASE
