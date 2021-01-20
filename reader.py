@@ -12,7 +12,7 @@ from indexdisplay import IndexDisplay
 from numbertools  import format_range, rom_to_int,\
      int_to_roman,de_range,de_range_numeric,abbreviate_range,convert_range
 
-from indexconfiguration import SMALL_WORDS, BREAK_PHRASE, DIVIDER
+from indexconfiguration import SMALL_WORDS, BREAK_PHRASE, DIVIDER, ROWS_IN_PAGE
 from itertools import cycle
 from globalconstants import BOX_CHAR
 
@@ -326,6 +326,13 @@ class Database:
         else:
             return (0,0)
 
+    def get_books_for_word (self,word):
+
+        self.cursor.execute("SELECT * FROM words WHERE  word=?;",(word,))
+        x = self.cursor.fetchall()
+        return {y[0] for y in x}
+        
+
     def get_pages_for_word (self,book_name,word):
 
         self.cursor.execute("SELECT * FROM words WHERE book=? AND word=?;",(book_name,word))
@@ -388,6 +395,31 @@ class Database:
 
             self.cursor.execute("SELECT * FROM words WHERE book=?",(book,))
             return set([x[1] for x in self.cursor.fetchall()])
+
+    def get_words_left_center_right (self,
+                                     left='',
+                                     center='',
+                                     right=''):
+
+        if isinstance(left,str) or isinstance(right,str) or isinstance(center,str):
+            
+
+            if left:
+
+                self.cursor.execute("SELECT * FROM words WHERE word LIKE '?%'".replace('?',left))
+
+            elif center:
+
+                self.cursor.execute("SELECT * FROM words WHERE word LIKE '%?%'".replace('?',center))
+
+            elif right:
+
+                self.cursor.execute("SELECT * FROM words WHERE word LIKE '%?'".replace('?',right))
+
+            result = self.cursor.fetchall()
+            result = [x[1] for x in result]
+
+            return list(set(result))
 
     def word_exists (self,
                      book,
@@ -667,6 +699,8 @@ class Displayer:
                     show_text = side_marks (show_text,BM)
                     if abridge:
                         show_text = abridge_page(show_text)
+                    if len(show_text.split('\n'))<ROWS_IN_PAGE:
+                        show_text += '\n'*(ROWS_IN_PAGE-len(show_text.split('\n')))
                     
                     display = IndexDisplay(columns=2,automatic=False,column_size=[(0,0),(20,40)])
 
@@ -931,6 +965,8 @@ class Console:
                                     sentence_search = True
                             else:
                                     sentence_search = False
+
+                             
                             
                             r = self.searcher_object.search_entry(to_search,database_object=self.DB,text_title=search_over,sentence_search=sentence_search)
                             r_dict = self.display_search(r)

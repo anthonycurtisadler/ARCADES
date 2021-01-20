@@ -31,7 +31,7 @@ from stack import Stack
 
 from indexconfiguration import LEFT_ITALIC, RIGHT_ITALIC, \
      DISPLAY_COLOR, NAME_WORDS, SUBHEAD_WORDS, BREAK_PHRASE, SEARCH_HELP,\
-     DIVIDER, SMALL_WORDS 
+     DIVIDER, SMALL_WORDS, ROWS_IN_PAGE
 
 from indexer_read_me import READ_ME
 
@@ -61,6 +61,33 @@ string.punctuation = string.punctuation.replace("'",'')
 
 
 from colorama import Fore, Back, Style
+
+def box (x):
+
+    
+    
+
+    if isinstance(x,str):
+        box_list = x.split('\n')
+    else:
+        box_list = list(x)
+    max_len = max([len(l) for l in box_list])
+
+    for index in range(len(box_list)):
+
+        box_list[index] = BOX_CHAR['v']+box_list[index]+(max_len-len(box_list[index]))*' '+BOX_CHAR['v']
+        
+
+    top = BOX_CHAR['lu']+BOX_CHAR['h']*max_len+BOX_CHAR['ru']
+    
+    bottom = BOX_CHAR['ll']+BOX_CHAR['h']*max_len+BOX_CHAR['rl']
+    
+    return '\n'.join([top]+box_list+[bottom])
+
+    
+    
+        
+
 
 def line_form (x,length=70,breaker=';'):
 
@@ -2090,7 +2117,7 @@ class Searcher:
 
         """Converting sentences to pages"""
 
-        if sentence_search or isinstance(list(return_pages)[0],int):
+        if sentence_search or (return_pages and isinstance(list(return_pages)[0],int)):
 
             if not database_object:
                 return_sentences = return_pages
@@ -2117,7 +2144,7 @@ class Searcher:
     
     
 
-    def get_pages (self,term,dictionary_object=None,alternative_object=None,literal_object=None,database_object=None,text_title=None,sentence_search=False):
+    def get_pages (self,term,dictionary_object=None,alternative_object=None,literal_object=None,database_object=None,text_title=None,sentence_search=False,get_terms_only=False):
 
         """Core search routine. Retrieves pages for the given term.
         """
@@ -2228,17 +2255,35 @@ class Searcher:
                     if not database_object:
 
                         words_from_dictionary = dictionary_object.keys()
-                    else:
-
-                        words_from_dictionary = database_object.get_all_words()
+##                    else:
+##
+##                        words_from_dictionary = database_object.get_all_words()
 
                     if center_words:
+
+                        if not database_object:
                         
-                        temp_terms = [x for x in words_from_dictionary if word in x]
+                            temp_terms = [x for x in words_from_dictionary if word in x]
+                        else:
+                            temp_terms = database_object.get_words_left_center_right(center=word)
                     elif left_of:
-                        temp_terms = [x for x in words_from_dictionary if x.startswith(word)]
+
+                        if not database_object: 
+                            temp_terms = [x for x in words_from_dictionary if x.startswith(word)]
+                        else:
+                            temp_terms = database_object.get_words_left_center_right(left=word)
                     elif right_of:
-                        temp_terms = [x for x in words_from_dictionary if x.endswith(word)]
+                        if not database_object:
+                            temp_terms = [x for x in words_from_dictionary if x.endswith(word)]
+                        else:
+                            temp_terms = database_object.get_words_left_center_right(right=word)
+
+            
+
+            if get_terms_only:
+                return full_words+temp_terms
+
+            
                         
                     
 
@@ -2423,7 +2468,8 @@ class Searcher:
                 x = self.get_pages(term,dictionary_object=dictionary_object,
                                    alternative_object=alternative_object,
                                    literal_object=literal_object,
-                                   text_title=text_title,sentence_search=sentence_search)
+                                   text_title=text_title,
+                                   sentence_search=sentence_search)
                 universe[term] = x[0]
                 found_terms.update(set(x[1]))
                 
@@ -2441,8 +2487,23 @@ class Searcher:
         result = {}
         found_terms = {}
 
+        found_books = set()
+
+        complete_terms = []
+        for temp_term in get_terms(search_phrase):
+            
+            complete_terms += self.get_pages(temp_term,dictionary_object=dictionary_object,
+                                       alternative_object=alternative_object,literal_object=literal_object,
+                                       text_title=text_title,database_object=database_object,
+                                       sentence_search=sentence_search,get_terms_only=True)
+        for term in complete_terms:
+            
+            books = database_object.get_books_for_word(term)
+            found_books.update(books)
         
-        for title in all_titles:
+            
+        
+        for title in set(all_titles).intersection(found_books):
 
             universe[title] = {}
 
@@ -3251,7 +3312,7 @@ class Index_Maker:
             
             while all_pages:
 
-
+                
                 
                 indexed_terms = {}
                 
@@ -3283,7 +3344,11 @@ class Index_Maker:
                 show_text = side_marks (show_text)
                 if abridge:
                     show_text = abridge_page(show_text)
+
+                if len(show_text.split('\n'))<ROWS_IN_PAGE:
+                    show_text += '\n'*(ROWS_IN_PAGE-len(show_text.split('\n')))
                 
+               
                 
                 display = IndexDisplay(columns=2,automatic=False,column_size=[(0,0),(20,40)])
                 print(DIVIDER+str(all_pages[page_at])+'/'+convert(all_pages[page_at])+'\n'+DIVIDER)
