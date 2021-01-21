@@ -609,7 +609,7 @@ class Reader:
         def determine_page_numeration (pdf,above=True,below=False):
 
             page_dict = {}
-            def get_number (x,up_to=50):
+            def get_number (x,up_to=50,reverse_it=False):
                 if not isinstance(x,str):
                     return 0
                 
@@ -626,7 +626,9 @@ class Reader:
                     elif starting and c.isnumeric():
                         number+=c
                     elif starting and not c.isnumeric():
-                        return int(number)
+                        if not reverse_it:
+                            return int(number)
+                        return int(''.join(reversed(number)))
                     counter += 1
                     
                 return 0
@@ -649,7 +651,7 @@ class Reader:
                                 threshold = len(text)
                                 if threshold>50:
                                     threshold = 50 
-                                lower_number = get_number (''.join(reversed(text[-threshold:])))
+                                lower_number = get_number (''.join(reversed(text[-threshold:])),reverse_it=True)
                                 
                                     
                     else:

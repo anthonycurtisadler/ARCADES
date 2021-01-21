@@ -15,6 +15,7 @@ from numbertools  import format_range, rom_to_int,\
 from indexconfiguration import SMALL_WORDS, BREAK_PHRASE, DIVIDER, ROWS_IN_PAGE
 from itertools import cycle
 from globalconstants import BOX_CHAR
+from generalutilities import abridge 
 
 
 
@@ -84,8 +85,10 @@ def get_if(x,left=None,right=None,get_all=False):
 
 class Database:
 
-    def __init__ (self,db_name='standard_database.db'):
-
+    def __init__ (self,
+                  db_name='standard_database.db'):
+        
+                   
         self.connection = sqlite3.connect('indexer'+'/'+db_name)
         self.cursor = self.connection.cursor()
         
@@ -183,11 +186,7 @@ class Database:
         FOREIGN KEY (book) REFERENCES books (book) ON DELETE CASCADE
         );""")
 
-
-        
-
-
-        
+     
 
     def change (self,
                 table_name=None,
@@ -835,8 +834,71 @@ class Console:
                     print_list.append(str(counter)+':'+x+'<LOADED>'*((x[:-4] in existing_files)
                                                                      or x in existing_files)+self.get_page_range_local(x))
                 print(box('\n'.join(print_list)))
-                return all_files 
-        
+                return all_files
+
+        def select_database (self):
+
+            def directory ():
+
+                """gets directory"""
+
+                file_path = os.getcwd()+os.altsep+'indexer'+os.altsep    
+                allfiles = os.listdir(file_path)
+
+                filelist = [x for x in allfiles if x.endswith('.db')]
+                dirlist = [x for x in allfiles if '.' not in x]
+                textlist = []
+                display_path = abridge(file_path,30,rev=True)
+
+                for temp_counter, filename in enumerate(filelist):
+                    #Files
+                    l_temp = filename
+                    textlist.append(l_temp)
+
+                for temp_counter, filename in enumerate(dirlist):
+                    #Directories
+                    l_temp = filename
+                    textlist.append(l_temp+'<DIR>')
+
+                
+
+                showtext = ''
+                for counter, x in enumerate(textlist):
+                    showtext+=str(counter) + ' : ' + x + '\n'
+                print(box(showtext))
+                return filelist
+
+            filelist = directory()
+            to_open = ''
+            while not to_open:
+                print(box('ENTER NAME OR INDEX OF NEW DATABASE, (N)ew, or Q(uit)'))
+                inp = input('?')
+                if inp in ['q','Q']:
+                    break
+                elif inp in ['n','N']:
+                    x = input('NEW DATABASE NAME?')
+                    if x not in filelist and x+'.db' not in filelist:
+                        to_open = x
+                        if not to_open.endswith('.db'):
+                            to_open += '.db'
+                else:
+                    if inp.isnumeric() and 0 <= int(inp) <= len(filelist):
+                        to_open = filelist[int(inp)]
+                    elif inp in filelist:
+                        to_open = inp
+                    elif inp+'.db' in filelist:
+                        to_open = inp
+                    else:
+                        possibles = [x for x in filelist if x.startswith(inp)] 
+                        if len(possibles) == 1:
+                            to_open = possibles[0]
+            if to_open:
+                return to_open
+            else:
+                return False
+                
+                            
+                            
         def load (self,files_to_load):
 
                 for pdf_filename in files_to_load:
@@ -1032,17 +1094,22 @@ class Console:
             go_on = True
             while go_on:
 
-                print(box("""L(oad)into SEARCHER
+                print(box("""C(hange) database
+L(oad)into SEARCHER
 S(earch) 
 B(rowse)
 H(elp)
 V(iew) search log
 Q(uit) """))
 
-                inp = input('? ')
+                inp = input('??')
                 if inp:
                     inp = inp.upper()[0]
-                if inp == 'L':
+                if inp == 'C':
+                    to_open = self.select_database()
+                    if to_open:
+                        self.run(to_open)
+                elif inp == 'L':
                     self.select_files_to_load()
                 elif inp == 'S':
                     self.get_search()
@@ -1054,8 +1121,11 @@ Q(uit) """))
                     go_on = False
 
         
-        def run(self):
-            self.DB = Database()
+        def run(self,to_open=None):
+            if to_open is None:
+                self.DB = Database()
+            else:
+                self.DB = Database(to_open)
 
             self.text_object = Reader(database_object=self.DB,
                                       in_italics=False,
