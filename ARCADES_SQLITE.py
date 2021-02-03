@@ -3136,7 +3136,7 @@ class Note_Shelf:
                ind=Index(-1),
                re_entering=False,
                suspend=False,
-               carrying_keys=True,
+               carrying_keys=False,
                quick=False,
                update_table=True,
                editing=False):
@@ -4434,7 +4434,8 @@ class Note_Shelf:
                     ind=index,
                     right_at=True,
                     update_table=update_table,
-                    editing=True)
+                    editing=True,
+                    carrying_keys=False)
         return True
 
     def add_keyword(self,
@@ -5134,7 +5135,7 @@ class Note_Shelf:
                                                                                       EMPTYCHAR).isnumeric():
                                 #for indexes or floating sequences
                                 
-                                if ATSIGN + QUESTIONMARK in k_temp:   #for floating sequences 
+                                if ATSIGN + QUESTIONMARK in k_temp and 'page' not in k_temp:   #for floating sequences 
                                     if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1
                                                                      and x_temp.count(PERIOD) == 2):
                                         if DASH not in x_temp or (x_temp.count(DASH)==1
@@ -5147,7 +5148,20 @@ class Note_Shelf:
                                                                             'from'+ATSIGN+x_temp.split(DASH)[0]))
                                             keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
                                                                             'to'+ATSIGN+x_temp.split(DASH)[1]))
-                                            satisfied = True      
+                                            satisfied = True
+
+                                elif ATSIGN + QUESTIONMARK in k_temp and 'page' in k_temp:
+
+                                    if x_temp.count(PERIOD) == 0 and x_temp.count(DASH) == 1:
+
+                                        from_temp, to_temp = x_temp.split(DASH)[0],x_temp.split(DASH)[1]
+
+                                        for val_temp in range(int(from_temp),int(to_temp)+1):
+
+                                            keysetobject.add(k_temp.replace(QUESTIONMARK,str(val_temp)))
+                                            satisfied = True
+                                     
+                                                             
                                    
                                 elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
                                     if PERIOD+PERIOD not in x_temp\
@@ -5598,7 +5612,7 @@ class Note_Shelf:
                             'size': self.defaults.get('size'),
                             'date': [str(datetime.datetime.now())]}
             else:
-                temp_size = max([len(x_temp)+30 for x_temp in text.split(EOL)])
+                temp_size = max([len(x_temp)+20+(poetic*40) for x_temp in text.split(EOL)])
                 metatext = {'user': self.defaults.get('user'),
                             'size': temp_size,
                             'date': [str(datetime.datetime.now())]}
@@ -13497,6 +13511,7 @@ class Console (Note_Shelf):
             self.tutor.show('CONESCAPE')
         
         if ((len(mainterm) < 2 or mainterm[1] != PLUS)
+            #If not CONCHILD, CONNEXT 
                 and (not self.always_next and not self.always_child)):
             if mainterm[0] != DASH:
                 right_at = predicate[0] or predicate[1]
@@ -13509,10 +13524,13 @@ class Console (Note_Shelf):
 
         elif (self.always_child
               or len(mainterm) > 2 and mainterm[2] == PLUS):
+            #Entering a child note 
             right_at = True
             as_child = True
 
         else:
+            #CONNEXT
+            
             right_at = True
             as_child = False
 
@@ -13599,6 +13617,7 @@ class Console (Note_Shelf):
                                       +BLANK+add_mark(lastup)+
                                       self.parent
                                       +BLANK+{EMPTYCHAR:EMPTYCHAR,
+                                              PLUS:'[+]',
                                               PLUS+PLUS:'[++]',
                                               PLUS+PLUS+PLUS:'[+++]'}[series_enter]+BLANK)
                 if self.use_alphabets:
@@ -15092,8 +15111,8 @@ while bigloop:
                                                ', '.join(allnotebooks_tracking[notebookname]['projectset'])))
                                 
                     else:
-                        allnotebooks_tracking [notebookname] = {'lastup':1,
-                                                                'uptohere':1,
+                        allnotebooks_tracking [notebookname] = {'lastup':Index(1),
+                                                                'uptohere':Index(1),
                                                                 'next_up':True,
                                                                 'skipped':False,
                                                                 'readonly':notebook.read_only,
@@ -15365,6 +15384,12 @@ while bigloop:
                 skipped = allnotebooks_tracking[notebookname]['skipped']
             else:
                 nprint(notebookname + ' NOT FOUND')
+            if isinstance(lastup,int):
+                lastup = Index(int(lastup))
+            if isinstance(uptohere,int):
+                uptohere = Index(int(uptohere))
+            if isinstance(next_up,int):
+                next_up = Index(int(next_up))
 
 
             if prefix == 'beta' or override:
