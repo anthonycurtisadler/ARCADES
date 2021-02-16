@@ -5152,7 +5152,13 @@ class Note_Shelf:
 
                                 elif ATSIGN + QUESTIONMARK in k_temp and 'page' in k_temp:
 
-                                    if x_temp.count(PERIOD) == 0 and x_temp.count(DASH) == 1:
+                                    if DASH not in x_temp or (x_temp.count(DASH)==1
+                                                                  and x_temp[0]==DASH):
+
+                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                            satisfied = True
+
+                                    elif x_temp.count(PERIOD) == 0 and x_temp.count(DASH) == 1:
 
                                         from_temp, to_temp = x_temp.split(DASH)[0],x_temp.split(DASH)[1]
 
