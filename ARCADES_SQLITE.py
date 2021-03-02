@@ -756,6 +756,7 @@ def next_next(index,
 
     #If no note exists at the given index, then return given index
     if rightat:
+
         if str(index) not in index_list:
             return index
 
@@ -3206,9 +3207,10 @@ class Note_Shelf:
                     
 
             
-
-            if self.indexes():
-                index = self.default_dict['indexlist_indexes'].list[-1]
+            if self.default_dict['indexlist_indexes'] and len(self.default_dict['indexlist_indexes'].list)>0 and not right_at:
+                    index = self.default_dict['indexlist_indexes'].list[-1]
+            elif right_at:
+                index = ind
             else:
                 index = Index(1)
 
@@ -5017,6 +5019,8 @@ class Note_Shelf:
         reentering also passed into addnew function returnnote
         -- returns the Note, rathing then calling addnote.
         """
+
+
         projects_old = list(self.project)
         returnquit_setting = self.defaults.get('returnquiton')
         text_fed_in = False
@@ -13524,26 +13528,31 @@ class Console (Note_Shelf):
                 as_child = predicate[1]
 
             else:
+                # enter previous
                 lastup = lastup.previous()
                 right_at = True
                 as_child = False
 
         elif (self.always_child
               or len(mainterm) > 2 and mainterm[2] == PLUS):
-            #Entering a child note 
+            #Entering a child note
+            
             right_at = True
-            as_child = True
+            as_child = False
+            lastup = lastup.child()
 
         else:
             #CONNEXT
             
             right_at = True
             as_child = False
+            lastup = lastup.next()
 
                     
         if otherterms[0] and otherterms[0].replace(PERIOD+PERIOD,
                                                    PLUS).replace(PERIOD,
                                                                  EMPTYCHAR).replace('^',EMPTYCHAR).isnumeric():
+            # IF an index is given
             right_at = True
             lastup=Index(otherterms[0])
             index_entered = True
@@ -13845,10 +13854,7 @@ class Console (Note_Shelf):
 
         """ called from the mainloop of the program to enter commands"""
 
-
-        
-
-        
+      
 
         display = Display(self.rectify)
         if self.first_time:
@@ -13966,7 +13972,7 @@ class Console (Note_Shelf):
             
 ##            try:
 
-                lastup = uptohere
+##                lastup = uptohere
                 if self.iteratormode:
                     uptohere = self.iterator.move()
                 else:
