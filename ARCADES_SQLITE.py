@@ -170,6 +170,8 @@ histo_tag_dict = None
 
 
 def nprint(*entries):
+    """For printing in a boxed note"""
+    
     text = ''
     for entry in entries:
         text += entry + BLANK
@@ -14474,11 +14476,46 @@ class Console (Note_Shelf):
                     self.default_dict['projects'].add_date(project=project_name,
                                                            new_date=str(datetime.datetime.now()))
                                     
-        ##            if temp_uptohere in self.indexes(): 
-        ##                command_stack.add('skip:'+temp_uptohere)
+                    #For automatically retrieving the last entered value
+                    #For queried sequence keys
+                    
+                    temp_keys = self.get_note(lastup).keyset
+                    
+                    
+                    for k in temp_keys:
+                        
+
+                        seq_temp = ''
+                        v_temp = ''
+
+                        
+
+                        if '@' in k:
+                            print('YES')
+                            if '@_' in k:
+                                seq_temp = k.split('@_')[0] + '@_' + '?'
+                                v_temp = k.split('@_')[1]
+                                
+                            elif '@#' in k:
+                                seq_temp = k.split('@#')[0] + '@#' + '?'
+                                v_temp= k.split('@#')[1]
+                            else:
+                                seq_temp = k.split('@')[0] + '@' + '?'
+                                v_temp = k.split('@')[1]
+                                
+                            if seq_temp and v_temp and seq_temp in self.default_dict['projects'].get_default_keys(project=project_name):
+                                self.lastsequencevalue.change(phrase=k,value=v_temp)
+                        
+
+                            
+
+                            
+                        
+                    
                     
                     self.project.append(project_name)
                     allnotebooks_tracking[notebookname]['projectset'].append(project_name)
+                    
                     self.dd_changed=True
 
 
