@@ -2330,19 +2330,36 @@ class Note_Shelf:
                               +" AND note_index=?;",
                               value_tuple)
                         
-            text = db_cursor.fetchone()[0].replace("''","'")
+            res_temp = db_cursor.fetchone()
+            
+            if res_temp:
+                text = res_temp[0].replace("''","'")
+            else:
+                text = ''
+
             db_cursor.execute("SELECT user"
                               +" FROM notes"
                               +" WHERE notebook=?"
                               +" AND note_index=?;",
                               value_tuple)
-            user = db_cursor.fetchone()[0]
+            res_temp = db_cursor.fetchone()
+            if res_temp:
+                
+                user = res_temp[0]
+            else:
+                user = 'USER'
+            
             db_cursor.execute("SELECT size"
                               +" FROM notes"
                               +" WHERE notebook=? "
                               +"AND note_index=?;",
                               value_tuple)
-            size = db_cursor.fetchone()[0]
+            
+            res_temp = db_cursor.fetchone()
+            if res_temp:
+                size = res_temp[0]
+            else:
+                size = 60
             db_cursor.execute("SELECT timestamp "
                               +"FROM timestamps"
                               +" WHERE notebook=?"
@@ -4637,6 +4654,7 @@ class Note_Shelf:
         if str(index) in self.indexes():
 
             newnote = self.get_note(index)
+            
             if not oldindex or str(oldindex) not in self.indexes():
                 if infront:
                    newnote = self.enter(returnnote=True) + breaker + newnote
@@ -5021,7 +5039,7 @@ class Note_Shelf:
         reentering also passed into addnew function returnnote
         -- returns the Note, rathing then calling addnote.
         """
-
+        
 
         projects_old = list(self.project)
         returnquit_setting = self.defaults.get('returnquiton')
@@ -5069,6 +5087,7 @@ class Note_Shelf:
         def query_keys(keysetobject=None):
 
             self.tutor.show('KEYWORDS')
+             
 
             key_text = input(queries.KEYS)
             if self.use_alphabets:
@@ -5239,7 +5258,7 @@ class Note_Shelf:
 
         from_keys = True
         keyset = set()
-        if ek is None:
+        if not ek:
             from_keys = False
             
  
@@ -5264,8 +5283,7 @@ class Note_Shelf:
 
 
                         
-                            
-
+        
         if not from_keys and self.defaults.get('keysbefore')\
            and not self.defaults.get('fromtext'):
                 query_keys(keyset)
@@ -5681,11 +5699,14 @@ class Note_Shelf:
         self.entry_buffer.clear()
         self.last_keys = set()
         # restore old settings
+
+
         self.defaults.set('fromtext',old_fromtext)
         self.defaults.set('convertmode',old_mode)
         self.defaults.set('returnquiton',returnquit_setting)
         if isinstance(projects_old,list):
             self.project = projects_old
+
 
         return index
 
@@ -9871,7 +9892,8 @@ class Console (Note_Shelf):
             self.default_dict['keymacros'] = KeyMacroDefinitions(displayobject=display,
                                                                  headings=defaultheadings,
                                                                  terms=defaultterms,
-                                                                 presets=presets.keymacro)
+                                                                 presets=presets.keymacro,
+                                                                 using_database=self.using_database)
             if not self.defaults.database_contains('keymacros'):
                 self.defaults.backup('keymacros')
             else:
@@ -9906,7 +9928,8 @@ class Console (Note_Shelf):
                                                        use_presets=False,
                                                        headings=defaultheadings,
                                                        terms=defaultterms,
-                                                       objectname='commands.db')
+                                                       objectname='commands.db',
+                                                       using_database=self.using_database)
             if not self.defaults.database_contains('commands'):
                 self.defaults.backup('commands')
             else:
@@ -11031,6 +11054,11 @@ class Console (Note_Shelf):
 
         global override
 
+        if mainterm in ['fromtext']:
+
+            self.defaults.set('fromtext',not self.defaults.get('fromtext'))
+            display.noteprint(('FROM TEXT',str(self.defaults.get('fromtext'))))
+            
         if mainterm in ['reader']:
 
             self.reader = reader.Console()
@@ -11445,7 +11473,7 @@ class Console (Note_Shelf):
         if mainterm in ['explode']:
             if otherterms[0] in self.indexes():
                 self.last_results = otherterms[0]
-                self.key_results = ','.join(get_keys_from_note(otherterms[0]))
+                self.key_results = ','.join(self.get_keys_from_note(otherterms[0]))
                 self.text_result = self.get_text_from_note(otherterms[0])
                 self.last_results_used = False
 
@@ -13492,7 +13520,7 @@ class Console (Note_Shelf):
                   lastup=None,
                   series_enter=EMPTYCHAR):
 
-
+       
         index_entered = False
         if predicate[4]:
             key_buffer = self.defaults.get('defaultkeys')
@@ -13521,6 +13549,7 @@ class Console (Note_Shelf):
         elif mainterm == 'enterback':
             mainterm = DASH
             self.tutor.show('CONESCAPE')
+        
         
         if ((len(mainterm) < 2 or mainterm[1] != PLUS)
             #If not CONCHILD, CONNEXT 
@@ -14491,7 +14520,6 @@ class Console (Note_Shelf):
                         
 
                         if '@' in k:
-                            print('YES')
                             if '@_' in k:
                                 seq_temp = k.split('@_')[0] + '@_' + '?'
                                 v_temp = k.split('@_')[1]

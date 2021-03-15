@@ -224,6 +224,9 @@ class Abbreviate:
         self.QUITTERMS = terms[3]
         self.CLEARTERMS = terms[4]
     def query (self,term1=None,term2=None,term3=None,action=None):
+        
+
+        #TERM 1 "ab" or "db" for ABBREVIATE or DEBREVIATE 
 
         dict_object = self.dict_object_dict[term1]
 
@@ -285,8 +288,10 @@ class Abbreviate:
         if action == 'get':
 
             dict_result, data_result = None, None
+            
 
             if 'o' in self.db_flag:
+                
 
                 if not term2:
 
@@ -309,6 +314,7 @@ class Abbreviate:
                 data_result = [x[0] for x in data_result]
 
             if 'd' in self.db_flag:
+                
                 return data_result
             else:
                 return dict_result

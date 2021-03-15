@@ -517,13 +517,12 @@ binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_I
                       'editdelete':("self.delete_by_edit",labels.DELETE_WHEN_EDITING),
                       'variablesize':("self.default_dict['variablesize']",labels.VARIABLE_SIZE),
                       'seqintext':("self.default_dict['sequences_in_text']",labels.SEQUENCE_IN_TEXT),
-                      'fromtext':("self.default_dict['fromtext']",labels.FROM_TEXT),
                       'convertbyline':("self.default_dict['convertbyline']",labels.CONVERT_BY_LINE),
                       'nodiagnostics':("self.add_diagnostics",labels.ADD_DIAGNOSTICS),
                       'carrykeys':("self.carry_keys",labels.CARRY_KEYS),
                       'abridgedformat':("self.abridgedformat",labels.ABRIDGEDFORMAT),
                       'nameinterpret':("self.name_interpret",labels.NAME_INTERPRET),
-                      'usealphabets':("self.use_alphabets","USE ALPHABETS")}
+                      'useallphabets':("self.use_alphabets","USE ALPHABETS")}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'
@@ -836,7 +835,8 @@ simple_commands =  {'dumpprojects':JSON_COM,
                     'dictionaryload':RESIZE_COM,
                     'seqformone':RESIZE_COM,
                     'seqformtwo':RESIZE_COM,
-                    'mainsequences':RESIZE_COM}         
+                    'mainsequences':RESIZE_COM,
+                    'fromtext':RESIZE_COM}
           
           
 
