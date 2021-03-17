@@ -36,7 +36,8 @@ class Display:
                   splitchar=BLANK,
                   is_embedded=False,
                   p_indent=0,
-                  leftmargin=0):
+                  leftmargin=0,
+                  override=False):
 
         """prints out individual lines of note.
         showsize = basic size for note.
@@ -91,10 +92,10 @@ class Display:
                                     +BOX_CHAR['v']*bracket)
 
             else:
-                if line.startswith('/C/'):
+                if not override and line.startswith('/C/'):
                     line = line.replace('/C/',EMPTYCHAR)
                     center = True
-                if line.startswith('/R/'):
+                if not override and line.startswith('/R/'):
                     line = line.replace('/R/',EMPTYCHAR)
                     leftalign = True
 
@@ -243,7 +244,8 @@ class Display:
                                          printyes=not np_temp,
                                          p_indent=param_indent,
                                          leftmargin=leftmargin,
-                                         bracket=brackets)
+                                         bracket=brackets,
+                                         override=override)
                                          # prints the top of the box
             if notenumber > 0:
                 returntext += self.lineprint(POUND+str(notenumber),
@@ -252,7 +254,8 @@ class Display:
                                              printyes=not np_temp,
                                              p_indent=param_indent,
                                              leftmargin=leftmargin,
-                                             bracket=brackets)
+                                             bracket=brackets,
+                                             override=override)
                                              #print the number of the note
             returntext += self.lineprint(head,
                                          showsize=param_width,
@@ -260,7 +263,8 @@ class Display:
                                          printyes=not np_temp,
                                          p_indent=param_indent,
                                          leftmargin=leftmargin,
-                                         bracket=brackets)
+                                         bracket=brackets,
+                                         override=override)
                                         # print the keywords
             returntext += self.lineprint('M',
                                          showsize=param_width,
@@ -268,7 +272,8 @@ class Display:
                                          printyes=not np_temp,
                                          p_indent=param_indent,
                                          leftmargin=leftmargin,
-                                         bracket=brackets)
+                                         bracket=brackets,
+                                         override=override)
             # print the divider between box heading and box body
             for line in body.split(EOL):
                 #split the main body into lines
@@ -288,7 +293,8 @@ class Display:
                                                          printyes=not np_temp,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
                     else:
 
                         returntext += self.lineprint(line,
@@ -297,7 +303,8 @@ class Display:
                                                      printyes=not np_temp,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
                                                       #add a new line
             returntext += self.lineprint('F',
                                          showsize=param_width,
@@ -305,7 +312,8 @@ class Display:
                                          printyes=not np_temp,
                                          p_indent=param_indent,
                                          leftmargin=leftmargin,
-                                         bracket=brackets)
+                                         bracket=brackets,
+                                         override=override)
             returntext += (EOL*param_spacing)
 
         else:            # For a non-embedded note 
@@ -331,7 +339,8 @@ class Display:
                                              is_embedded=param_is_emb,
                                              p_indent=param_indent,
                                              leftmargin=leftmargin,
-                                             bracket=brackets)
+                                             bracket=brackets,
+                                             override=override)
                 # Print note number
                 if notenumber > 0:
                     returntext += self.lineprint(POUND+str(notenumber), 
@@ -341,7 +350,8 @@ class Display:
                                                  is_embedded=param_is_emb,
                                                  p_indent=param_indent,
                                                  leftmargin=leftmargin,
-                                                 bracket=brackets)
+                                                 bracket=brackets,
+                                                 override=override)
                 # Keys
                 returntext += self.lineprint(head,                  
                                              showsize=param_width,
@@ -350,7 +360,8 @@ class Display:
                                              is_embedded=param_is_emb,
                                              p_indent=param_indent,
                                              leftmargin=leftmargin,
-                                             bracket=brackets)
+                                             bracket=brackets,
+                                             override=override)
                 # divider between keys and main body
             else:
                 returntext += self.lineprint('H',  
@@ -360,7 +371,8 @@ class Display:
                                              is_embedded=param_is_emb,
                                              p_indent=param_indent,
                                              leftmargin=leftmargin,
-                                             bracket=brackets)
+                                             bracket=brackets,
+                                             override=override)
 
 
             columnate = False
@@ -382,7 +394,7 @@ class Display:
             if body.replace(BLANK,EMPTYCHAR).replace(EOL,EMPTYCHAR):
 
                 for line in body.split(EOL):
-                    if '[#' in line and '#]' in line:
+                    if not override and '[#' in line and '#]' in line:
                         #to modify leftmargin 
                         if '[#]' in line:
                             
@@ -433,7 +445,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
                         elif head:
 
 
@@ -444,7 +457,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
                     starting = False
                         
                     
@@ -541,7 +555,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
 
                         # Determine the body of the columned note.
                         returntext += c_temp + EOL
@@ -556,7 +571,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
 
 
      
@@ -598,7 +614,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
                         returntext += self.lineprint('H',
                                                      showsize=param_width,
                                                      maxsize=maximum,
@@ -606,7 +623,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
 
                         
                         
@@ -618,7 +636,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
                         param_width = param_width_def
                         maximum = maximum_def
                         returntext += self.lineprint('H',
@@ -628,7 +647,8 @@ class Display:
                                                      is_embedded=param_is_emb,
                                                      p_indent=param_indent,
                                                      leftmargin=leftmargin,
-                                                     bracket=brackets)
+                                                     bracket=brackets,
+                                                     override=override)
                     elif not override and ('/BREAK/' in line or '/NEW/' in line):
                         if '/BREAK/' in line:
                             returntext += self.lineprint('M',
@@ -638,7 +658,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
                         else:
                             returntext += self.lineprint('F',
                                                          showsize=param_width,
@@ -647,7 +668,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
                             returntext += self.lineprint('H',
                                                          showsize=param_width,
                                                          maxsize=maximum,
@@ -655,7 +677,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
 
                     else:
 
@@ -669,7 +692,8 @@ class Display:
                                                          is_embedded=param_is_emb,
                                                          p_indent=param_indent,
                                                          leftmargin=leftmargin,
-                                                         bracket=brackets)
+                                                         bracket=brackets,
+                                                         override=override)
 
             if not columns_done or not columns: 
                 returntext += self.lineprint('F',
@@ -679,7 +703,8 @@ class Display:
                                              is_embedded=param_is_emb,
                                              p_indent=param_indent,
                                              leftmargin=leftmargin,
-                                             bracket=brackets)
+                                             bracket=brackets,
+                                             override=override)
             returntext += (EOL*param_spacing)
 
         line_length_list = [len(l_temp) for l_temp in returntext.split(EOL)]

@@ -13637,6 +13637,9 @@ class Console (Note_Shelf):
 
     def biginputterm_imp (self,lastup,stackobject=None,series_enter=EMPTYCHAR):
 
+        """Inputs command at command prompt, or takes the command from the command stack"""
+        
+
 
         def add_mark (index):
 
@@ -14092,7 +14095,7 @@ class Console (Note_Shelf):
                and not series_enter and ((COMMA in biginputterm
                  and SEMICOLON not in biginputterm
                  and biginputterm.replace(COMMA, EMPTYCHAR)) or
-                (COLON not in biginputterm and biginputterm in self.keys())):
+                (COLON not in biginputterm and ((biginputterm in self.keys()) and not biginputterm.replace('.','').replace('-','').isnumeric()))):
                 mainterm = 'autoenter'  # 'autoenter' is sent forward as a command 
                 otherterms[0] = biginputterm
                 longphrase = True

@@ -297,11 +297,11 @@ FORMATTINGSCRIPT = """
 /BREAK/ or /*/ (abbreviated mode) to ADD a BREAK.
 /NEW/ or /*/*/ to divide into a SEPARATE NOTE.
 [/INT/]to change size of note.
-[####]To change the left margin to the number of pounds
-[#+#]To add one to the left margin
-[#-#]To delete one from the left margin
-[#/#]To reset the left margin to normal
-[#INT#]To set the left margin to INT
+[###] To change the left margin to the number of pounds
+[#+#] To add one to the left margin
+[#-#] To delete one from the left margin
+[#/#] To reset the left margin to normal
+[#INT#] To set the left margin to INT
 /DEF/ to return to default size
 
 /COL/ To initiate columns by line.
@@ -312,8 +312,8 @@ _ to separate columns on the line.
 /M/ To separate chunks of text
 /ENDSPLIT/ To terminate columns
 
-/C / To center (no space)
-/R / To right (no space)
+/C/ To center 
+/R/ To right
 
 
 """
