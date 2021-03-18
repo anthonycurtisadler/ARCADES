@@ -389,9 +389,10 @@ class Abbreviate:
                     self.db_cursor.execute(delete_script_one,value_tuple[0:2])
                 elif term2:
                     self.db_cursor.execute(delete_script_two,value_tuple)
-                    self.db_connection.commit()
+                    
                 else:
                     self.db_cursor.execute(delete_script_none,value_tuple[0:1])
+                self.db_connection.commit()
                     
 
         

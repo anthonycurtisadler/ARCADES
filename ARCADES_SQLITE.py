@@ -5664,7 +5664,8 @@ class Note_Shelf:
                         self.default_dict['abbreviations'].undo(text),
                         metatext)
 
-        if not_parsing and extract.embedded_extract(text)[2] > 0:
+        if not self.defaults.get('overrideextract') and not_parsing and extract.embedded_extract(text)[2] > 0:
+            
             #call parsing if there are embedded notes,
             #and it is not already in the middle of parsing
 
@@ -9775,10 +9776,15 @@ class Console (Note_Shelf):
                     'returnquit':3,
                     'returnquiton':False,
                     'indentmultiplier':4,
-                    'smallsize':50}
+                    'smallsize':50,
+                    'overrideextract':True} 
 
 
         #FOR THE SIMPLE DEFAULTS
+        #There are two kinds of defaults with persistance when the database is closed.
+        #The simples defaults, which are defined if def_dict, and those whose content can be stored directly in a SQL database.
+        #The other defaults consist in objects or more complex datatypes.
+        
         for temp_label in def_dict:
             initiate_defaults(temp_label,def_dict[temp_label])
         if 'sequences' in self.default_dict:
@@ -10568,6 +10574,10 @@ class Console (Note_Shelf):
             self.copy_many_from_temp(copy_count)
 
     def default_com (self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR):
+
+        if mainterm in ['overrideextract']:
+            self.defaults.set('overrideextract',not self.defaults.get('overrideextract'))
+            display.noteprint(('OVERRIDE EXTRACT',str(self.defaults.get('overrideextract'))))
 
         if mainterm in ['branchone','branchtwo','branchthree']:
             self.hypermovemode = {'branchone':0,

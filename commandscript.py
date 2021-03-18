@@ -309,6 +309,8 @@ carryall||carry over keys from all parents
 returnquit| |Exit note entry mode after pressing successive returns
 setreturnquit| |Set number of returns for returnquit
 usealphabets| |Apply transcription for foreign languages
+overrideextract| |Overrides the automatic
+| |extraction of subordinate notes
 ||"""
 
 INPUT = """||
