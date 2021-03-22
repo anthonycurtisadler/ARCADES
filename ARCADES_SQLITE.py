@@ -13679,6 +13679,7 @@ class Console (Note_Shelf):
                                               PLUS:'[+]',
                                               PLUS+PLUS:'[++]',
                                               PLUS+PLUS+PLUS:'[+++]'}[series_enter]+BLANK)
+                rawbig = manyinputterm 
                 if self.use_alphabets:
                     
                     manyinputterm = self.alphabet_manager.interpret(manyinputterm)
@@ -13842,7 +13843,7 @@ class Console (Note_Shelf):
                                                                                         surround=False).replace(LONGDASH,SLASH)]))
             
 
-        return biginputterm,continuelooping,close_notebook
+        return biginputterm,continuelooping,close_notebook,rawbig
 
     
     def limitlist_cc(self,biginputterm=EMPTYCHAR):
@@ -13907,7 +13908,7 @@ class Console (Note_Shelf):
         self.first_time = False
         if not next_up:
             self.tutor.show('ESCAPE')
-        biginputterm,continuelooping,close_notebook = self.biginputterm_imp(lastup,
+        biginputterm,continuelooping,close_notebook,rawbig = self.biginputterm_imp(lastup,
                                                                             command_stack,
                                                                             series_enter=series_enter)
 
@@ -13942,7 +13943,18 @@ class Console (Note_Shelf):
             
             
         if biginputterm and self.add_diagnostics:
-            diagnostics.addline(biginputterm)
+            try:
+                diagnostics.addline(biginputterm)
+            except:
+                
+                try:
+                    print('UNICODE ERROR1')
+                    diagnostics.addline(rawbig)
+                except:
+                    print('UNICODE ERROR2')
+                    diagnostics.addline('ERROR')
+            
+                    
         if biginputterm == EMPTYCHAR:
             biginputterm = series_enter
         if biginputterm == SEMICOLON + SEMICOLON:
