@@ -1730,7 +1730,7 @@ class Note_Shelf:
                                                                  term2=seq_value,
                                                                  action='set')
                         else:
-                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + identifier + '/' + seq_value + str(x)
+                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + str(identifier) + '/' + str(seq_value) + str(x)
                             nprint(temp_label)
                             
         return newkeyset
@@ -8383,7 +8383,6 @@ class Note_Shelf:
         emb_len = str(len(embeddedlist))
 
         for a_temp, phrase in enumerate(embeddedlist):
-            print(PERIOD,end=EMPTYCHAR)
             if a_temp<10 or (a_temp>9 and a_temp<100
                              and a_temp%10 == 0) or (a_temp>99
                                                      and a_temp%100==0):
@@ -8489,6 +8488,7 @@ class Note_Shelf:
         if not analysetext and filename:
         
             analysetext = get_text_file(filename)
+        analysetext = '\n'.join([x for x in analysetext.split('\n') if not x.startswith('/#/')])
 
         if '<<<<PROJECTBEGIN>>>>' and '<<<<PROJECTEND>>>>' in analysetext:
             display.noteprint(('ATTENTION!','PROJECT SCRIPT FOUND!'))
@@ -8496,15 +8496,11 @@ class Note_Shelf:
             analysetext = analysetext.replace('<<<<PROJECTBEGIN>>>>'
                                               +projecttext+'<<<<PROJECTEND>>>>',
                                               EMPTYCHAR)
-            try:
-                display.noteprint(('',projecttext[0:100]))
-            except:
-                display.noteprint(('ATTENTION!',"Can't display PROJECT TEXT"))
         if loadproject and projecttext:
 
             if not self.default_dict['projects']  or self.default_dict['projects'].is_empty():
                 
-                self.default_dict['projects'].import_string(projecttext)
+                self.default_dict['projects'].import_string(projecttext,for_projects=True)
                 if self.default_dict['projects'].is_empty():
                     display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
                 self.dd_changed=True
@@ -11041,9 +11037,13 @@ class Console (Note_Shelf):
                     display.noteprint((alerts.LOADING_FILE,filename_temp))
                     project_text = get_text_file(filename_temp)
                 if project_text:
-                    self.default_dict['projects'].import_string(project_text)
+                    if '<<<<PROJECTBEGIN>>>>' in project_text and '<<<<PROJECTEND>>>>' in project_text:
+                        project_text = project_text.split('<<<<PROJECTBEGIN>>>>')[1].split('<<<<PROJECTEND>>>>')[0]
+                    self.default_dict['projects'].import_string(project_text,for_projects=True)
                 if not self.default_dict['projects'].is_empty():
                     display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
+                else:
+                    display.noteprint((alerts.ATTENTION,'PROJECT NOT LOADED'))
                 self.dd_changed=True
 
 
@@ -13948,11 +13948,9 @@ class Console (Note_Shelf):
             except:
                 
                 try:
-                    print('UNICODE ERROR1')
                     diagnostics.addline(rawbig)
                 except:
-                    print('UNICODE ERROR2')
-                    diagnostics.addline('ERROR')
+                    diagnostics.addline('UNICODE ERROR')
             
                     
         if biginputterm == EMPTYCHAR:
@@ -14468,6 +14466,7 @@ class Console (Note_Shelf):
         elif mainterm in ['resumeproject','loadproject']:
             project_name = EMPTYCHAR
             
+            
             if self.project and not predicate[0] and COMMA not in otherterms[0]:   # Save the existing project status
                 project_name = self.project.pop()
                 if project_name in self.default_dict['projects'].get_all_projects():
@@ -14504,72 +14503,72 @@ class Console (Note_Shelf):
             if otherterms[0]:  #Get the project title if entered
                 project_names = otherterms[0].split(COMMA)
 
-            for project_name in project_names:
-                while True:  #If not entered
-                    
-                    if not project_name:
-                        project_name = input(queries.PROJECT_NAME)
-                    if not project_name or  project_name in  self.default_dict['projects'].get_all_projects():
-                        break
-                    else:
-                        project_name = EMPTYCHAR
-
-                if project_name:
-
-                    # To load different project
-    ##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
-    ##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-    ##                else:
-    ##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
-                    if not predicate[1]:
-                        lastup,uptohere = Index(str(self.default_dict['projects'].get_position(project=project_name)[0])),\
-                                          Index(str(self.default_dict['projects'].get_position(project=project_name)[1]))
-                        mainterm,series_enter = self.default_dict['projects'].get_going(project=project_name)[0],\
-                                                self.default_dict['projects'].get_going(project=project_name)[1]
+                for project_name in project_names:
+                    while True:  #If not entered
                         
-                    self.default_dict['projects'].add_date(project=project_name,
-                                                           new_date=str(datetime.datetime.now()))
+                        if not project_name:
+                            project_name = input(queries.PROJECT_NAME)
+                        if not project_name or  project_name in  self.default_dict['projects'].get_all_projects():
+                            break
+                        else:
+                            project_name = EMPTYCHAR
+
+                    if project_name:
+
+                        # To load different project
+        ##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
+        ##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
+        ##                else:
+        ##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
+                        if not predicate[1]:
+                            lastup,uptohere = Index(str(self.default_dict['projects'].get_position(project=project_name)[0])),\
+                                              Index(str(self.default_dict['projects'].get_position(project=project_name)[1]))
+                            mainterm,series_enter = self.default_dict['projects'].get_going(project=project_name)[0],\
+                                                    self.default_dict['projects'].get_going(project=project_name)[1]
+                            
+                        self.default_dict['projects'].add_date(project=project_name,
+                                                               new_date=str(datetime.datetime.now()))
+                                        
+                        #For automatically retrieving the last entered value
+                        #For queried sequence keys
+                        
+                        temp_keys = self.get_note(lastup).keyset
+                        
+                        
+                        for k in temp_keys:
+                            
+
+                            seq_temp = ''
+                            v_temp = ''
+
+                            
+
+                            if '@' in k:
+                                if '@_' in k:
+                                    seq_temp = k.split('@_')[0] + '@_' + '?'
+                                    v_temp = k.split('@_')[1]
                                     
-                    #For automatically retrieving the last entered value
-                    #For queried sequence keys
-                    
-                    temp_keys = self.get_note(lastup).keyset
-                    
-                    
-                    for k in temp_keys:
-                        
-
-                        seq_temp = ''
-                        v_temp = ''
-
-                        
-
-                        if '@' in k:
-                            if '@_' in k:
-                                seq_temp = k.split('@_')[0] + '@_' + '?'
-                                v_temp = k.split('@_')[1]
-                                
-                            elif '@#' in k:
-                                seq_temp = k.split('@#')[0] + '@#' + '?'
-                                v_temp= k.split('@#')[1]
-                            else:
-                                seq_temp = k.split('@')[0] + '@' + '?'
-                                v_temp = k.split('@')[1]
-                                
-                            if seq_temp and v_temp and seq_temp in self.default_dict['projects'].get_default_keys(project=project_name):
-                                self.lastsequencevalue.change(phrase=k,value=v_temp)
-                        
-
+                                elif '@#' in k:
+                                    seq_temp = k.split('@#')[0] + '@#' + '?'
+                                    v_temp= k.split('@#')[1]
+                                else:
+                                    seq_temp = k.split('@')[0] + '@' + '?'
+                                    v_temp = k.split('@')[1]
+                                    
+                                if seq_temp and v_temp and seq_temp in self.default_dict['projects'].get_default_keys(project=project_name):
+                                    self.lastsequencevalue.change(phrase=k,value=v_temp)
                             
 
+                                
+
+                                
                             
                         
-                    
-                    
-                    self.project.append(project_name)
-                    allnotebooks_tracking[notebookname]['projectset'].append(project_name)
-                    
-                    self.dd_changed=True
+                        
+                        self.project.append(project_name)
+                        allnotebooks_tracking[notebookname]['projectset'].append(project_name)
+                        
+                        self.dd_changed=True
 
 
         elif mainterm in ['endproject','quitproject']:

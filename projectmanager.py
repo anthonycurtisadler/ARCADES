@@ -336,16 +336,27 @@ class ProjectManager:
      # primary methods
      
 
-     def import_string (self,string):
+     def import_string (self,projecttext,for_projects=False):
+          if for_projects:
+               print('IMPORTING PROJECT STRING')
           
           try:
                self.projects = transform(eval(projecttext))
                if self.projects:
+                    if for_projects:
+                         print('TEXT SUCCESFULLY TRANSFORMED')
+                         if self.using_database:
+                              self.load_into_database()
+                         
                     return True
                else:
                     return False
+                    print('TEXT TRANSFORMATION UNSUCCESSFUL')
+               
           except:
                return False
+               print('TEXT TRANSFORMATION UNSUCCESSFUL - EXCEPTION RAISED')
+     
 
      def return_dict (self):
 
