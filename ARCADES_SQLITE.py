@@ -5268,8 +5268,7 @@ class Note_Shelf:
             em = {}
         oldtext = EMPTYCHAR
         oldkeys = set()
-        if  (self.last_keys != set()
-                and input(queries.RESUME_ABORTED_NOTE) in YESTERMS):
+        if  (self.entry_buffer and input(queries.RESUME_ABORTED_NOTE) in YESTERMS):
             #IF last entry was aborted ...
             oldkeys = set(self.last_keys)
             if self.entry_buffer:
