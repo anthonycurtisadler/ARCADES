@@ -3667,6 +3667,8 @@ class Note_Shelf:
         """returns 2-entry list for note at given index;
         list[0]=keys; list[1]=text
         """
+
+
         if not self.notebook_contains(index):
             display.noteprint((alerts.ATTENTION,'INDEX NOT FOUND'))
             return [set(),EMPTYCHAR]
@@ -3799,9 +3801,9 @@ class Note_Shelf:
                         
 
             suffix = EMPTYCHAR
-            if self.no_flash:
+            if self.no_flash: #To disable flash card mode
                 tex_temp = tex_temp.replace('/FC/','\n  /BREAK/  \n')
-            if '/FC/' in tex_temp:
+            if '/FC/' in tex_temp: #For a flash card 
                 sides_temp = tex_temp.split('/FC/')
                 if self.flexflip:
                     self.sides = len(sides_temp)
@@ -3825,6 +3827,7 @@ class Note_Shelf:
                           +BLANK+VERTLINE)
             l_temp.append(seq_text + nformat.encase(tex_temp,
                                          highlight))
+
             if len(l_temp) > 1: 
                 if self.defaults.get('curtail'):
                     l_temp[1] = l_temp[1].strip(EOL)
@@ -5260,21 +5263,22 @@ class Note_Shelf:
         keyset = set()
         if not ek:
             from_keys = False
-            
- 
-            
+                        
         
         if em is None:
             em = {}
         oldtext = EMPTYCHAR
         oldkeys = set()
-        if  (self.entry_buffer and input(queries.RESUME_ABORTED_NOTE) in YESTERMS):
-            #IF last entry was aborted ...
-            oldkeys = set(self.last_keys)
-            if self.entry_buffer:
-                oldtext = self.entry_buffer.dump()
+        if  self.entry_buffer: #If last entry was aborted
+            if input(queries.RESUME_ABORTED_NOTE) in YESTERMS:
+                #TO resume aborted note ...
+                oldkeys = set(self.last_keys)
+                if self.entry_buffer:
+                    oldtext = self.entry_buffer.dump()
+                    self.entry_buffer.clear()
+                    self.last_keys = set()
+            else:
                 self.entry_buffer.clear()
-                self.last_keys = set()
 
         if not from_keys:
             print('<<'+nformat.format_keys(usedefaultkeys*(self.defaults.get('defaultkeys')
@@ -6229,7 +6233,7 @@ class Note_Shelf:
                 curtail=0,
                 groupsize=None,
                 save_list='all'):
-        
+
         if not groupsize:
             groupsize = self.how_many
 
@@ -6343,7 +6347,7 @@ class Note_Shelf:
                         ind_temp = index_reduce(str(i_temp)) 
                         k_temp = formkeys(self.get_keys_from_note(i_temp))
                         k_temp = k_temp[0:min([len(k_temp),30])]
-                        t_temp = self.get_text_from_note(i_temp)
+                        t_temp = nformat.encase(self.get_text_from_note(i_temp),highlight)
                         t_temp = nformat.purgeformatting(t_temp[0:min([len(t_temp),40])])
                         t_temp = t_temp.replace(VERTLINE,EMPTYCHAR)\
                                  .replace(UNDERLINE,EMPTYCHAR)\
@@ -6417,6 +6421,7 @@ class Note_Shelf:
                                                  display.noteprint(self.show(i_temp,
                                                             shortform=shortform,
                                                             yestags=self.tagdefault,
+                                                            highlight=highlight,
                                                             show_date=show_date),
                                                                    param_width=self.defaults.get('size'),
                                                                    np_temp=shortform,
@@ -6424,6 +6429,7 @@ class Note_Shelf:
                                                                    brackets=brackets)
                             else:
                                 self.default_dict[save_list].append(display.noteprint(self.show(i_temp,
+                                                                                                highlight=highlight,
                                                                 shortform=shortform,
                                                                 yestags=self.tagdefault,
                                                                 show_date=show_date,deepest=deepest_temp),
@@ -6443,6 +6449,7 @@ class Note_Shelf:
                             if self.default_dict['variablesize']:
                                 output.load(
                                     display.noteprint(self.show(i_temp,
+                                                                highlight=highlight,
                                                                 yestags=self.tagdefault,
                                                                 show_date=show_date,curtail=curtail),
                                                       np_temp=True,
@@ -6450,6 +6457,7 @@ class Note_Shelf:
                                                       (self.show(i_temp,
                                                                  yestags=self.tagdefault,
                                                                  show_date=show_date,
+                                                                 highlight=highlight,
                                                                  curtail=curtail),
                                                        self.get_metadata_from_note(i_temp)['size'],
                                                        leftmargin=self.default_dict['leftmargin']),
@@ -6459,6 +6467,7 @@ class Note_Shelf:
                                 output.load(display.noteprint
                                             (self.show(i_temp,
                                                        yestags=self.tagdefault,
+                                                       highlight=highlight,
                                                        show_date=show_date,curtail=curtail),
                                              np_temp=True,
                                              param_width=self.default_dict['size'],
@@ -6470,6 +6479,7 @@ class Note_Shelf:
                             if self.default_dict['variablesize']:
                                 output.load(display.noteprint
                                             (self.show(i_temp,
+                                                       highlight=highlight,
                                                        yestags=self.tagdefault,
                                                        show_date=show_date,
                                                        curtail=curtail),
@@ -6477,6 +6487,7 @@ class Note_Shelf:
                                              param_width=display.width_needed
                                              (self.show(i_temp,
                                                         yestags=self.tagdefault,
+                                                        highlight=highlight,
                                                         show_date=show_date,
                                                         curtail=curtail),
                                               p_width=max([int
@@ -6485,6 +6496,7 @@ class Note_Shelf:
                                                              (self.show(i_temp,
                                                                         yestags=self.tagdefault,
                                                                         show_date=show_date,
+                                                                        highlight=highlight,
                                                                         curtail=curtail)[1]))),20])),
                                              leftmargin=self.default_dict['leftmargin'],
                                              brackets=brackets))
@@ -6492,12 +6504,14 @@ class Note_Shelf:
 
                                 output.load(display.noteprint(self.show
                                                               (i_temp, yestags=self.tagdefault,
+                                                               highlight=highlight,
                                                                show_date=show_date),
                                                               np_temp=True,
                                                               param_width=max([int
                                                                                (math.sqrt(
                                                                                    len(self.show(
                                                                                        i_temp,
+                                                                                       highlight=highlight,
                                                                                        yestags=self.tagdefault,
                                                                                        show_date=show_date)[1]))), 20]),
                                                               leftmargin=self.default_dict['leftmargin'],
@@ -7124,6 +7138,8 @@ class Note_Shelf:
             ALLCAPS non-case sensitive
             #TERM tag
             ##TERM class defined through knowledge base
+
+            RETURNS tuple (query, result, foundterms)
 
         """
 
@@ -9537,6 +9553,7 @@ class Console (Note_Shelf):
         self.last_term = EMPTYCHAR
 
         self.last_results = EMPTYCHAR
+        self.last_found_terms = None 
         self.next_term = EMPTYCHAR
         self.divided = True
         self.divide_no_query = True
@@ -10313,10 +10330,11 @@ class Console (Note_Shelf):
 
         if mainterm in ['marked']:
 
-            self.last_results = rangelist.range_find([Index(a_temp)
-                                                     for a_temp
-                                                     in self.defaults.get('marked')
-                                                      if a_temp in self.indexes()])
+
+
+            self.last_results = ', '.join([a_temp for a_temp
+                                                 in self.defaults.get('marked')
+                                                  if a_temp in self.indexes()])
             
             display.noteprint((labels.MARKED,self.last_results))
 
@@ -10948,10 +10966,11 @@ class Console (Note_Shelf):
                               flag=self.defaults.get('setitflag'))
         elif mainterm in ['showflip','showflipbook']:
 
-            self.last_results = rangelist.range_find(self.default_dict['flipbook'])
+            self.last_results = ', '.join([str(x) for x in self.default_dict['flipbook']])
             
             display.noteprint(('FLIPBOOK',
-                               rangelist.range_find(self.default_dict['flipbook'],reduce=True)))
+                               self.last_results))
+
 
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
 
@@ -11521,13 +11540,13 @@ class Console (Note_Shelf):
             
 
         if mainterm in ['invert']:
-            self.last_results = rangelist.range_find([Index(a_temp)
-                                                      for a_temp in self.indexes()
+            temp_range = get_range(s_input(prompt=queries.RANGE_TO_FROM, inputtext=otherterms[0]),many=True)
+
+            self.last_results = ', '.join([a_temp for a_temp in self.indexes()
                                                       if Index(a_temp)>Index(0)
                                                       and Index(a_temp)
-                                                      not in get_range(s_input(queries.RANGE_TO_FROM,
-                                                                               otherterms[0]),
-                                        many=True)])
+                                                      not in temp_range])
+                                        
             self.last_results = self.last_results.replace(LONGDASH,SLASH)          
             self.last_results_used = False
             
@@ -11752,9 +11771,10 @@ class Console (Note_Shelf):
                                               many=True)])
         elif mainterm in ['showdel']:
             
-            self.last_results = rangelist.range_find([Index(temp_l)
-                                                      for temp_l in self.indexes()
-                                                      if Index(temp_l) < Index(0)])
+##            self.last_results = rangelist.range_find([Index(temp_l)
+##                                                      for temp_l in self.indexes()
+##                                                      if Index(temp_l) < Index(0)])
+            self.last_results = ', '.join(temp_l for temp_l in self.indexes() if Index(temp_l) < Index(0))
             display.noteprint((labels.DELETED,self.last_results))
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
 
@@ -12346,6 +12366,7 @@ class Console (Note_Shelf):
                          multi=True,
                          output=multi_dict[notebookname][display_stream],
                          vary=predicate[2],
+                         highlight=self.last_found_terms,
                          show_date=self.default_dict['showdate'],
                          curtail={True:self.default_dict['smallsize'],
                                   False:0}[predicate[0]])
@@ -13194,12 +13215,15 @@ class Console (Note_Shelf):
                     sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
                                                   otherterms[0])))
                     
+                    
                     display.noteprint(('TOTAL RESULTS for '+temp_notebook+'!',str(len(sr_temp[1]))))
 
                     if predicate[0] or input('SHOW RESULTS?') in YESTERMS:
 
-                        self.last_results = rangelist.range_find([Index(a_temp)
-                                                 for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+##                        self.last_results = rangelist.range_find([Index(a_temp)
+##                                                 for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+
+                        self.last_results = ', '.join(a_temp for a_temp in sr_temp[1] if a_temp!='0').replace(LONGDASH,SLASH)
 
                         display.noteprint((labels.RESULT_FOR
                                            +formkeys(sorted(list(sr_temp[2]))),
@@ -13228,8 +13252,11 @@ class Console (Note_Shelf):
                     self.set_iterator(self.default_dict['flipbook'],flag=self.defaults.get('setitflag'))
 
                 
-                self.last_results = rangelist.range_find([Index(a_temp)
-                                                         for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+##                self.last_results = rangelist.range_find([Index(a_temp)
+##                                                         for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
+                self.last_results = ', '.join(x for x in sr_temp[1])
+                self.last_found_terms = sr_temp[2]
+                
 
                 display.noteprint((labels.RESULT_FOR
                                    +formkeys(sorted(list(sr_temp[2]))),
