@@ -78,7 +78,8 @@ from multidisplay import Note_Display                                   #pylint 
 from noteclass import Note                                              #pylint 10.0/10
 from orderedlist import OrderedList, convert_to_type
 import simple_parser as parser
-import pointerclass                                                     #pylint 9.62/10
+import pointerclass#pylint 9.62/10
+from sorter import Sort
 from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      BREAKTERMS, NEWTERMS, QUITALLTERMS, QUITTERMS, YESTERMS, NOTERMS, ADDTERMS,\
      QUITTERMS, SHOWTERMS, DELETETERMS, CLEARTERMS, binary_settings, simple_commands
@@ -6232,7 +6233,8 @@ class Note_Shelf:
                 brackets=True,
                 curtail=0,
                 groupsize=None,
-                save_list='all'):
+                save_list='all',
+                sorting=True):
 
         if not groupsize:
             groupsize = self.how_many
@@ -6312,19 +6314,24 @@ class Note_Shelf:
             total_length_temp = len(entrylist)
             lastgroup=-1
 
-            if not self.defaults.get('sortbydate'):
+            if not sorting:
+                to_enumerate = [Index(x) for x in entrylist]
 
-                to_enumerate =  [x_temp for x_temp
-                                 in self.default_dict['indexlist_indexes'].list
-                                 if str(x_temp) in entrylist]
-            else:
-                to_enumerate = self.index_sort([Index(a_temp)
-                                                         for a_temp in entrylist],
-                                                             by_date=self.defaults.get('sortbydate'),
-                                               quick=False,
-                                               no_check=False)
+            else:         
 
+                if not self.defaults.get('sortbydate'):
 
+                    to_enumerate =  [x_temp for x_temp
+                                     in self.default_dict['indexlist_indexes'].list
+                                     if str(x_temp) in entrylist]
+                else:
+                    to_enumerate = self.index_sort([Index(a_temp)
+                                                             for a_temp in entrylist],
+                                                                 by_date=self.defaults.get('sortbydate'),
+                                                   quick=False,
+                                                   no_check=False)
+
+            
             for counter, i_temp in enumerate(to_enumerate):
                 
                 group, remainder = divmod(counter,groupsize)
@@ -9592,6 +9599,7 @@ class Console (Note_Shelf):
         self.default_dict = {}
         self.alphabet_manager = AlphabetManager()
         self.use_alphabets = True
+        self.sorting = True
         
 
         auto_database = True
@@ -10587,6 +10595,9 @@ class Console (Note_Shelf):
             self.copy_many_from_temp(copy_count)
 
     def default_com (self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR):
+
+
+            
 
         if mainterm in ['overrideextract']:
             self.defaults.set('overrideextract',not self.defaults.get('overrideextract'))
@@ -12203,14 +12214,17 @@ class Console (Note_Shelf):
                                   otherterms[0]),
                          orequal=True,
                          complete=False, 
-                         sort=True,
+                         sort=self.sorting,
                          many=True),
                 show_date=(self.defaults.get('showdate') or predicate[4]),
                 childrentoo=not predicate[1],
                 levels=l_temp,
                 brackets=not predicate[2],
-                         shortshow=not predicate[3],
-                         save_list='display')
+                shortshow=not predicate[3],
+                save_list='display',
+                sorting=self.sorting)
+            if not self.sorting:
+                self.sorting = True 
     
         elif mainterm in ['histogram']:
 
@@ -12357,11 +12371,12 @@ class Console (Note_Shelf):
                     if not otherterms[2]:
                         otherterms[2] = '0'
                     multi_dict[notebookname][display_stream] = Note_Display(t_size)
+
             self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
                                                      otherterms[0]),
                                              True,
                                              False,
-                                             sort=True,
+                                             sort=self.sorting,
                                              many=True),
                          multi=True,
                          output=multi_dict[notebookname][display_stream],
@@ -12369,7 +12384,10 @@ class Console (Note_Shelf):
                          highlight=self.last_found_terms,
                          show_date=self.default_dict['showdate'],
                          curtail={True:self.default_dict['smallsize'],
-                                  False:0}[predicate[0]])
+                                  False:0}[predicate[0]],
+                         sorting=self.sorting)
+            if not self.sorting:
+                self.sorting=True 
             save_stream = display_stream
             if otherterms[3]:
                 save_stream = otherterms[3]
@@ -12416,13 +12434,16 @@ class Console (Note_Shelf):
                                          True,
                                          False,
                                          sort=True,
-                                         many=True),
+                                         many=self.sorting),
                      multi=True,
                      output=multi_dict[notebookname][display_stream],
                      vary=predicate[2],
                      show_date=self.defaults.get('showdate'),
                      curtail={True:self.defaults.get('smallsize'),
-                              False:0}[predicate[0]])
+                              False:0}[predicate[0]],
+                     sorting=self.sorting)
+                if not self.sorting:
+                    self.sorting = True 
                 self.text_result = multi_dict[notebookname][display_stream].print_all(pause=predicate[3],
                                      show=False,
                                      save=True,
@@ -13129,6 +13150,24 @@ class Console (Note_Shelf):
     def copy_move_search_com (self,longphrase=False,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
 
         global notebookname
+
+        if mainterm in ['sort']:
+            sorter = Sort(indexstring=otherterms[0],
+                          sortstring=otherterms[1],
+                          fetchfunction=self.get_note,
+                          sequenceobject=self.default_dict['sequences'])
+            self.last_results = ', '.join(sorter.get_sort())
+            display.noteprint(('SORTED',self.last_results))
+            self.sorting = False
+
+        if mainterm in ['reverse']:
+            sort_list = otherterms[0]
+            sort_list = ', '.join([x.strip() for x in reversed(otherterms[0].split(','))])
+            self.last_results = sort_list
+            display.noteprint(('REVERSED',self.last_results))
+            self.sorting = False
+            
+            
         
         if mainterm in ['move','copy']:
                     copy_temp = False

@@ -204,6 +204,8 @@ search, ?	|search phrase  %%indexrange..	%%daterange		|keysearch..
                 |<SEQUENCE@TO> | ADD # and _ as appropriate
                 |<SEQUENCE@FROM/SEQUENCE@TO>
                 |{NOTEBOOK1,NOTEBOOK2} |To search over another notebook
+sort            |refed indexes;searchphrase  |sorts refer search results
+reverse         |refer indexes       |reverse search result
 globalsearch    |searchphrase;notebooks |To search over other notebooks
                 |/$ don't query
 terms,???       |return foundterms 
