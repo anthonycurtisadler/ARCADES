@@ -158,6 +158,17 @@ class Index:
 
         return self > other or self == other
 
+    def __neg__ (self):
+
+        """Inverts index"""
+        tl_temp = list(self.self)
+        return Index(tuple([-x for x in tl_temp]))
+
+    def __mul__ (self,mult_by):
+        """Multiplies index"""
+        tl_temp = list(self.self)
+        return Index(tuple([x*mult_by for x in tl_temp]))
+
     def child(self):
 
         """Gets the child note  e.g. 1-> 1.1"""
