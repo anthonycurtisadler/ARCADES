@@ -70,6 +70,8 @@ class Fetcher:
             self.default_dictionary = {}
         if variables:
             self.variables = variables
+        else:
+            self.variables = {}
 
         
 
@@ -189,13 +191,14 @@ class Fetcher:
         
         negative = False
         variable = False
+        returnset = set()
 
         if term and term[0] == '~':
             negative = True
             term = term[1:]
         if not term:
-            return set()
-
+            return returnset
+        
         if is_index_range(term):
             returnset = self.get_range(term)
 
