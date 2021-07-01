@@ -39,6 +39,7 @@ from globalconstants import BOX_CHAR,\
 
                                                                         #pylint 10.0/10
 from alphabetmanager import AlphabetManager
+from fetcher import Fetcher
 import commandscript                                                    #pylint 10.0/10
 from complexobjecttransformindexes import transform
 import consolidate                                                      #Stack Overflow
@@ -7533,7 +7534,11 @@ class Note_Shelf:
             #termlist b = list of words in text
 
         
-        parsed_query = parser.parse(query)
+        parsed_query = parser.parse(query) #Runs the parser on the query
+                                           #To get a parsed object that
+                                           #Can then be evaluated against the universe
+        print(parsed_query)
+        
         if isinstance(parsed_query,str):
             parsed_query = [parsed_query]
         upto = len(termlista)
@@ -7997,12 +8002,15 @@ class Note_Shelf:
                     temp_set = set(searchset) - temp_set
                         
                 
-            universe[unmodified_term] = temp_set.intersection(searchset)
+            universe[unmodified_term] = temp_set.intersection(searchset)#Populates the universe
+                                                                        #with search results
         
 
-        result = parser.interpret(parsed_query,universe=universe)
+        result = parser.interpret(parsed_query,universe=universe) #completes the search
 
         return query, result, foundterms
+
+        
 
 
     def cluster(self,
@@ -9802,7 +9810,7 @@ class Console (Note_Shelf):
 
         #FOR THE SIMPLE DEFAULTS
         #There are two kinds of defaults with persistance when the database is closed.
-        #The simples defaults, which are defined if def_dict, and those whose content can be stored directly in a SQL database.
+        #The simples defaults, which are defined in def_dict, and those whose content can be stored directly in a SQL database.
         #The other defaults consist in objects or more complex datatypes.
         
         for temp_label in def_dict:
@@ -13151,6 +13159,13 @@ class Console (Note_Shelf):
 
         global notebookname
 
+
+        if mainterm in ['fetch']:
+            fetcher = Fetcher(notebook=notebook,
+                              default_dictionary=self.default_dict,
+                              variables=self.variables)
+            self.last_results = ', '.join(fetcher.run_search(otherterms[0]))
+            display.noteprint(('FETCHED',self.last_results))
         if mainterm in ['sort']:
             sorter = Sort(indexstring=otherterms[0],
                           sortstring=otherterms[1],
@@ -13283,6 +13298,16 @@ class Console (Note_Shelf):
                     self.tutor.show('SEARCH')
                 sr_temp = self.new_search(self.default_dict['abbreviations'].undo(s_input(queries.SEARCH_PHRASE,
                                                   otherterms[0])))
+                
+                if otherterms[1]:
+                    temp_range = get_range(otherterms[1],
+                                   orequal=True,
+                                   complete=False,
+                                   sort=True,
+                                   many=True,
+                                   indexes=True)
+                    temp_range = [str(x) for x in temp_range]
+                    sr_temp =(sr_temp[0],[x for x in sr_temp[1] if x in temp_range],sr_temp[2])
                 display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))
                 if self.flipout:
                     self.default_dict['flipbook'] = [Index(a_temp)

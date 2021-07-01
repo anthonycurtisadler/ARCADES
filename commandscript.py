@@ -188,7 +188,7 @@ keystags	| |show tags and their keys
 
 ||"""
 SEARCHING = """| |
-search, ?	|search phrase  %%indexrange..	%%daterange		|keysearch..
+search, ?	|/$search phrase  /&indexrange /*daterange		|keysearch..
                 |use a straight slash for OR.. |.. =>COMMAND:?.. 
                 |use an amperstand for AND.. |to feed results into
                 |parentheses are allowed.. |another command
@@ -205,6 +205,7 @@ search, ?	|search phrase  %%indexrange..	%%daterange		|keysearch..
                 |<SEQUENCE@FROM/SEQUENCE@TO>
                 |{NOTEBOOK1,NOTEBOOK2} |To search over another notebook
 sort            |refed indexes;searchphrase  |sorts refer search results
+fetch           |fetches indexes
 reverse         |refer indexes       |reverse search result
 globalsearch    |searchphrase;notebooks |To search over other notebooks
                 |/$ don't query

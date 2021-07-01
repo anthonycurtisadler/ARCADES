@@ -691,27 +691,27 @@ STORING_SEARCH_RESULTS_WITH_VARIABLES/**/
           self.add('SEARCH',
               """
 THE_SLICE_QUALIFIER/**/
-     The “slice”-qualifier can be used to restrict the search results to notes whose indexes are contained “within” the upper and lower slice.
+The “slice”-qualifier can be used to restrict the search results to notes whose indexes are contained “within” the upper and lower slice.
 
-     A slice consists in of values, separated by PERIODS.
-     Every value may either by be empty, or consist in either an integer, for the value at the head of the slice, or a natural number.
+A slice consists in of values, separated by PERIODS.
+Every value may either by be empty, or consist in either an integer, for the value at the head of the slice, or a natural number.
 
-     Or in other words: a slice is an index, with some, but not all, of the elements removed.
-     
-     Valid slices include: “1.2.3.4.5.6”, “…5…”,”-10.1.1.1.1.”
+Or in other words: a slice is an index, with some, but not all, of the elements removed.
 
-     A given Index is “within” a lower and upper bound iff each element of the index is not less than equally-ranked element of the lower bound and not greater than the equally-ranked element of the upper bound.
-     If a bound is not given, whether because either the upper or lower bound has not been defined or because ranked-element is missing, then the condition is automatically satisfied.
+Valid slices include: “1.2.3.4.5.6”, “…5…”,”-10.1.1.1.1.”
 
-     If the “must”-mode is selected, then the index must have elements of rank equal to all the rank of all the elements of the lower and upper bound. Or in other words, if an index is not as “deep” as the greatest depth of the upper or lower bound, then the index will not be “within” the slice.
+A given Index is “within” a lower and upper bound iff each element of the index is not less than equally-ranked element of the lower bound and not greater than the equally-ranked element of the upper bound.
+If a bound is not given, whether because either the upper or lower bound has not been defined or because ranked-element is missing, then the condition is automatically satisfied.
 
-     Examples of slices.
-     1.1.1 is within “slice=1.1.1/2.2.2”
-     3.3.3 is not within “slice=/.2”
-     10.1^10 is within “slice=/.1.1.1.1.1.1.1.1.1.1.1”
-     10.1^10.2 is not within “slice=/.1.1.1.1.1.1.1.1.1.1.1.1.1.1”
-     10.1 is within “slice=10.1.1/12.1.1” in the “must”-mode.
-     10.1 is not within “slice=10.1.1/12.1.1” if not in the “must”-mode
+If the “must”-mode is selected, then the index must have elements of rank equal to all the rank of all the elements of the lower and upper bound. Or in other words, if an index is not as “deep” as the greatest depth of the upper or lower bound, then the index will not be “within” the slice.
+
+Examples of slices.
+1.1.1 is within “slice=1.1.1/2.2.2”
+3.3.3 is not within “slice=/.2”
+10.1^10 is within “slice=/.1.1.1.1.1.1.1.1.1.1.1”
+10.1^10.2 is not within “slice=/.1.1.1.1.1.1.1.1.1.1.1.1.1.1”
+10.1 is within “slice=10.1.1/12.1.1” in the “must”-mode.
+10.1 is not within “slice=10.1.1/12.1.1” if not in the “must”-mode
 """)
 
           self.add('SEARCH',
@@ -723,6 +723,7 @@ THE_COUNT_QUALIFIER/**/
 
      The qualifier “strict” can be used to count by whole words.
      The result is more correct, but it is also a bit slower, since it must iterate over the Cartesian product of the punctuation marks. """)
+
           self.add('SEARCH',
                    """
 GLOBAL_SEARCHS/**/
@@ -736,6 +737,132 @@ GLOBAL_SEARCHS/**/
 
      """)
           
+          self.add('SORT',
+                   """
+The "sort" command can be used to sort the results of a "search" or a "fetch" according to various criterion.
+
+""")
+
+          self.add('SORT',
+                   """
+The "sort" command accepts two values:
+First, the list of indexes or index ranges to be sorted.
+Second, the sort string.
+
+
+
+""")
+
+          self.add('SORT',
+                   """
+
+The sort string consists of a series of criterion,
+separated by and UNDERLINE _.
+
+E.G. Criterion1_Criterion2_Criterion3
+
+
+
+
+
+""")
+
+
+          self.add('SORT',
+                   """
+
+Each Criterion consists in one of the following:
+
+(1) a sequence keyword
+(2) 'DATE','USER','SIZE','KEYCOUNT','INDEX','TEXTLENGTH'
+(3) a parenthetical phrase:
+
+            SPECIFIER#val1,val2,val3,val4..
+
+            val = WORD*WEIGHT
+
+                WORD = a simple search word
+                WEIGHT = a floating point number
+                
+               SPECIFIER = K, KW, T, TC, TW, TCW
+                        K = KEYWORD
+                        KW = KEYWORD WEIGHTED
+                        T = TEXTWORD
+                        TC = TEXTWORD  COUNT
+                        TW = TEXTWORD WEIGHTED
+                        TCW = TEXTWORD COUNT WEIGHTED
+USE ~ to REVERSE ordering of element
+USE $ to make a text ordering not case sensitive.
+
+""")
+          self.add('SORT',
+                   """
+The "sort" command is most powerful when used in conjunction
+with "search" or "fetch."
+
+For example:
+
+search:body =>sort:?;book
+
+#Searches for "body" and then sorts results by sequence key "book"
+""")
+
+          self.add('FETCH',
+                   """
+
+The "fetch" command is used to retrieve indexes
+fallin within a certain range, belonging
+to a certain project or variable, as well as
+marked notes, unmarked notes.
+
+It is similar to the search, and allows full logical
+expressiveness.
+
+""")
+          self.add('FETCH',
+                   """
+Logical primatives include: ~ () & |
+& = Intersection
+| = Union
+
+The ~ is equivalent to NOT. Note, however, that it can be applied only to individual elements, and
+not to a paranthetical construction.
+
+
+                    
+
+""")
+          self.add('FETCH',
+                   """
+Atomic elements include:
+(1) one or more ranges of notes separated by parentheses.
+(2) MARKED, UNMARKED, POS(ITIVE), NEG(ITIVE), ALL, FLIPBOOK (or FB)
+(3) The name of a project.
+(4) The name of a variable.
+""")
+
+          self.add('FETCH',
+                   """
+The "fetch" command can be used in conjunction with
+"search" and/or "sort."
+
+For example:
+
+fetch:NicomacheanEthics =>sort:?;bekker
+
+#Gets all notes belonging to the project "NicomacheanEthics"
+and sorts them by sequence key "bekker"
+
+fetch:NicomacheanEthics =>search:pleasure;?
+
+#Conducts a search on all notes belong to the project "NicomacheanEthics"
+
+fetch:NicomacheanEthics =>search:pleasure;? =>sort:?;bekker
+                   
+                   
+""")
+          
+
           self.add('INITIATE',
                    """
 HISTOGRAMS_AND_CHRONOGRAMS/**/
