@@ -63,7 +63,7 @@ def range_set(entrystring):
         rangeset = rangeset.union(set(de_range(e_temp)))
     return rangeset
 
-def range_find(pageset,reduce=True,compact=True):
+def range_find(pageset,reduce=True,compact=True,breaker=', '):
 
     """Tranforms a list of pages into a formatted range
     Reduce to give indexes in a reduced form!
@@ -115,11 +115,11 @@ def range_find(pageset,reduce=True,compact=True):
             for pair in pair_list:
                  starting,ending = pair[0],pair[1]
                  if ending>starting:
-                      result+=str(starting)+LONGDASH+str(ending)+', '
+                      result+=str(starting)+LONGDASH+str(ending)+breaker
                  else:
-                      result+=str(starting)+', '
-            if len(result)>2:
-                return result[0:-2]
+                      result+=str(starting)+breaker
+            if len(result)>len(breaker):
+                return result[0:-len(breaker)]
             else:
                 return ''
         else:

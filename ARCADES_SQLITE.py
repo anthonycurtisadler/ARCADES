@@ -61,7 +61,8 @@ except:
     print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
-     abridge, format_text_output, unformat_text_output, show_list
+     abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values
+
 
      
 from generalknowledge import GeneralizedKnowledge 
@@ -169,7 +170,6 @@ histo_tag_dict = None
 
 
 # other utilities
-
 
 
 def nprint(*entries):
@@ -5713,8 +5713,10 @@ class Note_Shelf:
         showindexes = False
 
         if not dictionaryobject:
+            
             if determinant not in self.default_dict['date_dict']:
                 self.default_dict['date_dict'][determinant] = {}
+                #To initialize dictionary
             dictionaryobject = self.default_dict['date_dict'][determinant]
 
 
@@ -6078,12 +6080,13 @@ class Note_Shelf:
     def show_date_dictionary (self,
                               dictionaryobject=None,
                               determinant='ym',
-                              func=dummy,
+                              func=combine_sequence_values,
                               prefix=EMPTYCHAR):
 
         """ Takes a date-dictionary and displays it
             The date-dictionary has dates for keys, and contains
             a list of keywords or other info as values
+            func is used for formating
         """
 
         if not dictionaryobject:
@@ -9282,7 +9285,7 @@ class Console (Note_Shelf):
 
     """ Instantiating the Cosole creates a
     NOTEBASE by loading the shelf files
-    and pickled files, and inituatializing
+    and pickled files, and initializing
     configuration option, defaults,
     and non-persistent attributes, and then
     interpreting commands that have been

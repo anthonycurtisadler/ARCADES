@@ -1,8 +1,69 @@
-from globalconstants import UNDERLINE, EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, POUND, STAR, DASH, PLUS
+from globalconstants import UNDERLINE, ATSIGN, \
+     EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, \
+     POUND, STAR, DASH, PLUS
 import nformat
 from itertools import product
 import datetime
 from displaylist import DisplayList
+from rangelist import range_find
+
+
+def combine_sequence_values (keylist):
+
+    """combines sequence keys into ranges.
+       used with const_dict
+       
+    """
+    sequence_key_dict = {}
+    other_key_set = set()
+    returnlist = []
+    
+    def all_numeric (l):
+        for x in l:
+            if not x.isnumeric():
+                return False
+        else:
+            return True 
+            
+        
+
+    for key in keylist:
+        if ATSIGN in key:
+
+            if ATSIGN+UNDERLINE in key:
+                value = key.split(ATSIGN+UNDERLINE)[1]
+            elif ATSIGN+POUND in key:
+                value = key.split(ATSIGN+POUND)[1]
+            elif ATSIGN in key:
+                value = key.split(ATSIGN)[1]
+            if value:
+                
+                head = key.split(value)[0]
+            else:
+                head = key
+                value = ''
+            if value.endswith('.0'):
+                value = value[:-2]
+
+            if value:
+                if head not in sequence_key_dict:
+                    sequence_key_dict[head] = {value}
+                else:
+                    sequence_key_dict[head].add(value)
+        else:
+            other_key_set.add(key)
+
+    for head in sequence_key_dict:
+        if UNDERLINE not in head and POUND not in head and all_numeric(sequence_key_dict[head]):
+            
+            
+            all_values = range_find(list(sequence_key_dict[head]), breaker=';')
+            returnlist.append(head+all_values)
+        else:
+            returnlist.append(head+', '.join(sorted(sequence_key_dict[head])))
+    returnlist += list(other_key_set)
+    return sorted(returnlist) 
+    
 
 def select_func (entrylist):
 
