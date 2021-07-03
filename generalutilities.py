@@ -1,9 +1,18 @@
 from globalconstants import UNDERLINE, EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, POUND, STAR, DASH, PLUS
-from nformat import purgeformatting
+import nformat
 from itertools import product
 import datetime
+from displaylist import DisplayList
 
+def select_func (entrylist):
 
+    """ passed-in function to select form menu """
+
+    to_keep = input('ENTER KEYWORDS')
+    to_keep = rangelist.range_set(to_keep)
+    return [entrylist[a_temp]
+            for a_temp in to_keep
+            if a_temp in range(len(entrylist))]
 
 
 def format_text_output (text):
@@ -290,7 +299,7 @@ def split_into_columns (t_temp,
     """ splits text into columns.
     """
 
-    t_temp = purgeformatting(t_temp)
+    t_temp = nformat.purgeformatting(t_temp)
     
     t_temp = t_temp.split(breaker)
 
@@ -362,3 +371,79 @@ def side_note(texts,
         returntext += EOL
 
     return returntext + '/ENDCOL/'
+
+
+def show_list(entrylist,
+              label=EMPTYCHAR,
+              from_here=0,
+              to_here=40,
+              select=False,
+              func=dummy,
+              sfunc=select_func,
+              accumulate=False,
+              present=False,
+              columnwidth=None,
+              compactwidth=None,
+              display=None):
+
+    """displays elements from_here to to-here of a list
+    in a note with label. Select if a selection is to be
+    made from the elements in the list
+    """
+
+    showlist = DisplayList(displayobject=display)
+    text = EMPTYCHAR
+    counter = 1
+
+    for log in entrylist:
+
+
+        funky = func(log)
+
+        #This is in order to handle very long number of indexes
+        if funky:
+            if isinstance(funky, str):
+                # func returns a simple string
+                # if there are only a few indexes,
+                # but otherwise it returns a list
+                text += (str(counter)+COLON+BLANK
+                         +funky+EOL)
+                # which is then carried over to the next line
+                #+((3-len(str(counter)))*BLANK)
+                       #  +BLANK+BLANK
+
+                counter += 1
+            else:   #for a list of indexes
+                text += str(counter)+COLON+BLANK+funky[0]+EOL
+
+                counter += 1
+                for f_temp in funky[1:]:
+                    # for subsequent lines
+                    text += f_temp + EOL
+    ##                    showlist.append(f_temp+EOL)
+
+    width = nformat.columns(text,   #formats as columns while appending to
+                            showlist,
+                            not_centered={0, 1, 2, 3, 4},
+                            columnwidth=columnwidth,
+                            compactwidth=compactwidth)
+
+    if not present:
+        showlist.show(from_here,
+                      to_here,
+                      nformat.center(label,
+                                     width+6))
+        if select:
+
+            return sfunc(entrylist)
+
+    if present and not accumulate:
+        showlist.present(header=label,
+                                centered=True)
+    if present and accumulate:
+        return showlist.present(header=label,centered=True,accumulate=True)
+        
+
+    return False
+
+

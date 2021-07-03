@@ -61,7 +61,7 @@ except:
     print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
-     abridge, format_text_output, unformat_text_output
+     abridge, format_text_output, unformat_text_output, show_list
 
      
 from generalknowledge import GeneralizedKnowledge 
@@ -113,6 +113,7 @@ except:
     pass
 if not os.altsep:
     os.altsep = '/'
+from histogram import histogram 
 
 SMALLWORDS += English_frequent_words 
 
@@ -413,26 +414,26 @@ def stack_input(query,stack_object):
 
 
 
-def split_up_range(string,
-                   seg_length=5):
-
-    """splits up the string with search result
-    output to allow it to be formatted for display
-    """
-
-    returnlist = []
-    l_temp = string.split(COMMA)
-    if len(l_temp) < seg_length:
-        return [COMMA.join(l_temp)]
-    multip = int(len(l_temp)/seg_length)
-    rem = len(l_temp)-(multip*seg_length)
-    for a_temp in range(multip):
-        returnlist.append(COMMA.join(l_temp[a_temp*seg_length:
-                                          (a_temp+1)*seg_length-1]))
-    returnlist.append(COMMA.join
-                      (l_temp[multip*seg_length :
-                              multip*seg_length+rem-1]))
-    return returnlist
+##def split_up_range(string,
+##                   seg_length=5):
+##
+##    """splits up the string with search result
+##    output to allow it to be formatted for display
+##    """
+##
+##    returnlist = []
+##    l_temp = string.split(COMMA)
+##    if len(l_temp) < seg_length:
+##        return [COMMA.join(l_temp)]
+##    multip = int(len(l_temp)/seg_length)
+##    rem = len(l_temp)-(multip*seg_length)
+##    for a_temp in range(multip):
+##        returnlist.append(COMMA.join(l_temp[a_temp*seg_length:
+##                                          (a_temp+1)*seg_length-1]))
+##    returnlist.append(COMMA.join
+##                      (l_temp[multip*seg_length :
+##                              multip*seg_length+rem-1]))
+##    return returnlist
 
 
 def get_range(entryterm,
@@ -878,78 +879,6 @@ def select_func (entrylist):
             for a_temp in to_keep
             if a_temp in range(len(entrylist))]
 
-def show_list(entrylist,
-              label=EMPTYCHAR,
-              from_here=0,
-              to_here=40,
-              select=False,
-              func=dummy,
-              sfunc=select_func,
-              accumulate=False,
-              present=False,
-              columnwidth=None,
-              compactwidth=None):
-
-    """displays elements from_here to to-here of a list
-    in a note with label. Select if a selection is to be
-    made from the elements in the list
-    """
-
-    showlist = DisplayList(displayobject=display)
-    text = EMPTYCHAR
-    counter = 1
-
-    for log in entrylist:
-
-
-        funky = func(log)
-
-        #This is in order to handle very long number of indexes
-        if funky:
-            if isinstance(funky, str):
-                # func returns a simple string
-                # if there are only a few indexes,
-                # but otherwise it returns a list
-                text += (str(counter)+COLON+BLANK
-                         +funky+EOL)
-                # which is then carried over to the next line
-                #+((3-len(str(counter)))*BLANK)
-                       #  +BLANK+BLANK
-
-                counter += 1
-            else:   #for a list of indexes
-                text += str(counter)+COLON+BLANK+funky[0]+EOL
-
-                counter += 1
-                for f_temp in funky[1:]:
-                    # for subsequent lines
-                    text += f_temp + EOL
-    ##                    showlist.append(f_temp+EOL)
-
-    width = nformat.columns(text,   #formats as columns while appending to
-                            showlist,
-                            not_centered={0, 1, 2, 3, 4},
-                            columnwidth=columnwidth,
-                            compactwidth=compactwidth)
-
-    if not present:
-        showlist.show(from_here,
-                      to_here,
-                      nformat.center(label,
-                                     width+6))
-        if select:
-
-            return sfunc(entrylist)
-
-    if present and not accumulate:
-        showlist.present(header=label,
-                                centered=True)
-    if present and accumulate:
-        return showlist.present(header=label,centered=True,accumulate=True)
-        
-
-    return False
-
 
 def save_file(returntext=EMPTYCHAR,
               filename=EMPTYCHAR,
@@ -1029,7 +958,11 @@ def get_file_name(file_path=EMPTYCHAR,
 
         show_list(textlist,display_path+'\n'+\
                   (max([(int(len(file_path)/2))-5,0])*BLANK),0,20,
-                  select=True,func=zformat,sfunc=dummy,present=True)
+                  select=True,
+                  func=zformat,
+                  sfunc=dummy,
+                  present=True,
+                  display=display)
 
         return filelist,dirlist
     
@@ -4269,7 +4202,7 @@ class Note_Shelf:
                         +shown_indexes)
 
             returnlist = []
-            sp_temp = split_up_range(shown_indexes,seg_length=3)
+            sp_temp = rangelist.split_up_range(shown_indexes,seg_length=3)
             
                                         
             returnlist.append(abridge(x_temp[0],maxlength=20)
@@ -4329,7 +4262,8 @@ class Note_Shelf:
         accumulated_set = show_list(list_to_show,labels.KEYS[3:],0,30,
                                     func=dict_format,
                                     accumulate=True,
-                                    present=True)
+                                    present=True,
+                                    display=display)
         if accumulated_set:
             for a_temp in accumulated_set:
                 if int(a_temp)-1 < len(list_to_show) and int(a_temp)-1 > -1:
@@ -6186,7 +6120,8 @@ class Note_Shelf:
         show_list(all_dates,
                   alerts.KEYS_FOR_DATES,0,40,
                   func=dformat,present=True,
-                  compactwidth=(0,90,5))
+                  compactwidth=(0,90,5),
+                  display=display)
 
         
     def get_indexes(self,
@@ -6258,7 +6193,8 @@ class Note_Shelf:
             show_list(self.default_dict[save_list],
                       'INDEXES',0,40,
                       func=xformat,
-                      present=True)
+                      present=True,
+                      display=display)
 
         else:
             if self.indexchanges == 20:
@@ -6543,7 +6479,9 @@ class Note_Shelf:
 
                 show_list(self.default_dict[save_list],
                           'INDEXES',0,40,
-                          func=xformat,present=True)
+                          func=xformat,
+                          present=True,
+                          display=display)
             if not quick and shortshow:
                 self.abr_maxdepth_found = self.buf_abr_depth
                
@@ -6904,7 +6842,7 @@ class Note_Shelf:
                         
 
             returnlist = []
-            sp_temp = split_up_range(shown_indexes)
+            sp_temp = rangelist.split_up_range(shown_indexes)
             
                                         
             returnlist.append(x_temp[0].replace(VERTLINE,SLASH)[0:min([60,len(x_temp[0])])]
@@ -6914,7 +6852,11 @@ class Note_Shelf:
 
             return returnlist
 
-        show_list(field_text_list,alerts.FIELDS[3:],0,40,func=fld_format,present=True)
+        show_list(field_text_list,
+                  alerts.FIELDS[3:],0,40,
+                  func=fld_format,
+                  present=True,
+                  display=display)
 
     def show_search_log(self,
                         enterlist=None,
@@ -6952,7 +6894,7 @@ class Note_Shelf:
                         +VERTLINE+temp_st+VERTLINE)
 
             returnlist = []
-            sp_temp = split_up_range(shown_indexes)
+            sp_temp = rangelist.split_up_range(shown_indexes)
 
             if len(temp_st) > 30:
                 temp_st = temp_st[0:30] + PERIOD + PERIOD + PERIOD
@@ -6971,7 +6913,9 @@ class Note_Shelf:
         searchlogcopy.reverse()
 
         show_list(searchlogcopy,
-                  label, 0, 40, func=lformat)
+                  label, 0, 40,
+                  func=lformat,
+                  display=display)
 
         if query:
 
@@ -8768,7 +8712,8 @@ class Note_Shelf:
                                           from_here=0,
                                           to_here=len(possible_keys),
                                           label='KEYS',
-                                          select=True)
+                                          select=True,
+                                          display=display)
                     # show the keys through display
                     #object and select which are to be kept
                 possible_keys += input(queries.ADDITIONAL_KEYS).split(COMMA)
@@ -9075,194 +9020,6 @@ class Note_Shelf:
                         columnwidth=(4,10,15,50,15))
         notelist.present() 
         
-"""histogram"""
-
-import copy
-
-
-class histogram:
-
-
-
-    def __init__(self,displayobject,for_indexes=True):
-
-        
-
-        self.histo_dict = {}
-        self.displayobject = displayobject
-        self.for_indexes=for_indexes
-        self.database_mode = False
-
-    def load_dictionary(self,entrydictionary=None,flag="w"):
-
-        #flag 'w' for words
-        #flag 'k' for keys
-        #flag 't' for tags
-        global histo_word_dict,histo_tag_dict,histo_key_dict
-
-        if entrydictionary:
-
-            self.histo_dict = copy.deepcopy(entrydictionary)
-
-        else:
-
-            if 'w' in flag:
-
-                if not histo_word_dict or 'n' in flag:
-
-                    display.noteprint(('ATTENTION',
-                                       'Making temporary word dictionary!'))
-
-                    value_tuple = (notebookname,)
-                    db_cursor.execute("SELECT word "
-                                      +"FROM word_to_indexes "
-                                      +"WHERE notebook=?;",
-                                      value_tuple)
-                    fetched = db_cursor.fetchall()
-                    for word in fetched:
-
-                        value_tuple = (notebookname,word[0],)
-                        db_cursor.execute("SELECT note_index "
-                                          +"FROM word_to_indexes "
-                                          +"WHERE notebook=? and word=?;",
-                                          value_tuple)
-
-                        fetched = db_cursor.fetchall()
-                        if fetched:
-                            indexes = {index[0].strip() for index in fetched}
-                            self.histo_dict[word[0]] = indexes
-                    display.noteprint(('ATTENTION','Word dictionary finished!'))
-                    histo_word_dict = copy.deepcopy(self.histo_dict)
-                else:
-                    display.noteprint(('Using word dictionary'))
-                    self.histo_dict = histo_word_dict 
-
-            if 'k' in flag:
-
-                if not histo_key_dict or 'n' in flag:
-
-                    display.noteprint(('ATTENTION',
-                                       'Making temporary key dictionary!'))
-
-                    value_tuple = (notebookname,)
-                    db_cursor.execute("SELECT keyword"
-                                      +" FROM keys_to_indexes"
-                                      +" WHERE notebook=?;",
-                                      value_tuple)
-                    fetched = db_cursor.fetchall()
-                    for key in fetched:
-
-                        value_tuple = (notebookname,key[0],)
-                        db_cursor.execute("SELECT note_index "
-                                          +"FROM keys_to_indexes "
-                                          +"WHERE notebook=? and keyword=?;",
-                                          value_tuple)
-
-                        fetched = db_cursor.fetchall()
-                        if fetched:
-                            indexes = {index[0].strip() for index in fetched}
-                            self.histo_dict[key[0]] = indexes
-                    display.noteprint(('ATTENTION','Key dictionary finished!'))
-                    histo_key_dict = copy.deepcopy(self.histo_dict)
-                    
-
-                else:
-                    display.noteprint(('Using Existing Key Dictionary'))
-                    self.histo_dict = histo_key_dict 
-
-
-            if 't' in flag:
-
-                if not histo_tag_dict or 'n' in flag:
-                    display.noteprint(('ATTENTION',
-                                       'Making temporary tag dictionary!'))
-
-                    value_tuple = (notebookname,)
-                    db_cursor.execute("SELECT tag"
-                                      +" FROM tags_to_keys"
-                                      +" WHERE notebook=?;",value_tuple)
-                    fetched = db_cursor.fetchall()
-                    for tag in fetched:
-
-                        value_tuple = (notebookname,tag[0],)
-                        db_cursor.execute("SELECT keyword "
-                                          +"FROM tags_to_keys"
-                                          +" WHERE notebook=? and tag=?;",
-                                          value_tuple)
-
-                        fetched = db_cursor.fetchall()
-                        if fetched:
-                            keys = {key[0].strip() for key in fetched}
-                            self.histo_dict[tag[0]] = keys
-                    display.noteprint(('ATTENTION','Tag dictionary finished!'))
-                    histo_tag_dict = copy.deepcopy(self.histo_dict)
-
-                else:
-                    display.noteprint(('Using existing tag dctionary'))
-                    self.histo_dict = histo_tag_dict 
-
-                    
-        
-
-   
-
-    def contract(self,entrylist):
-
-        if entrylist:
-
-            entryset = set(entrylist)
-
-            for key in list(self.histo_dict.keys()):
-                self.histo_dict[key] = self.histo_dict[key].intersection(entryset)
-                if not self.histo_dict[key]:
-                    del self.histo_dict[key]
-
-    def implode (self,entrylist):
-
-        for key in list(self.histo_dict):
-            if key not in entrylist:
-                del self.histo_dict[key]
-
-
-    def show (self):
-
-
-        def dict_format(x_temp):
-
-            """formats output of the list of search results"""
-
-            if self.for_indexes:
-                shown_indexes = rangelist.range_find([Index(a_temp)
-                                                      for a_temp in x_temp[1]],
-                                                     reduce=True)
-            else:
-                shown_indexes = formkeys({abridge(index_reduce(x_temp),
-                                                      maxlength=20)
-                                              for x_temp in x_temp[1]})
-            
-                
-            if len(shown_indexes) < 20:
-                return (abridge(x_temp[0],maxlength=20)
-                        +VERTLINE
-                        +shown_indexes)
-
-            returnlist = []
-            sp_temp = split_up_range(shown_indexes,seg_length=3)
-            
-                                        
-            returnlist.append(abridge(x_temp[0],maxlength=20)
-                              +VERTLINE+sp_temp[0])
-            for s_temp in sp_temp[1:]:
-                returnlist.append(VERTLINE+s_temp)
-
-            return returnlist
-        
-        list_to_show = []
-        for key in sorted(self.histo_dict):
-            list_to_show.append((key,self.histo_dict[key]))
-        show_list(list_to_show,
-                  labels.CONCORDANCE,
-                  0, 30, func=dict_format, present=True)       
 
 class Configuration:
 
@@ -9611,6 +9368,9 @@ class Console (Note_Shelf):
         
 
         auto_database = True
+        self.histo_word_dict = None
+        self.histo_key_dict = None
+        self.histo_tag_dict = None
 
 ##        if self.using_shelf:
 ##            for suffix in ('d','k','t','w'):
@@ -10999,13 +10759,23 @@ class Console (Note_Shelf):
         d_temp = {'capkeys':0,
                   'upperkeys':1,
                   'lowerkeys':2}[mainterm]
+
+        
             
 
-        self.histio = histogram(displayobject=display)
+        self.histio = histogram(displayobject=display,
+                                db_connection_cursor=db_cursor,
+                                notebookname=notebookname)
         if not self.using_database:
-            self.histio.load_dictionary(entrydictionary=self.key_dict)
+            self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict = self.histio.load_dictionary(entrydictionary=self.key_dict,
+                                                                                                         histo_word_dict = self.histo_word_dict,
+                                                                                                         histo_key_dict = self.histo_key_dict,
+                                                                                                         histo_tag_dict = self.histo_tag_dict)
         else:
-            self.histio.load_dictionary(flag='k')
+            self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict = self.histio.load_dictionary(flag='k',
+                                                                                                         histo_word_dict = self.histo_word_dict,
+                                                                                                         histo_key_dict = self.histo_key_dict,
+                                                                                                         histo_tag_dict = self.histo_tag_dict)
         self.histio.implode(sort_keyset(self.keys())[d_temp])
         self.histio.show()
 
@@ -12236,24 +12006,50 @@ class Console (Note_Shelf):
     
         elif mainterm in ['histogram']:
 
-            self.histio = histogram(displayobject=display)
+            self.histio = histogram(displayobject=display,
+                                    db_connection_cursor=db_cursor,
+                                    notebookname=notebookname)
 
             if predicate[1]:
                 if not self.using_database:
-                    self.histio.load_dictionary(entrydictionary=self.key_dict)
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict  = \
+                                                self.histio.load_dictionary(entrydictionary=self.key_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 else:
-                    self.histio.load_dictionary(flag='t'+('n'*predicate[2]))
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                            self.histio.load_dictionary(flag='t'+('n'*predicate[2]),
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
             
             elif predicate[0]:
                 if not self.using_database:
-                    self.histio.load_dictionary(entrydictionary=self.key_dict)
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(entrydictionary=self.key_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 else:
-                    self.histio.load_dictionary(flag='k'+('n'*predicate[2]))
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(flag='k'+('n'*predicate[2]),
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
             else:                
                 if not self.using_database:
-                    self.histio.load_dictionary(entrydictionary=self.word_dict)
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(entrydictionary=self.word_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 else:
-                    self.histio.load_dictionary(flag='w'+('n'*predicate[2]))
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(flag='w'+('n'*predicate[2]),
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 
             self.histio.contract([str(x_temp) for x_temp in get_range(s_input('Range from / to',
                                                                               otherterms[0]),many=True)])
@@ -12271,11 +12067,22 @@ class Console (Note_Shelf):
                                                                               many=True)}                    
                     temp_keys = {x_temp for x_temp in self.keys() if self.get_indexes_for_key(x_temp).intersection(temp_range)}
                     temp_tags = {x_temp for x_temp in self.tags() if self.get_keys_for_tag(x_temp).intersection(temp_keys)}
-            self.histio = histogram(displayobject=display,for_indexes=False)
+            self.histio = histogram(displayobject=display,
+                                    for_indexes=False,
+                                    db_connection_cursor=db_cursor,
+                                    notebookname=notebookname)
             if not self.using_database:
-                self.histio.load_dictionary(entrydictionary=self.tag_dict)
+                self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                      self.histio.load_dictionary(entrydictionary=self.tag_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
             else:
-                self.histio.load_dictionary(flag='t')
+                self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                      self.histio.load_dictionary(flag='t',
+                                            histo_word_dict = self.histo_word_dict,
+                                            histo_key_dict = self.histo_key_dict,
+                                            histo_tag_dict = self.histo_tag_dict)
                 
             if temp_tags:
                 self.histio.implode(temp_tags)
@@ -13452,11 +13259,21 @@ class Console (Note_Shelf):
                 if predicate[3]:
                     implode_list += sort_keyset(self.keys())[2]
 
-                self.histio = histogram(displayobject=display)
+                self.histio = histogram(displayobject=display,
+                                        db_connection_cursor=db_cursor,
+                                        notebookname=notebookname)
                 if not self.using_database:
-                    self.histio.load_dictionary(entrydictionary=self.key_dict)
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(entrydictionary=self.key_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 else:
-                    self.histio.load_dictionary(flag='t')
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(flag='t',
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 self.histio.implode(implode_list)
 
                 if longphrase:
@@ -13471,11 +13288,21 @@ class Console (Note_Shelf):
                 self.histio.show()
 
             else:
-                self.histio = histogram(displayobject=display)
+                self.histio = histogram(displayobject=display,
+                                        db_connection_cursor=db_cursor,
+                                        notebookname=notebookname)
                 if not self.using_databse:
-                    self.histio.load_dictionary(entrydictionary=self.key_dict)
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(entrydictionary=self.key_dict,
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 else:
-                    self.histio.load_dictionary(flag='k')
+                    self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
+                                          self.histio.load_dictionary(flag='k',
+                                                histo_word_dict = self.histo_word_dict,
+                                                histo_key_dict = self.histo_key_dict,
+                                                histo_tag_dict = self.histo_tag_dict)
                 if longphrase:
                     self.histio.contract([str(x_temp) for x_temp in get_range(s_input('Range from? ',
                                                                                       otherterms[0]),
@@ -14875,9 +14702,9 @@ class Console (Note_Shelf):
                                                            new_date=str(datetime.datetime.now()))
                 self.project = self.project[0:-1]  
         elif mainterm in ['switch']:
-            histo_word_dict = None
-            histo_key_dict = None
-            histo_tag_dict = None
+            self.histo_word_dict = None
+            self.histo_key_dict = None
+            self.histo_tag_dict = None
             continuelooping = False
             close_notebook = False
             if longphrase:        
@@ -15368,7 +15195,8 @@ while bigloop:
                         show_list(allnotebooks[notebookname].default_dict['all'],
                                   'INDEXES',0,40,
                                   func=dummy,
-                                  present=True)
+                                  present=True,
+                                  display=display)
                     else:
                         allnotebooks[notebookname].default_dict['display'].present()
 

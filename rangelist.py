@@ -7,6 +7,28 @@ from globalconstants import EMPTYCHAR, DASH, COMMA, BLANK, COMMABLANK, SLASH, LO
 from indexclass import Index
 from indexutilities import index_reduce
 
+def split_up_range(string,
+                   seg_length=5):
+
+    """splits up the string with search result
+    output to allow it to be formatted for display
+    """
+
+    returnlist = []
+    l_temp = string.split(COMMA)
+    if len(l_temp) < seg_length:
+        return [COMMA.join(l_temp)]
+    multip = int(len(l_temp)/seg_length)
+    rem = len(l_temp)-(multip*seg_length)
+    for a_temp in range(multip):
+        returnlist.append(COMMA.join(l_temp[a_temp*seg_length:
+                                          (a_temp+1)*seg_length-1]))
+    returnlist.append(COMMA.join
+                      (l_temp[multip*seg_length :
+                              multip*seg_length+rem-1]))
+    return returnlist
+
+
 def de_range(range_string):
 
     """Takes a single formatted range and returns a list
