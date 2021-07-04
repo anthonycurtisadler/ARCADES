@@ -193,6 +193,12 @@ class Index:
         tl_temp[len(tl_temp)-1] = tl_temp[len(tl_temp)-1]+1
         return Index(tuple(tl_temp))
 
+    def is_next(self,other):
+        return self == other.next()
+
+    def is_child(self,other):
+        return self == other.child()
+
     def __int__(self):
 
         """Converts an index to the integer of the top level."""
@@ -240,10 +246,10 @@ class Index:
 
         la_temp = tuple(self.self)
         lb_temp = tuple(other.self)
-        if len(la_temp) == len(lb_temp)+1:
+        if len(la_temp) == len(lb_temp)+1:  
             return True
         return False
-
+            
     def level(self):
 
         """Returns the level or 'depth' of an Index."""

@@ -6,6 +6,12 @@ from itertools import product
 import datetime
 from displaylist import DisplayList
 from rangelist import range_find
+from indexorderer  import index_orderer
+
+
+ind_ord = index_orderer()
+
+
 
 
 def combine_sequence_values (keylist):
@@ -14,6 +20,9 @@ def combine_sequence_values (keylist):
        used with const_dict
        
     """
+
+    from indexclass import Index
+
     sequence_key_dict = {}
     other_key_set = set()
     returnlist = []
@@ -21,6 +30,13 @@ def combine_sequence_values (keylist):
     def all_numeric (l):
         for x in l:
             if not x.isnumeric():
+                return False
+        else:
+            return True
+
+    def all_float (l):
+        for x in l:
+            if not x.replace('.','').isnumeric() or x.count('.')>1:
                 return False
         else:
             return True 
@@ -56,11 +72,19 @@ def combine_sequence_values (keylist):
     for head in sequence_key_dict:
         if UNDERLINE not in head and POUND not in head and all_numeric(sequence_key_dict[head]):
             
-            
             all_values = range_find(list(sequence_key_dict[head]), breaker=';')
             returnlist.append(head+all_values)
-        else:
-            returnlist.append(head+', '.join(sorted(sequence_key_dict[head])))
+        elif UNDERLINE not in head and POUND not in head and all_float(sequence_key_dict[head]):
+            ordered_indexes = ind_ord.format([Index(x) for x in sequence_key_dict[head]])
+            returnlist.append(head+ordered_indexes)
+        elif UNDERLINE in head:            
+            ordered_indexes = ind_ord.format([Index(x) for x in sequence_key_dict[head]])
+            returnlist.append(head+ordered_indexes)
+        elif POUND in head:
+##            ordered_dates = ind_ord.format([datetime.datetime([int(y) for y in x.split('-')]) for x in sequence_key_dict[head]])
+##            returnlist.append(head+ordered_indexes)
+            pass
+            
     returnlist += list(other_key_set)
     return sorted(returnlist) 
     
