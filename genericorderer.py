@@ -1,4 +1,5 @@
-
+##For ordering a list into clusters of sequential values
+##Serves as metaclass for specialized ordering functions
 
 def successor (x,y):
     try:
@@ -8,14 +9,24 @@ def successor (x,y):
 
 successor = (successor,)
 
-def apply_all_funcs (x,y,funclist):
+def apply_all_funcs (value_tuple, funclist):
 
+    """Returns True is any one of the functions
+    in funclist returns True when applies to x and y
+    """
+    x = value_tuple[0][-1][-1]
+    y = value_tuple[1]
     for f in funclist:
         if f(x,y):
             return True
     return False
 
 class generic_orderer:
+
+    """Orders integers.
+       Specialize by specifying sortfunc and orderfuncs in
+       derived class.
+    """
 
 
     def __init__ (self,orderfuncs=successor,sortfunc=lambda x:x):
@@ -51,7 +62,7 @@ class generic_orderer:
         for x in self.entrylist:
             if not self.resultlist:
                 self.resultlist = [[x]]
-            elif apply_all_funcs(self.resultlist[-1][-1],x,self.orderfuncs):
+            elif apply_all_funcs((self.resultlist,x),self.orderfuncs):
                 self.resultlist[-1].append(x)
             else:
                 self.resultlist.append([x])
