@@ -170,7 +170,7 @@ show, s		|indexrange;levels to show |
  | /= show dates |
 inc | |incremental show
 indexes, ind, i	| |show indexes
-keys, key, k	|/$ histiogram.. |show keys
+keys, key, k	|/$ histogram.. |show keys
                 |/& all caps..  | =>COMMAND:?? 
                 |/* upperkeys..  | to feed back results
                 |/? lowerkeys  |
@@ -424,7 +424,7 @@ streams| |shows active display streams
 showstream|stream /? pause |display an active display stream
 deletestream|streamname {$ to suppress query}		|delete a display stream
 updatetags||updates the tags
-histiogram|/$ for keys                                  |generate a histiogram of words
+histogram|/$ for keys                                  |generate a histogram of words
 showuser	| |show the user
 negativeresults,| |include negative results with searches
 negresults,nr | |
