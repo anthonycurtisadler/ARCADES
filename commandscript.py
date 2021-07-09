@@ -137,6 +137,9 @@ deletekey,dk| |delete last default key
 deletedefaultkeys| |delete default keys
 clearkeys| |clear all default keys 
 grabkeys|indexrange.. /$ no all caps.. /& no first caps     |
+suspendkey|keys  |Suspend queried sequence key
+unsuspendkey|keys |Unsuspend queried sequence key
+clearsuspended|   |Clear all sequence keys 
 """
 
 NAVIGATION = """

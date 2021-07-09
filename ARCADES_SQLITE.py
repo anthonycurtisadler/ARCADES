@@ -5055,13 +5055,16 @@ class Note_Shelf:
             and gets other keys from projects 
             """
 
+            if self.suspended_sequences:
+                print('SUSPENDED: '+', '.join(self.suspended_sequences))
+
             for k_temp in sorted(usedefaultkeys*(self.defaults.get('defaultkeys'))
                                  +list(get_keys_from_projects())
                                  +list(keysetobject),
                                  key=lambda x:order_sequence_keys(x)):
                 if (not et
                     and ATSIGN in k_temp
-                    and QUESTIONMARK in k_temp):  #for sequence keywords with a question mark 
+                    and QUESTIONMARK in k_temp) and not k_temp in self.suspended_sequences:  #for sequence keywords with a question mark 
                     satisfied=False
                     while satisfied==False:
 
@@ -5070,94 +5073,98 @@ class Note_Shelf:
                                                                 input(k_temp.split(QUESTIONMARK)[0]
                                                                       +self.lastsequencevalue.show(k_temp)
                                                                       +QUESTIONMARK))
-                        for x_temp in xt_temp.split(COMMA):
-                            x_temp = self.default_dict['abbreviations'].undo(x_temp)
+                        if xt_temp == '/':
+                            self.suspended_sequences.add(k_temp)
+                            satisfied = True 
+                        else:
+                            for x_temp in xt_temp.split(COMMA):
+                                x_temp = self.default_dict['abbreviations'].undo(x_temp)
+                                
                             
-                        
-                            if not x_temp:
-                                satisfied = True
-                            elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences
-                                    if  (SLASH not in x_temp
-                                         and is_date(x_temp)) or (x_temp.count(SLASH)==1
-                                                                  and is_date(x_temp.split(SLASH)[0])
-                                                                  and is_date(x_temp.split(SLASH)[1])):
-                                        if SLASH not in x_temp:
-                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                            satisfied = True
-                                        elif x_temp.count(SLASH) == 1 and x_temp[-1] != SLASH:
-                                            keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,
-                                                                            'from'+ATSIGN+POUND
-                                                                            +x_temp.split(SLASH)[0]))
-                                            keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,
-                                                                            'to'+ATSIGN+POUND
-                                                                            +x_temp.split(SLASH)[1]))
-                                            satisfied = True 
+                                if not x_temp:
+                                    satisfied = True
+                                elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences
+                                        if  (SLASH not in x_temp
+                                             and is_date(x_temp)) or (x_temp.count(SLASH)==1
+                                                                      and is_date(x_temp.split(SLASH)[0])
+                                                                      and is_date(x_temp.split(SLASH)[1])):
+                                            if SLASH not in x_temp:
+                                                keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                                satisfied = True
+                                            elif x_temp.count(SLASH) == 1 and x_temp[-1] != SLASH:
+                                                keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,
+                                                                                'from'+ATSIGN+POUND
+                                                                                +x_temp.split(SLASH)[0]))
+                                                keysetobject.add(k_temp.replace(ATSIGN+POUND+QUESTIONMARK,
+                                                                                'to'+ATSIGN+POUND
+                                                                                +x_temp.split(SLASH)[1]))
+                                                satisfied = True 
 
-                            elif x_temp.replace(PERIOD,
-                                                EMPTYCHAR).replace(DASH,
-                                                                   EMPTYCHAR).replace(SLASH,
-                                                                                      EMPTYCHAR).isnumeric():
-                                #for indexes or floating sequences
-                                
-                                if ATSIGN + QUESTIONMARK in k_temp and 'page' not in k_temp:   #for floating sequences 
-                                    if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1
-                                                                     and x_temp.count(PERIOD) == 2):
+                                elif x_temp.replace(PERIOD,
+                                                    EMPTYCHAR).replace(DASH,
+                                                                       EMPTYCHAR).replace(SLASH,
+                                                                                          EMPTYCHAR).isnumeric():
+                                    #for indexes or floating sequences
+                                    
+                                    if ATSIGN + QUESTIONMARK in k_temp and 'page' not in k_temp:   #for floating sequences 
+                                        if x_temp.count(PERIOD) <= 1 or (x_temp.count(DASH) ==1
+                                                                         and x_temp.count(PERIOD) == 2):
+                                            if DASH not in x_temp or (x_temp.count(DASH)==1
+                                                                      and x_temp[0]==DASH):
+
+                                                keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                                satisfied = True
+                                            elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
+                                                keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
+                                                                                'from'+ATSIGN+x_temp.split(DASH)[0]))
+                                                keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
+                                                                                'to'+ATSIGN+x_temp.split(DASH)[1]))
+                                                satisfied = True
+
+                                    elif ATSIGN + QUESTIONMARK in k_temp and 'page' in k_temp:
+
                                         if DASH not in x_temp or (x_temp.count(DASH)==1
-                                                                  and x_temp[0]==DASH):
+                                                                      and x_temp[0]==DASH):
 
-                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                            satisfied = True
-                                        elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
-                                            keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
-                                                                            'from'+ATSIGN+x_temp.split(DASH)[0]))
-                                            keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
-                                                                            'to'+ATSIGN+x_temp.split(DASH)[1]))
-                                            satisfied = True
+                                                keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                                satisfied = True
 
-                                elif ATSIGN + QUESTIONMARK in k_temp and 'page' in k_temp:
+                                        elif x_temp.count(PERIOD) == 0 and x_temp.count(DASH) == 1:
 
-                                    if DASH not in x_temp or (x_temp.count(DASH)==1
-                                                                  and x_temp[0]==DASH):
+                                            from_temp, to_temp = x_temp.split(DASH)[0],x_temp.split(DASH)[1]
 
-                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                            satisfied = True
+                                            for val_temp in range(int(from_temp),int(to_temp)+1):
 
-                                    elif x_temp.count(PERIOD) == 0 and x_temp.count(DASH) == 1:
+                                                keysetobject.add(k_temp.replace(QUESTIONMARK,str(val_temp)))
+                                                satisfied = True
+                                         
+                                                                 
+                                       
+                                    elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
+                                        if PERIOD+PERIOD not in x_temp\
+                                           and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
+                                            if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
+                                                keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                                satisfied = True
+                                            elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
+                                                keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
+                                                                                'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
+                                                keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
+                                                                                'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
+                                                satisfied = True 
+                                                
 
-                                        from_temp, to_temp = x_temp.split(DASH)[0],x_temp.split(DASH)[1]
-
-                                        for val_temp in range(int(from_temp),int(to_temp)+1):
-
-                                            keysetobject.add(k_temp.replace(QUESTIONMARK,str(val_temp)))
-                                            satisfied = True
-                                     
-                                                             
-                                   
-                                elif ATSIGN + UNDERLINE + QUESTIONMARK in k_temp:  # for index sequences 
-                                    if PERIOD+PERIOD not in x_temp\
-                                       and x_temp[0] != PERIOD and x_temp[-1] != PERIOD:
-                                        if DASH not in x_temp or (x_temp.count(DASH)==1 and x_temp[0]==DASH):
-                                            keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                            satisfied = True
-                                        elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
-                                            keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
-                                                                            'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
-                                            keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
-                                                                            'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
-                                            satisfied = True 
-                                            
-
-                            else: # for text sequences
-                                
-                                if x_temp.count(DASH) == 2 and DASH+DASH in x_temp and x_temp[-1] != DASH:
-                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
-                                                                    'from'+ATSIGN+x_temp.split(DASH+DASH)[0]))
-                                    keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
-                                                                    'to'+ATSIGN+x_temp.split(DASH+DASH)[1]))
-                                    satisfied = True
-                                else:
-                                    keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
-                                    satisfied = True
+                                else: # for text sequences
+                                    
+                                    if x_temp.count(DASH) == 2 and DASH+DASH in x_temp and x_temp[-1] != DASH:
+                                        keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
+                                                                        'from'+ATSIGN+x_temp.split(DASH+DASH)[0]))
+                                        keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
+                                                                        'to'+ATSIGN+x_temp.split(DASH+DASH)[1]))
+                                        satisfied = True
+                                    else:
+                                        keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
+                                        satisfied = True
                                     
                 else:
                     keysetobject.add(k_temp)
@@ -9375,6 +9382,9 @@ class Console (Note_Shelf):
         self.histo_key_dict = None
         self.histo_tag_dict = None
 
+        self.suspended_sequences = set()
+            
+
 ##        if self.using_shelf:
 ##            for suffix in ('d','k','t','w'):
 ##                if not failed:
@@ -10874,12 +10884,32 @@ class Console (Note_Shelf):
 
         global override
 
-        if mainterm in ['fromtext']:
+        if mainterm in ['suspendkey']:
+            temp_buffer = []
+            for k_temp in otherterms[0].split(','):
+                self.suspended_sequences.add(k_temp.strip())
+                temp_buffer.append(k_temp)
+            display.noteprint(('SUSPENDED',', '.join(temp_buffer)))
+            display.noteprint(('SUSPENDED KEYS = ',', '.join(sorted(self.suspended_sequences))))
+        
+                
+        elif mainterm in ['unsuspendkey']:
+            temp_buffer = []
+            for k_temp in otherterms[0].split(','):
+                if k_temp.strip() in self.suspended_sequences:
+                    self.suspended_sequences.remove(k_temp.strip())
+                    temp_buffer.append(k_temp)
+            display.noteprint(('UNSUSPENDED',', '.join(temp_buffer)))
+            display.noteprint(('SUSPENDED KEYS = ',', '.join(sorted(self.suspended_sequences))))
+                    
+                
+
+        elif mainterm in ['fromtext']:
 
             self.defaults.set('fromtext',not self.defaults.get('fromtext'))
             display.noteprint(('FROM TEXT',str(self.defaults.get('fromtext'))))
             
-        if mainterm in ['reader']:
+        elif mainterm in ['reader']:
 
             self.reader = reader.Console()
             notes = self.reader.run()
@@ -10895,7 +10925,7 @@ class Console (Note_Shelf):
             
             
 
-        if mainterm in ['indexer']:
+        elif mainterm in ['indexer']:
             check_spelling_was = self.check_spelling
             if not predicate[1]:
                 #TO disable spelling
@@ -11008,11 +11038,11 @@ class Console (Note_Shelf):
                         
             self.check_spelling=check_spelling_was      
 
-        if mainterm in ['alphabets']:
+        elif mainterm in ['alphabets']:
 
             self.alphabet_manager.console()
             
-        if mainterm in ['tutorial']:
+        elif mainterm in ['tutorial']:
 
             self.tutor.start()
             display.noteprint(('ATTENTION!','TUTORIAL ACTIVATED'))
@@ -11023,7 +11053,7 @@ class Console (Note_Shelf):
             
             
 
-        if mainterm in ['starttutorial']:
+        elif mainterm in ['starttutorial']:
             self.tutor.all_tutorials()
             
         
@@ -11031,7 +11061,7 @@ class Console (Note_Shelf):
                 
             
 
-        if mainterm in ['test']:
+        elif mainterm in ['test']:
 
             animals = ['pig',
                        'sloth',
@@ -11066,13 +11096,13 @@ class Console (Note_Shelf):
                     print(temp_counter, end=' ')
                 temp_counter+=1
 
-        if mainterm in ['calculate']:
+        elif mainterm in ['calculate']:
             if self.calculator is None:
                 self.calculator = Calculator()
             self.calculator.console()
                 
 
-        if mainterm in ['truthtable']:
+        elif mainterm in ['truthtable']:
 
 
             display.noteprint(('TRUTH TABLE',TRUTHSCRIPT.replace('*','\n')),
@@ -11085,17 +11115,17 @@ class Console (Note_Shelf):
             
             
 
-        if mainterm in ['cleargeneralknowledge']:
+        elif mainterm in ['cleargeneralknowledge']:
         
 
             result = self.default_dict['generalknowledge'].clear()
 
-        if mainterm in ['reconstitutegeneralknowledge']:
+        elif mainterm in ['reconstitutegeneralknowledge']:
 
             if input('DO YOU WANT TO CREATE A NEW GENERAL KNOWLEDGE SHELF??') in ['yes']:
 
               self.choose_general_knowledge()
-        if mainterm in ['general','generalknowledge','gk']:
+        elif mainterm in ['general','generalknowledge','gk']:
 
             while True:
 
@@ -11106,13 +11136,13 @@ class Console (Note_Shelf):
                 if not query:
                     break
 
-        if mainterm in ['switchgeneralknowledge']:
+        elif mainterm in ['switchgeneralknowledge']:
             
             while True:
                 self.choose_general_knowledge()                                                                           
     
 
-        if mainterm in ['convertdefinitions']:
+        elif mainterm in ['convertdefinitions']:
             for x_temp in ['d','s','e']:
                 queries_dic = {'d':'Dividor?',
                                's':'Sequence key mark?',
@@ -11132,22 +11162,22 @@ class Console (Note_Shelf):
                                                     replace(EOL,'EOL').
                                                     replace(COMMA,'COMMA').
                                                     replace(COLON,'COLON')))
-        if mainterm in ['restoreallprojects']:
+        elif mainterm in ['restoreallprojects']:
             self.restore_projects(query=not predicate[0])
 
-        if mainterm in ['restoreproject']:
+        elif mainterm in ['restoreproject']:
             self.restore_project(project=s_input('Name of project?',
                                                  otherterms[0]),
                                  query=not predicate[0])
 
                 
-        if mainterm in ['newconvertmode']:
+        elif mainterm in ['newconvertmode']:
             ex_temp = s_input('New convert mode?',otherterms[0])
             if ex_temp not in self.default_dict['convert']:
                 self.default_dict['convert'][ex_temp] = Convert()
             display.noteprint(('/C/ Convert modes',
                                ', '.join(self.default_dict['convert'])))
-        if mainterm in ['switchconvertmode']:
+        elif mainterm in ['switchconvertmode']:
             ex_temp = s_input('convert mode?',
                               otherterms[0],
                               typeflag='str',
@@ -11159,7 +11189,7 @@ class Console (Note_Shelf):
                                                     replace(EOL,'EOL').
                                                     replace(COMMA,'COMMA').
                                                     replace(COLON,'COLON')))
-        if mainterm in ['showallconvertmodes']:
+        elif mainterm in ['showallconvertmodes']:
             display.noteprint(('ALL CONVERT MODES',
                                EOL.join([x_temp + ':'
                                          + '/'.join(self.default_dict['convert'][x_temp].show()).
@@ -11169,7 +11199,7 @@ class Console (Note_Shelf):
                                          for x_temp in self.default_dict['convert'].keys()])))
             
 
-        if mainterm in ['mainsequences']:
+        elif mainterm in ['mainsequences']:
 
             entry_temp = s_input(queries.MAIN_SEQUENCES,otherterms[0])
             if not entry_temp:
@@ -11191,7 +11221,7 @@ class Console (Note_Shelf):
                                labels.MAIN_SEQUENCES
                                +', '.join(self.default_dict['main_sequences'])))
 
-        if mainterm in ['seqformone']:
+        elif mainterm in ['seqformone']:
             entry_temp = s_input(queries.SEQ_FORM_ONE,
                                  otherterms[0],
                                  typeflag='str',
@@ -11233,7 +11263,7 @@ class Console (Note_Shelf):
                                replace('/NEW/',
                                        'NEW')))
 
-        if mainterm in ['seqformtwo']:
+        elif mainterm in ['seqformtwo']:
             
             entry_temp = s_input(queries.SEQ_FORM_TWO,otherterms[0])
             if entry_temp[0].lower() in ['e','l','b','n']:
@@ -11250,7 +11280,7 @@ class Console (Note_Shelf):
             display.noteprint((labels.SEQ_FORM_ONE,self.defaults.get('seqform2').
                                replace(EOL,' EOL ').
                                replace('/BREAK/',' BREAK ').replace('/NEW/',' NEW ')))
-        if mainterm in ['dictionaryload']:
+        elif mainterm in ['dictionaryload']:
             filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
                                     get_filename=otherterms[0])[0].rstrip()
@@ -11258,7 +11288,7 @@ class Console (Note_Shelf):
         
             self.dictionaryload(filename_temp)
 
-        if mainterm in ['language']:
+        elif mainterm in ['language']:
             lang_temp = s_input(queries.LANGUAGE_SELECT,
                                 otherterms[0],
                                 typeflag='str',
@@ -11269,7 +11299,7 @@ class Console (Note_Shelf):
                 self.speller.set_language(lang_temp)
                 
 
-        if mainterm in ['save']:
+        elif mainterm in ['save']:
             text_temp=s_input(queries.TEXT_TO_SAVE,otherterms[0])
             filename = s_input(queries.SAVE_TO_FILE,otherterms[1])
             if totalterms == 3:
@@ -11278,11 +11308,11 @@ class Console (Note_Shelf):
                 pathname = '/textfiles'
             save_file(text_temp,filename,pathname)
 
-        if mainterm in ['echo']:
+        elif mainterm in ['echo']:
             text_temp=s_input(queries.TEXT_TO_PRINT,otherterms[0])
             print(text_temp)
 
-        if mainterm in ['run']:
+        elif mainterm in ['run']:
             program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
             program = get_text_file(program_name,'\programs',suffix='.py')
             print(program)
@@ -11300,7 +11330,7 @@ class Console (Note_Shelf):
                 
                 
 
-        if mainterm in ['load']:
+        elif mainterm in ['load']:
 
             filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
                                           file_suffix='.txt', file_prefix=EMPTYCHAR,
@@ -11309,11 +11339,11 @@ class Console (Note_Shelf):
 
             self.text_result = get_text_file(filename_temp)
 
-        if mainterm in ['interpret']:
+        elif mainterm in ['interpret']:
             text_temp=s_input(queries.TEXT_TO_INTERPRET,otherterms[0])
             self.loadtext(text=text_temp)
 
-        if mainterm in ['runinterpret']:
+        elif mainterm in ['runinterpret']:
             program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
             program = get_text_file(program_name,'\programs',suffix='.py')
             print(program)
@@ -11331,7 +11361,7 @@ class Console (Note_Shelf):
             
             
 
-        if mainterm in ['invert']:
+        elif mainterm in ['invert']:
             temp_range = get_range(s_input(prompt=queries.RANGE_TO_FROM, inputtext=otherterms[0]),many=True)
 
             self.last_results = ', '.join([a_temp for a_temp in self.indexes()
