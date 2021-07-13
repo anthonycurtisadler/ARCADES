@@ -12949,12 +12949,12 @@ class Console (Note_Shelf):
                 
             if breakertext in BREAKTERMS + NEWTERMS or predicate[2] or predicate[3]:                
                 if predicate[2] or breaker in BREAKTERMS:
-                    if not predicate[0] or predicate[1]:
+                    if not predicate[0]:
                         breaker = breaker + BREAKNOTE
                     else:
                         breaker = BREAKNOTE + breaker 
                 if predicate[3] or breaker in NEWTERMS:
-                    if not predicate[0] or predicate[1]:
+                    if not predicate[0]:
                         breaker = breaker + NEWNOTE
                     else:
                         breaker = NEWNOTE + breaker
@@ -12969,8 +12969,8 @@ class Console (Note_Shelf):
                                                                    self.get_metadata_from_note(i_temp)['size']))
                 self.revise(i_temp,
                             oldindex_temp,
-                            infront = not predicate[0] or predicate[1],
-                            inback = predicate[0] or predicate[1],
+                            infront = not predicate[0],
+                            inback = predicate[0],
                             breaker=breaker)
 
         elif mainterm in ['helpall']:
@@ -14057,7 +14057,7 @@ class Console (Note_Shelf):
             mainterm = biginputterm.split(COLON)[0]
             longphrase = True
             for i_temp, term in enumerate(biginputterm.split(COLON)[1].split(SEMICOLON)):
-                otherterms[i_temp] = unformat_text_output(term)
+                otherterms[i_temp] = unformat_text_output(term).strip()
                 totalterms += 1
         else:
             # if a list of keywords 
