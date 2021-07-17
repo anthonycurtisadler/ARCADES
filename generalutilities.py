@@ -1,6 +1,6 @@
-from globalconstants import UNDERLINE, ATSIGN, \
+from globalconstants import BOX_CHAR, UNDERLINE, ATSIGN, \
      EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, \
-     POUND, STAR, DASH, PLUS
+     POUND, STAR, DASH, PLUS, TAB, SLASH, VERTLINE
 import nformat
 from itertools import product
 import datetime
@@ -11,8 +11,132 @@ from indexorderer  import index_orderer
 
 ind_ord = index_orderer()
 
+def dummy(x_temp):
 
 
+    """#dummy function to be passed as argument"""
+
+    return x_temp
+
+def vertical_display (enterlist,
+                      leftmargin=7):
+    """Specialized function for displaying a list"""
+
+    showlist = []
+    display = ''
+    maxlen = max([len(x_temp) for x_temp in enterlist])
+    addition = int(maxlen/len(enterlist))
+
+    for counter, el_temp in enumerate(enterlist):
+        showlist.append(str(counter) +
+                        (2-len(str(counter)))*BLANK+BOX_CHAR['h']
+                        +(counter*addition)*BLANK+el_temp)
+
+    maxlen = max([len(x_temp) for x_temp in showlist])
+    showlist = [x_temp + (maxlen - len(x_temp))*BLANK for x_temp in showlist]
+    maxlen = len(showlist[0])
+    
+    for y_temp in range(maxlen):
+        display += leftmargin * BLANK
+        for x_temp in range(len(showlist)):
+  
+                display += showlist[x_temp][y_temp] + VERTLINE
+        display += '\n'
+    return display
+
+
+def stack_input(query,stack_object):
+
+    """if the stack is not empty, pulls from the stack.
+    otherwise, queries use
+    """
+
+    if stack_object.size() > 0:
+        return stack_object.pop()
+    else:
+        return input (query)
+
+
+def modify_keys(keyset,
+                func=dummy,
+                strip=False):
+
+    """ Modifies keys in set by applying func"""
+
+    returnset = set()
+    for key in keyset:
+        key = func(key)
+        if strip:
+            key = key.strip()
+        returnset.add(key)
+    return returnset
+
+def remove_tags(keyset,
+                override=False):
+
+    """returns a set of keys with the tags removed"""
+    if override:
+        return keyset
+
+    returnset = set()
+    for k_temp in keyset:
+
+        if SLASH in k_temp:
+            k_temp = k_temp.split(SLASH)[0]
+        returnset.add(k_temp)
+
+    return returnset
+
+def sort_keyset(keyset):
+
+
+    """Divides a set of keys into three groups
+    and returns a tuple=(ALL CAPS, Capitalized, no caps)"""
+
+    value1 = [k_temp for k_temp
+              in keyset
+              if k_temp.upper() == k_temp]
+
+    value2 = [k_temp for k_temp in keyset
+              if k_temp.upper() != k_temp
+              and k_temp[0].upper() == k_temp[0]]
+
+    value3 = [k_temp for k_temp in keyset
+              if k_temp.upper() != k_temp
+              and k_temp[0].upper() != k_temp[0]]
+
+    return value1, value2, value3
+
+def reform_text(text):
+
+    """reformats text to get rid of tabs,
+    spaces between punctuation etc.
+    """
+
+    text = text.replace((PERIOD+BLANK)*3,
+                        PERIOD*3)
+    text = text.replace(PERIOD*3+BLANK,
+                        PERIOD*3)    
+    text = text.replace(BLANK*4,
+                        BLANK)    
+    for a_temp in range(4):
+        text = text.replace(BLANK*2,
+                            BLANK)
+        
+##    text = text.replace(PERIOD+BLANK,
+##                        PERIOD+EOL+TAB)
+    text = text.replace(TAB,
+                        BLANK*4)    
+    text = text.replace(EOL*3,
+                        EOL*2)
+
+    return text
+
+def remove_tag(key):
+
+    """removes a tag from a single key"""
+
+    return key.split(SLASH)[0]
 
 def combine_sequence_values (keylist):
 
@@ -249,12 +373,7 @@ def split_up_string(string,
 
 
 
-def dummy(x_temp):
 
-
-    """#dummy function to be passed as argument"""
-
-    return x_temp
 
 
 def isindex(entry):

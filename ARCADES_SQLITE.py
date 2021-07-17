@@ -61,7 +61,8 @@ except:
     print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
-     abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values
+     abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values, \
+     remove_tags, sort_keyset, reform_text, remove_tag, modify_keys, stack_input
 
 
      
@@ -401,39 +402,10 @@ def switchlanguage(language='ple'):
                                                    terms=defaultterms)
     
  
-def stack_input(query,stack_object):
-
-    """if the stack is not empty, pulls from the stack.
-    otherwise, queries use
-    """
-
-    if stack_object.size() > 0:
-        return stack_object.pop()
-    else:
-        return input (query)
 
 
 
-##def split_up_range(string,
-##                   seg_length=5):
-##
-##    """splits up the string with search result
-##    output to allow it to be formatted for display
-##    """
-##
-##    returnlist = []
-##    l_temp = string.split(COMMA)
-##    if len(l_temp) < seg_length:
-##        return [COMMA.join(l_temp)]
-##    multip = int(len(l_temp)/seg_length)
-##    rem = len(l_temp)-(multip*seg_length)
-##    for a_temp in range(multip):
-##        returnlist.append(COMMA.join(l_temp[a_temp*seg_length:
-##                                          (a_temp+1)*seg_length-1]))
-##    returnlist.append(COMMA.join
-##                      (l_temp[multip*seg_length :
-##                              multip*seg_length+rem-1]))
-##    return returnlist
+
 
 
 def get_range(entryterm,
@@ -1053,45 +1025,8 @@ def show_setting(message,
     else:
         display.noteprint((message,alerts.OFF))
 
-def modify_keys(keyset,
-                func=dummy,
-                strip=False):
 
-    """ Modifies keys in set by applying func"""
 
-    returnset = set()
-    for key in keyset:
-        key = func(key)
-        if strip:
-            key = key.strip()
-        returnset.add(key)
-    return returnset
-
-def vertical_display (enterlist,
-                      leftmargin=7):
-    """Specialized function for displaying a list"""
-
-    showlist = []
-    display = ''
-    maxlen = max([len(x_temp) for x_temp in enterlist])
-    addition = int(maxlen/len(enterlist))
-
-    for counter, el_temp in enumerate(enterlist):
-        showlist.append(str(counter) +
-                        (2-len(str(counter)))*BLANK+BOX_CHAR['h']
-                        +(counter*addition)*BLANK+el_temp)
-
-    maxlen = max([len(x_temp) for x_temp in showlist])
-    showlist = [x_temp + (maxlen - len(x_temp))*BLANK for x_temp in showlist]
-    maxlen = len(showlist[0])
-    
-    for y_temp in range(maxlen):
-        display += leftmargin * BLANK
-        for x_temp in range(len(showlist)):
-  
-                display += showlist[x_temp][y_temp] + VERTLINE
-        display += '\n'
-    return display
 
 def get_all_notebooks ():
 
@@ -1199,72 +1134,7 @@ def edit_keys (keyobject,
         
     return keyobject
 
-def remove_tags(keyset,
-                override=False):
 
-    """returns a set of keys with the tags removed"""
-    if override:
-        return keyset
-
-    returnset = set()
-    for k_temp in keyset:
-
-        if SLASH in k_temp:
-            k_temp = k_temp.split(SLASH)[0]
-        returnset.add(k_temp)
-
-    return returnset
-
-def sort_keyset(keyset):
-
-
-    """Divides a set of keys into three groups
-    and returns a tuple=(ALL CAPS, Capitalized, no caps)"""
-
-    value1 = [k_temp for k_temp
-              in keyset
-              if k_temp.upper() == k_temp]
-
-    value2 = [k_temp for k_temp in keyset
-              if k_temp.upper() != k_temp
-              and k_temp[0].upper() == k_temp[0]]
-
-    value3 = [k_temp for k_temp in keyset
-              if k_temp.upper() != k_temp
-              and k_temp[0].upper() != k_temp[0]]
-
-    return value1, value2, value3
-
-def reform_text(text):
-
-    """reformats text to get rid of tabs,
-    spaces between punctuation etc.
-    """
-
-    text = text.replace((PERIOD+BLANK)*3,
-                        PERIOD*3)
-    text = text.replace(PERIOD*3+BLANK,
-                        PERIOD*3)    
-    text = text.replace(BLANK*4,
-                        BLANK)    
-    for a_temp in range(4):
-        text = text.replace(BLANK*2,
-                            BLANK)
-        
-##    text = text.replace(PERIOD+BLANK,
-##                        PERIOD+EOL+TAB)
-    text = text.replace(TAB,
-                        BLANK*4)    
-    text = text.replace(EOL*3,
-                        EOL*2)
-
-    return text
-
-def remove_tag(key):
-
-    """removes a tag from a single key"""
-
-    return key.split(SLASH)[0]
 
 
 
