@@ -74,6 +74,7 @@ import nformat                                                          #pylint 
 from ninput import q_input, s_input                                     #pylint 10.0/10
 from indexclass import Index                                            #pylint 10.0/10
 from keyauto import KeyAuto
+from keypurge import KeyPurge
 from knowbase import KnowledgeBase                              #pylint  8.62/10
 from lexical import English_frequent_words
 import movingwindow
@@ -3501,7 +3502,9 @@ class Note_Shelf:
         if str(index) not in self.indexes():
             return [EMPTYCHAR, EMPTYCHAR]
 
-        keyset_temp = self.get_keys_from_note(index)
+        keyset_temp = self.get_keys_from_note(index) #fetches keyset
+
+        keyset_temp = self.keypurger.purge(keyset_temp,projects=set(self.default_dict['projects'].get_all_projects()))
         seq_keys = set()
         if self.defaults.get('sequences_in_text') and not shortform:
             oldkeys = set(keyset_temp)
@@ -9253,6 +9256,7 @@ class Console (Note_Shelf):
         self.histo_tag_dict = None
 
         self.suspended_sequences = set()
+        self.keypurger = KeyPurge()
             
 
 ##        if self.using_shelf:
@@ -10754,7 +10758,15 @@ class Console (Note_Shelf):
 
         global override
 
-        if mainterm in ['suspendkey']:
+        
+        if mainterm in ['setkeypurge']:
+
+            self.keypurger.permanent = set([x.strip() for x in otherterms[0].split(',')])
+            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
+            
+            
+        
+        elif mainterm in ['suspendkey']:
             temp_buffer = []
             for k_temp in otherterms[0].split(','):
                 self.suspended_sequences.add(k_temp.strip())
