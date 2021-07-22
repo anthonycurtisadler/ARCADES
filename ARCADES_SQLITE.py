@@ -7364,7 +7364,6 @@ class Note_Shelf:
         parsed_query = parser.parse(query) #Runs the parser on the query
                                            #To get a parsed object that
                                            #Can then be evaluated against the universe
-        print(parsed_query)
         
         if isinstance(parsed_query,str):
             parsed_query = [parsed_query]
@@ -8455,7 +8454,8 @@ class Note_Shelf:
         if no_allcaps and len(freq_list) > 3:
             freq_list = [a_temp for a_temp
                          in freq_list
-                         if not a_temp.isupper()]
+                         if not a_temp.isupper() and not '@' in a_temp]+[a_temp for a_temp
+                         in freq_list if a_temp.isupper() or not '@' in a_temp]
 ##        freq_list = sorted(freq_list, key=lambda x_temp: len(x_temp))
 ##        freq_list.reverse()
 
@@ -10758,13 +10758,22 @@ class Console (Note_Shelf):
 
         global override
 
+
+
         
-        if mainterm in ['setkeypurge']:
+        if mainterm in ['setsuppresskeys']:
 
             self.keypurger.permanent = set([x.strip() for x in otherterms[0].split(',')])
             display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
             
-            
+        elif mainterm in ['addsuppresskeys']:
+            self.keypurger.permanent.update([x.strip() for x in otherterms[0].split(',')])
+            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
+        elif mainterm in ['deletesuppresskeys']:
+            for x in otherterms[0].split(','):
+                
+                self.keypurger.permanent.remove(x.strip())
+            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
         
         elif mainterm in ['suspendkey']:
             temp_buffer = []
@@ -12993,7 +13002,10 @@ class Console (Note_Shelf):
                     
                     
                     display.noteprint(('TOTAL RESULTS for '+temp_notebook+'!',str(len(sr_temp[1]))))
-
+                    self.keypurger.temporary = sr_temp[2]
+                    display.noteprint(('FOUND KEYWORDS',', '.join(self.keypurger.temporary)))
+                    
+                    
                     if predicate[0] or input('SHOW RESULTS?') in YESTERMS:
 
 ##                        self.last_results = rangelist.range_find([Index(a_temp)
@@ -13042,6 +13054,8 @@ class Console (Note_Shelf):
 ##                                                         for a_temp in sr_temp[1] if a_temp!=0]).replace(LONGDASH,SLASH)
                 self.last_results = ', '.join(x for x in sr_temp[1])
                 self.last_found_terms = sr_temp[2]
+                self.keypurger.temporary = sr_temp[2]
+                display.noteprint(('FOUND KEYWORDS',', '.join(self.keypurger.temporary)))
                 
 
                 display.noteprint((labels.RESULT_FOR
@@ -14677,7 +14691,7 @@ class Console (Note_Shelf):
             self.dd_changed = False
 
         db_connection.commit()
-        self.text_result = format_text_output(self.text_result)
+        self.text_result = format_text_output(str(self.text_result))
 
         return continuelooping, \
                skipped, lastup, next_up, \
