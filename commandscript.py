@@ -232,10 +232,18 @@ ahowdatedictpurge |/$ ym .& ymd /* add hour  |
 cleardatedict   |/$year.. /&month.. /*day.. /&hour..                    |clear date chart 
 changedet       |determinant                                    |change determinant
 showdet         |                                               |show determinants 
-setpurgekeys    |/$ allcaps.. /& upper.. /& lower..                   |set keys to pyrfe when showing date  
-                |spec[=aul].terms                               |
-clearpurgekeys  |                                               |clear purge keys 
-showpurgekeys   |                                               |show purge keys 
+setpurgekeys    |/$ allcaps.. /& upper.. /& lower..                   |set keys to purge when showing date  
+                |[~][aulns]VERTLINE term1,term2,etc.            |
+                |  | Each term can be a searchable term (e.g. *ism)
+                |  | OR #ALLCAPS#,#CAPS#,#LOWER#,#NUMSEQ#,
+                |  | #ALLSEQ#, #NONPS#, #PROJ#,
+                |  | #INDSEQ#, #STRSEQ#, #DATSEQ#
+setsuppresskeys |  | SETS keywords that are suppressed
+clearpurgekeys, clearsuppresskeys  |                                               |clear purge keys
+addsuppresskeys, deletesuppresskeys |
+
+showpurgekeys, showsuppresskeys  |                                               |show purge keys 
+cleartempsuppresskeys |  |
 searchlog       |                                               |show the search log
 clearlog,       |                                               |clear the search log 
 clearsearchlog  |                                               |

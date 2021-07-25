@@ -40,7 +40,10 @@ class histogram:
                         flag="w",
                         histo_word_dict = None,
                         histo_key_dict = None,
-                        histo_tag_dict = None):
+                        histo_tag_dict = None,
+                        projects=None,
+                        func=lambda x,y:x,
+                        truncatespecs=''): #idnta  index date number text all
 
         #flag 'w' for words
         #flag 'k' for keys
@@ -48,6 +51,31 @@ class histogram:
         self.histo_word_dict = histo_word_dict
         self.histo_key_dict =  histo_key_dict
         self.histo_tag_dict =  histo_tag_dict
+        print('TRUNCATING: ',truncatespecs)
+        
+        
+        def trunckey (x):
+
+            if '@' not in x:
+                return x
+            else:
+                for spec in truncatespecs:
+
+                    if spec == 'p' and x.split('@')[0] in projects:
+                        return x.split('@')[0]+'@'
+                    elif spec == 'i' and '@_' in x:  #For index sequences
+                        return  x.split('@_')[0]+'@'
+                    elif spec == 'd' and '@#' in x: #Dor date sequences 
+                        return x.split('@#')[0]+'@'  #For numeric 
+                    elif ((spec == 'n' and x.split('@')[1].replace('.','').isnumeric()) or
+                          (spec in ['t'] and not x.split('@')[1].replace('.','').isnumeric()) or
+                          (spec in ['a'])): #For others 
+                        return x.split('@')[0]+'@'
+            return x
+                          
+
+                    
+                
 
         if entrydictionary:
 
@@ -99,9 +127,9 @@ class histogram:
                                       +" WHERE notebook=?;",
                                       value_tuple)
                     fetched = self.db_connection_cursor.fetchall()
-                    for key in fetched:
+                    for key in func([x[0] for x in fetched],projects):
 
-                        value_tuple = (self.notebookname,key[0],)
+                        value_tuple = (self.notebookname,key,)
                         self.db_connection_cursor.execute("SELECT note_index "
                                           +"FROM keys_to_indexes "
                                           +"WHERE notebook=? and keyword=?;",
@@ -110,7 +138,7 @@ class histogram:
                         fetched = self.db_connection_cursor.fetchall()
                         if fetched:
                             indexes = {index[0].strip() for index in fetched}
-                            self.histo_dict[key[0]] = indexes
+                            self.histo_dict[trunckey(key)] = indexes
                     self.displayobject.noteprint(('ATTENTION','Key dictionary finished!'))
                     self.histo_key_dict = copy.deepcopy(self.histo_dict)
                     

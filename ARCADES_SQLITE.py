@@ -89,7 +89,7 @@ from plainenglish import Queries, Alerts, Labels, Spelling, DefaultConsoles,\
      QUITTERMS, SHOWTERMS, DELETETERMS, CLEARTERMS, binary_settings, simple_commands
 import presets
 from projectmanager import ProjectManager
-from purgekeys import PurgeKeys 
+##from purgekeys import PurgeKeys 
 import rangelist                                                        #pylint 9.68/10
 import reader 
 from registry import Registry
@@ -5960,8 +5960,10 @@ class Note_Shelf:
     def show_date_dictionary (self,
                               dictionaryobject=None,
                               determinant='ym',
-                              func=combine_sequence_values,
-                              prefix=EMPTYCHAR):
+                              func=dummy,
+                              functwo=combine_sequence_values,
+                              prefix=EMPTYCHAR,
+                              projects=None):
 
         """ Takes a date-dictionary and displays it
             The date-dictionary has dates for keys, and contains
@@ -5982,9 +5984,12 @@ class Note_Shelf:
             if len(x_temp)>1:
                 i_temp = x_temp[1]
             x_temp = x_temp[0]
-            
-            
-            keys = formkeys(func(dictionaryobject[xx_temp])).replace(UNDERLINE,BLANK)
+
+            if projects:
+                temp_res = func(dictionaryobject[xx_temp],projects)
+            else:
+                temp_res = func(dictionaryobject[xx_temp])
+            keys = formkeys(functwo(temp_res)).replace(UNDERLINE,BLANK)
             if 'VOID' in keys:
                 return None
             if len(keys) < 20:
@@ -9543,7 +9548,7 @@ class Console (Note_Shelf):
                                                       for x_temp
                                                       in self.indexes()])
         if  not self.defaults.contains('purge'):
-            self.default_dict['purge'] = PurgeKeys(),
+            self.default_dict['purge'] = KeyPurge()
         
         if self.purge_objects or 'generalknowledge' not in self.default_dict:
 
@@ -10495,18 +10500,44 @@ class Console (Note_Shelf):
             display.noteprint((labels.DETERMINANT,self.defaults.get('determinant')))
         elif mainterm in ['showdeterminant','showdet']:
             display.noteprint((labels.DETERMINANT,self.defaults.get('determinant')))
+
+        elif mainterm in ['addsuppresskeys']:
+            self.keypurger.permanent.update([x.strip() for x in otherterms[0].split(',')])
+            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
+        elif mainterm in ['deletesuppresskeys']:
+            for x in otherterms[0].split(','):
+                
+                self.keypurger.permanent.remove(x.strip())
+            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
+
+        elif mainterm in ['clearsuppresskeys']:
+            self.keypurger.clear()
+            display.noteprint(('KEYS TO SUPPRESS',self.default_dict['purge'].show()))
+            
             
         elif mainterm in ['clearpurgekeys']:
             self.default_dict['purge'].clear()
             display.noteprint((labels.PURGE_KEYS,self.default_dict['purge'].show()))
             self.dd_changed=True
-        elif mainterm in ['setpurgekeys']:
+        elif mainterm in ['setpurgekeys','setsuppresskeys']:
+            if mainterm in ['setpurgekeys']:
+                purgeobject = self.default_dict['purge']
+            else:
+                
+                purgeobject = self.keypurger
             e_temp=s_input(queries.SPECS,otherterms[0].strip())
             termset = set()
             spec_temp = EMPTYCHAR
             if e_temp:
 
-                if len(e_temp)<6 and VERTLINE not in e_temp:
+                if e_temp[0] == '~':
+                    e_temp = e_temp[1:]
+                    purgeobject.invert(True)
+                else:
+                    purgeobject.invert(False)
+                        
+
+                if len(e_temp)<4 and VERTLINE not in e_temp:
                     spec_temp = e_temp
                     e_temp = EMPTYCHAR
                     
@@ -10514,20 +10545,30 @@ class Console (Note_Shelf):
                     spec_temp = e_temp.split(VERTLINE)[0]
                     e_temp = e_temp.split(VERTLINE)[1]
                 
+
+                
+                
                 if e_temp:
-                    termset = self.new_search(e_temp,onlyterms=True)
-                    self.default_dict['purge'].load(termset)
 
-            self.default_dict['purge'].allcaps(predicate[0] or 'a' in spec_temp)
-            self.default_dict['purge'].caps(predicate[1] or 'u' in spec_temp)
-            self.default_dict['purge'].lower(predicate[2] or 'l' in spec_temp)
-            self.default_dict['purge'].numbers(predicate[3] or 'n' in spec_temp)
-            self.default_dict['purge'].sequences(predicate[4] or 's' in spec_temp) 
+                    for tt in e_temp.split(','):
+                        if (tt.strip() and tt.strip()[0]!='#'):
+                            termset = self.new_search(tt.strip(),onlyterms=True)
+                            purgeobject.load(termset)
+                        elif tt.strip():
+                            purgeobject.load({tt})
 
-            display.noteprint((labels.PURGEKEYS,self.default_dict['purge'].show()))
+            purgeobject.allcaps(predicate[0] or 'a' in spec_temp)
+            purgeobject.caps(predicate[1] or 'u' in spec_temp)
+            purgeobject.lower(predicate[2] or 'l' in spec_temp)
+            purgeobject.numbers(predicate[3] or 'n' in spec_temp)
+            purgeobject.sequences(predicate[4] or 's' in spec_temp) 
+
+            display.noteprint((labels.PURGEKEYS,purgeobject.show()))
             self.dd_changed=True
         elif mainterm  in ['showpurgekeys']:
             display.noteprint((labels.PURGEKEYS,self.default_dict['purge'].show()))
+        elif mainterm in ['showsuppresskeys']:
+            display.noteprint((labels.PURGEKEYS,self.keypurger.show()))
             
     def spelling_com (self,
                       mainterm=EMPTYCHAR,
@@ -10761,21 +10802,9 @@ class Console (Note_Shelf):
 
 
         
-        if mainterm in ['setsuppresskeys']:
-
-            self.keypurger.permanent = set([x.strip() for x in otherterms[0].split(',')])
-            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
-            
-        elif mainterm in ['addsuppresskeys']:
-            self.keypurger.permanent.update([x.strip() for x in otherterms[0].split(',')])
-            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
-        elif mainterm in ['deletesuppresskeys']:
-            for x in otherterms[0].split(','):
-                
-                self.keypurger.permanent.remove(x.strip())
-            display.noteprint(('KEYS TO PURGE FROM DISPLAY',', '.join(self.keypurger.permanent)))
         
-        elif mainterm in ['suspendkey']:
+        
+        if mainterm in ['suspendkey']:
             temp_buffer = []
             for k_temp in otherterms[0].split(','):
                 self.suspended_sequences.add(k_temp.strip())
@@ -11760,7 +11789,8 @@ class Console (Note_Shelf):
 
         elif mainterm in ['testdate']:
             self.find_dates_for_keys_in_indexes(determinant='ymd')
-            self.show_date_dictionary(determinant='ymd')
+            self.show_date_dictionary(determinant='ymd',
+                                      func=self.default_dict['purge'].apply)
 
         elif mainterm in ['changeuser']:
             display.noteprint(('USER',
@@ -11930,6 +11960,7 @@ class Console (Note_Shelf):
     
         elif mainterm in ['histogram']:
 
+
             self.histio = histogram(displayobject=display,
                                     db_connection_cursor=db_cursor,
                                     notebookname=notebookname)
@@ -11960,7 +11991,10 @@ class Console (Note_Shelf):
                                           self.histio.load_dictionary(flag='k'+('n'*predicate[2]),
                                                 histo_word_dict = self.histo_word_dict,
                                                 histo_key_dict = self.histo_key_dict,
-                                                histo_tag_dict = self.histo_tag_dict)
+                                                histo_tag_dict = self.histo_tag_dict,
+                                                projects=set(self.default_dict['projects'].get_all_projects()),
+                                                func=self.keypurger.purge,
+                                                truncatespecs=otherterms[1])
             else:                
                 if not self.using_database:
                     self.histo_word_dict, self.histo_key_dict, self.histo_tag_dict =\
@@ -12388,7 +12422,9 @@ class Console (Note_Shelf):
                                                                                 otherterms[0]),
                                                                         many=True)],
                                                 determinant=determinant,flag=flag)
-            self.show_date_dictionary(determinant=determinant)
+            self.show_date_dictionary(determinant=determinant,
+                                      func=self.default_dict['purge'].apply,
+                                      projects=set(self.default_dict['projects'].get_all_projects()))
         elif mainterm in ['showdatedict']:
             determinant = EMPTYCHAR
             if predicate[0] or predicate[1] or predicate[2] or predicate[3] or predicate[4]: 
@@ -12409,7 +12445,9 @@ class Console (Note_Shelf):
             else:
                 determinant = self.defaults.get('determinant')
                 
-            self.show_date_dictionary(determinant=determinant)
+            self.show_date_dictionary(determinant=determinant,
+                                      func=self.default_dict['purge'].apply,
+                                      projects=set(self.default_dict['projects'].get_all_projects()))
             
         elif mainterm in ['actdet','activedet']:
             display.noteprint((labels.DETERMINANT,
@@ -12469,7 +12507,9 @@ class Console (Note_Shelf):
                 self.dd_changed=True
 
 
-            self.show_date_dictionary(determinant=determinant,func=self.default_dict['purge'].apply)
+            self.show_date_dictionary(determinant=determinant,
+                                      func=self.default_dict['purge'].apply,
+                                      projects=set(self.default_dict['projects'].get_all_projects()))
 
         elif mainterm in ['grabkeys', 'grabdefaultkeys', 'grabautokeys']:
             grabrange = get_range(s_input(queries.RANGE_FROM+BLANK,
