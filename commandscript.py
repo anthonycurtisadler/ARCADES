@@ -435,7 +435,9 @@ streams| |shows active display streams
 showstream|stream /? pause |display an active display stream
 deletestream|streamname {$ to suppress query}		|delete a display stream
 updatetags||updates the tags
-histogram|/$ for keys                                  |generate a histogram of words
+histogram|indexrange;truncatespec=[p][i][d][n][t][a]
+          /$ for keys   /& for tags                             |generate a histogram of words
+         |* to create a new dictionary    
 showuser	| |show the user
 negativeresults,| |include negative results with searches
 negresults,nr | |
