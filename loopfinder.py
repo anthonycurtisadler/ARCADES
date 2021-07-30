@@ -28,26 +28,28 @@ class LoopFinder:
      def find_cycle (self,node=None):
 
           starting_node = node
+          done_nodes = set()
           seed_nodes = set(self.all_nodes[node].send())
+          done_nodes.add(node)
           if not seed_nodes:
                return {node}
 
 
-          done_nodes = seed_nodes
+          
           counter = 0
 
-          while True:
+          while seed_nodes:
                
-               seed_nodes_copy = set(seed_nodes)
                counter += 1
                for s_n in list(seed_nodes):
+                    done_nodes.add(s_n)
+                    seed_nodes.remove(s_n)
                     new_nodes = set(self.all_nodes[s_n].send())                    
-                    for n_n in new_nodes-set(done_nodes):
-                              done_nodes.add(n_n)
-                              seed_nodes.update(set(self.all_nodes[n_n].send()))
+                    for n_n in new_nodes:
+                              if n_n not in done_nodes:
+                                   done_nodes.add(n_n)
+                                   seed_nodes.add(n_n)
 
-               if not len(seed_nodes_copy) < len(seed_nodes):
-                    break
 
           return sorted(done_nodes)
 
