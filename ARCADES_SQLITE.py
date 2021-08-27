@@ -4941,14 +4941,25 @@ class Note_Shelf:
                     satisfied=False
                     while satisfied==False:
 
-                        
-                        xt_temp = self.lastsequencevalue.change(k_temp,
-                                                                input(k_temp.split(QUESTIONMARK)[0]
-                                                                      +self.lastsequencevalue.show(k_temp)
-                                                                      +QUESTIONMARK))
+                        def remove_final_slash (x):
+
+                            if x.endswith('/'):
+                                return x[0:-1]
+                            else:
+                                return x
+                            
+
+                        xt_temp = input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK)
+
+                        self.lastsequencevalue.change(k_temp,remove_final_slash(xt_temp))
+                        if xt_temp != '/' and xt_temp.endswith('/'):
+                            self.suspended_sequences.add(k_temp)
+                            self.defaults.set('defaultkeys',self.defaults.get('defaultkeys')+[k_temp.split('@')[0]+'@'+xt_temp[0:-1]])
+                            satisfied = True
+                            xt_temp = remove_final_slash(xt_temp)
                         if xt_temp == '/':
                             self.suspended_sequences.add(k_temp)
-                            satisfied = True 
+                            satisfied = True
                         else:
                             for x_temp in xt_temp.split(COMMA):
                                 x_temp = self.default_dict['abbreviations'].undo(x_temp)
