@@ -393,6 +393,9 @@ changecommandmacros| |change commandmacros
 changekeydefinitions| |change definitions
 | |Used to automatically assign keys with loadbyparagraph
 changeknowledge| |change knowledgebase
+changeequivalences| |change equivalences
+yieldequivalences|  |suspects or unsuspends automatic yielding
+    | |of equivalences during searches
 changegeneralknowledge| |change general knowledge
 ||
 defaultcodes| |load codes embedded with kw CODES

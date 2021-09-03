@@ -59,6 +59,7 @@ try:
     from indexer import Index_Maker
 except:
     print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
+from equivalences import Equivalences
 from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values, \
@@ -1426,10 +1427,17 @@ class Note_Shelf:
                     tags = [key.split(SLASH)[1]]
                 tagkey = key.split(SLASH)[0]
                 for tag in tags:
-                    if EQUAL in tag:
+                    if RIGHTBRACKET in tag:
 
-                        definitions = tag.split(EQUAL)[1:]
-                        tag = tag.split(EQUAL)[0]
+                        definitions = tag.split(RIGHTBRACKET)[1:]
+                        tag = tag.split(RIGHTBRACKET)[0]
+
+                        if EQUAL in tag:
+                            equivalent_terms = tag.split('=')
+                            tag = equivalent_terms[0]
+                            display.noteprint(('ADDING EQUIVALENTS',', '.join(equivalent_terms)))
+                            self.default_dict['equivalences'].new_class(equivalent_terms)
+                        
                         definitions = [tag]+definitions
                         if len(definitions) > 1:
                             for r in range(0, len(definitions)-1):
@@ -1461,8 +1469,12 @@ class Note_Shelf:
                     else:
                         tags = [key.split(SLASH)[1]]
                     tagkey = key.split(SLASH)[0]
+                    if EQUAL in tagkey:
+                        tagkey, equivalent_terms = tagkey.split(EQUAL)[0], tagkey.split(EQUAL)
+                        display.noteprint(('ADDING EQUIVALENTS',', '.join(equivalent_terms)))
+                        self.default_dict['equivalences'].new_class(equivalent_terms)
                     for tag in tags:
-                        key = tagkey+SLASH+tag.split(EQUAL)[0]
+                        key = tagkey+SLASH+tag.split(RIGHTBRACKET)[0].split(EQUAL)[0]
                         newkeyset.add(key)
                     
                         if self.key_dict_contains(key):
@@ -1474,6 +1486,10 @@ class Note_Shelf:
                 else:
                     # If there are no tags
 
+                    if EQUAL in key:
+                        key, equivalent_terms = key.split(EQUAL)[0], key.split(EQUAL)
+                        display.noteprint(('ADDING EQUIVALENTS',', '.join(equivalent_terms)))
+                        self.default_dict['equivalences'].new_class(equivalent_terms)
                     
                     newkeyset.add(key)
                     if self.key_dict_contains(key):
@@ -7168,10 +7184,19 @@ class Note_Shelf:
         def expand_term_list(termlist):
 
             """expand the list of search terms according to the type of query """
+            def compound (func,entry_list,append=False):
+
+                    returnlist = []
+                    for x in entry_list:
+                        if not append:
+                            returnlist += func(x)
+                        else:
+                            returnlist.append(func(x))
+                    return returnlist 
 
             returnlist = []
             for term in termlist:
-                
+ 
                 qualifier = ''
 
                 if term.count('"')==2:
@@ -7179,29 +7204,35 @@ class Note_Shelf:
                     term = EMPTYCHAR.join([term.split('"')[0],term.split('"')[2]])
                 brackets = False
                 tilda = False
+                
 
                 if DOLLAR in term:
                     returnlist.append(term)
 
-                elif term[0] in [POUND, CARET] and term[1:].replace(TILDA,EMPTYCHAR) in self.tags():
+                elif term[0] in [POUND, CARET] and compound(lambda x:x in self.tags(),self.default_dict['equivalences'].fetch(term[1:].replace(TILDA,EMPTYCHAR)),append=True):
                     #    #TAG search for a tag
-                    returnlist += [a_temp+SLASH+term[1:]
-                                   for a_temp
-                                   in self.get_keys_for_tag(term[1:])]+[a_temp
-                                                                for a_temp
-                                                                in self.get_keys_for_tag(term[1:])]
+                    for t in self.default_dict['equivalences'].fetch(term[1:].replace(TILDA,EMPTYCHAR)):
+                        returnlist += [a_temp+SLASH+t
+                                       for a_temp
+                                       in self.get_keys_for_tag(t)]+[a_temp
+                                                                    for a_temp
+                                                                    in self.get_keys_for_tag(t)]
+
 
                     # 1) adds keys+tags 2) adds keys without tags
-                elif (term[:2] == '##' and self.default_dict['knower'].learned(term[2:])
-                        and self.default_dict['knower'].genus(term[2:]) is True):
-                    definitionlist = self.default_dict['knower'].reveal(term[2:])
+
+                    
+                
+                elif ((term[:2] == '##' and True in compound(self.default_dict['knower'].learned,self.default_dict['equivalences'].fetch(term[2:]),append=True)
+                        and True in compound(self.default_dict['knower'].genus,self.default_dict['equivalences'].fetch(term[2:]),append=True))):
+                    definitionlist = compound(self.default_dict['knower'].reveal,self.default_dict['equivalences'].fetch(term[2:]))
+                    
                     for d_temp in definitionlist:
                         if self.tag_dict_contains(d_temp):
 
                             returnlist += [a_temp+SLASH+d_temp
                                            for a_temp in self.get_keys_for_tag(d_temp)]\
                                            +[a_temp for a_temp in self.get_keys_for_tag(d_temp)]
-
                 else:
                     #if / is in the term, then separate it into word and suffixes
                     if SLASH in term:
@@ -7237,14 +7268,31 @@ class Note_Shelf:
                     #generate all possible combinations
                     # of l list and r list.
 
-            middlelist, returnlist = returnlist, []
+            
+
+            middlelist, returnlist = list(returnlist), []
 
             for term in middlelist:
                 if term[0] == DOLLAR:
                     returnlist += [x+qualifier for x in self.default_dict['keymacros'].get_definition(term[1:])]
+                if term[0] == PLUS:
+                    returnlist += [x+qualifier for x in self.default_dict['equivalences'].fetch(term[1:],override=True)]
+                    
                 else:
                     returnlist += [term+qualifier]
-            return returnlist
+
+            finalreturnlist = []
+            for term in returnlist:
+
+                if self.default_dict['equivalences'].exists(term):
+                    finalreturnlist += list(self.default_dict['equivalences'].fetch(term))
+                else:
+                    finalreturnlist.append(term)
+            
+            
+
+            
+            return finalreturnlist
 
         ##beginning of the main routine##
 
@@ -9892,6 +9940,8 @@ class Console (Note_Shelf):
                                                                                  filename={2:self.filename,
                                                                                            1:'GENERALKNOWLEDGE'}[int(i_temp)],
                                                                          using_shelf=True,using_database=False)
+
+            
         elif i_temp in ('3'):
 
             self.default_dict['generalknowledge'] = GeneralizedKnowledge(using_shelf=False,using_database=False)
@@ -9902,6 +9952,11 @@ class Console (Note_Shelf):
                                                                  filename={4:self.filename,
                                                                            5:'GENERALKNOWLEDGE'}[int(i_temp)],using_shelf=False,using_database=True)
 
+
+            
+            self.default_dict['equivalences'] = Equivalences(directoryname=self.directoryname,
+                                                            filename={4:self.filename,
+                                                                      5:'GENERALKNOWLEDGE'}[int(i_temp)])
     ## functions called from within command line ##
 
     def show_settings (self):
@@ -10367,8 +10422,7 @@ class Console (Note_Shelf):
                                                      otherterms[0]))},
                         self.default_dict['commands'].show(returntext=True))
         elif mainterm in ['changegeneralknowledge']:
-             self.text_result = self.default_dict['generalknowledge'].console(otherterms[0])
-               
+             self.text_result = self.default_dict['generalknowledge'].console(otherterms[0])               
         elif mainterm in ['changekeydefinitions']:
             try:
                 self.default_dict['definitions'].console()
