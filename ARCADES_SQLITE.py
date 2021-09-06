@@ -107,7 +107,7 @@ import stack                                                            #pylint 
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
-from truth_table import truth_table
+from truth_table import truth_table, TruthTable
 from tutorial import TutorialManager
 import random
 ##client = False
@@ -7010,6 +7010,168 @@ class Note_Shelf:
 
         """
 
+        def stripped (term):
+            unmodified = term
+
+            for a_temp in ['##','<','>','#','~']:
+                term = term.replace(a_temp,'')
+            
+            return term, unmodified.split(term)[0], unmodified.split(term)[1]
+            
+
+        def get_terms_from_query (query):
+
+            for a_temp in [LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE]:  
+                query = query.replace(a_temp, '  '+a_temp+'  ')
+
+
+            for a_temp in extract.extract(query, LEFTNOTE, RIGHTNOTE):
+                # extract keywords, which are surrounded by arrow brackets.
+                a_temp = LEFTNOTE+a_temp+RIGHTNOTE
+                query = query.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
+                  #spaces in keywords replaced with percentage sign
+
+            
+
+
+            query = nformat.reduce_blanks(query)
+
+            for a_temp in [LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE]:
+                query = query.replace(a_temp, EMPTYCHAR)
+
+            
+            termlist = [x for x in sorted(set(query.strip().split(BLANK))) if x]
+
+            return termlist
+
+        def substitute_equivalences (query,done_terms=None,working_terms=None):
+
+            """In addition to simple equivalences, ARCADES allows a term to be substituted for search phrase.
+
+            For example: frog = (green & amphibian)
+            This functions performs substitutions on the query phrase.
+                e.g frog => (frog | (green&amphibian))
+            If more than one equivalent term is defined, they are applied accordingly.
+
+            substitution is applied recursively, but done_terms is used to keep track of substitutions so as to avoid
+            circular substititions leading to recursion error"""
+            
+
+            def bracket_all (phrase,left_part,right_part):
+
+                for term in get_terms_from_query (phrase):
+
+                    phrase = phrase.replace(term, left_part+term+right_part)
+                return phrase 
+                    
+            def get (x,query,working_terms):
+
+
+                x, left_part, right_part = stripped(x)
+
+                
+                equivalent_term = self.default_dict['equivalences'].fetch_bracketed(x)
+                if equivalent_term:
+                    new_terms = [left_part+t+right_part for t in get_terms_from_query(equivalent_term)]
+                    working_terms.update(new_terms)
+                    query = query.replace(left_part+x+right_part,'('+left_part+x+right_part+'|'+bracket_all(equivalent_term,left_part,right_part)+')')
+                return query, working_terms
+                    
+
+            if done_terms is None:
+                done_terms = set()
+            if working_terms is None:
+                working_terms = set()
+
+            if not working_terms:
+
+                terms = get_terms_from_query (query)
+                
+                for term in terms:
+                    query,working_terms = get(term,query,working_terms)             
+                
+            else:
+
+                for term in list(working_terms):
+                    dummy, left_part, right_part = stripped(term)
+                    if term not in done_terms:
+                        query,working_terms = get(term,query,working_terms)
+                        done_terms.add(term)
+                    working_terms.remove(term)
+            
+            if working_terms:
+                query, done_terms, working_terms = substitute_equivalences(query,done_terms,working_terms)
+            return query, done_terms, working_terms 
+        
+        def substitute_complex_equivalences (query,done_terms=None,working_terms=None):
+
+            unbrack = lambda x,y,z:({q[len(y):-len(z)] for q in x if q.startswith(y) and q.endswith(z)},{q for q in x if not (q.startswith(y) and q.endswith(z))})
+            
+            def well_formed(x):
+
+                x = x.replace('&',' & ')
+                x = x.replace('|',' | ')
+                
+
+                while '  ' in x:
+                    x = x.replace('  ',' ')
+                x = x.replace('( ','(')
+                x = x.replace(' )',')')
+                x = x.replace(' (','(')
+                x = x.replace(') ',')')
+
+                x = x.replace('&',' & ')
+                x = x.replace('|',' | ')
+                while '  ' in x:
+                    x = x.replace('  ',' ')
+                
+                return x
+                
+            get_terms = lambda x:{y for y in x.replace('(',' ').replace(')',' ').replace('&',' ').replace('|',' ').split(' ') if y}
+            extract_tag = lambda x:unbrack(x,'<#','>')
+            extract_key = lambda x:unbrack(x,'<','>')
+            def augment (phrase,lp,rp):
+
+                for x in get_terms(phrase):
+                    phrase = phrase.replace(x,lp+x+rp)
+                return phrase
+            
+
+            # extract tags, keywords, texwords from query, since they will be evaluated separately.
+            # A logical equivalence is only recognized in the same class
+            
+
+            all_terms = get_terms(query)
+            tags, remainder = extract_tag(all_terms)
+            keywords, remainder = extract_key(remainder)
+            textwords = remainder
+
+            temp_dict = {1: (tags,'<#','>'),
+                         2: (keywords,'<','>'),
+                         3: (textwords,'','')}
+            query = well_formed (query)
+
+            for count in range(1,4):
+
+                term_set, left_part, right_part = temp_dict[count]
+                complex_equivalent_terms = self.default_dict['equivalences'].fetch_reverse_bracketed(term_set)
+                
+
+                A = TruthTable (query.replace('<','').replace('>','').replace('#',''))
+                for cet in complex_equivalent_terms:
+                    replace_phrase = augment('('+ ' | '.join(complex_equivalent_terms[cet]) + ')',left_part,right_part)
+                    B = TruthTable (cet)
+                    if A>B:
+                        cet_aug = augment (cet,left_part,right_part) 
+                        if cet_aug in query:
+                            query = query.replace(cet_aug, replace_phrase)
+                        else:
+                            query = query + ' | ' + '(' + replace_phrase + ')'
+
+            return query.replace('_',' ')                                  
+
+                                    
+
         def eliminate_punctuation (x):
             #to eliminate punctuation marks 
 
@@ -7299,6 +7461,11 @@ class Note_Shelf:
         returnstack = []
         foundterms = set()
 
+
+        query, dummy, dummy = substitute_equivalences(query) 
+        query = substitute_complex_equivalences(query)
+        
+
         if onlyterms:
 
             #extract all search terms from query and return the search terms 
@@ -7334,7 +7501,7 @@ class Note_Shelf:
             # extract keywords, which are surrounded by arrow brackets.
             a_temp = LEFTNOTE+a_temp+RIGHTNOTE
             query = query.replace(a_temp, a_temp.replace(BLANK, PERCENTAGE))
-              #spaces in keywords replaced with blanks
+              #spaces in keywords replaced with percentage sign
 
 
         query = nformat.reduce_blanks(query)
@@ -7346,10 +7513,6 @@ class Note_Shelf:
         
         termlist = [x for x in sorted(set(querycopy.strip().split(BLANK))) if x]
 
-
-        
-
-        
 
 
         termlist.reverse()

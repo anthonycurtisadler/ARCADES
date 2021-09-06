@@ -483,43 +483,7 @@ def generate_truth_universes(phrase):
      return universe_list 
 
 
-def truth_table (phrase):
 
-     """Print out the truth table for <phrase>
-     """
-     
-     return_text = []
-     return_text.append('TRUTH TABLE FOR '+phrase)
-     return_text.append('_')
-     phrase = format_input(phrase)
-
-     universes = generate_truth_universes(phrase)
-          # Generate the universes
-     for counter, x in enumerate(universes):
-
-          universe = x[1]
-          row = sorted(x[0],key=lambda x:x.replace('~',''))
-          result = interpret(parse(phrase),universe=universe)
-               # the values of the rows in the truth table
-               # determined by interpreting PHRASE in the
-               # given universe
-          header = ''
-          rank = '('+str(counter)+')'
-          rank =  rank + ((len(str(len(universes)))+2)-len(rank))*' '
-          for r in row:
-               header+=('~' not in r)*' '+r+' '
-          
-          
-          return_text.append(rank+': '+header+ ' | ' + str(result))
-     max_length = max([len(x) for x in return_text])
-     final_text = ''
-     for x in return_text:
-          if x != '_':
-               final_text += x+(max_length-len(x))*' '+'\n'
-          else:
-               final_text += '_'*max_length+'\n'
-     return final_text 
-          
      
 
 def format_input (phrase):
@@ -554,12 +518,91 @@ def help():
 
      return ENTERSCRIPT 
 
+class TruthTable:
 
+     def __init__ (self,phrase):
 
+          self.finished_table = {}
+          self.text = self.generate(phrase)
+          self.phrase = phrase
           
-          
+
+     def generate (self,phrase):
+
+          """Print out the truth table for <phrase>
+          """
+          self.finished_table = {}
+          return_text = []
+          return_text.append('TRUTH TABLE FOR '+phrase)
+          return_text.append('_')
+          phrase = format_input(phrase)
+
+          universes = generate_truth_universes(phrase)
+               # Generate the universes
+          for counter, x in enumerate(universes):
+
+               universe = x[1]
+               row = sorted(x[0],key=lambda x:x.replace('~',''))
+               result = interpret(parse(phrase),universe=universe)
+                    # the values of the rows in the truth table
+                    # determined by interpreting PHRASE in the
+                    # given universe
+               header = ''
+               head_list = []
+               rank = '('+str(counter)+')'
+               rank =  rank + ((len(str(len(universes)))+2)-len(rank))*' '
+               for r in row:
+                    header+=('~' not in r)*' '+r+' '
+                    head_list.append(r)
+                    
+               
+               return_text.append(rank+': '+header+ ' | ' + str(result))
+               temp_tup = tuple(sorted(head_list,key=lambda x:x.replace('~','')))
+               self.finished_table[temp_tup] = result
+          max_length = max([len(x) for x in return_text])
+          final_text = ''
+          for x in return_text:
+               if x != '_':
+                    final_text += x+(max_length-len(x))*' '+'\n'
+               else:
+                    final_text += '_'*max_length+'\n'
+          return final_text
      
 
+
+     def __eq__ (self,other):
+
+          listify = lambda x:sorted(','.join(y)+'/'+str(x[y]) for y in x)
+          return listify (self.finished_table)==listify(other.finished_table)
+
+     def __str__ (self):
+          return self.text
+
+     def __truediv__ (self,other):
+
+          return TruthTable(self.phrase+'&'+other.phrase)
+
+     def __mul__ (self,other):
+
+          return TruthTable(self.phrase+'|'+other.phrase)
+
+     def __gt__ (self,phrase):
+
+          return self==(self/phrase)
+     
+                            
+     
+
+                     
+def truth_table (x):
+
+     T = TruthTable(x)
+     return_text = str(T)
+
+     return return_text
+          
+
+     
      
           
      

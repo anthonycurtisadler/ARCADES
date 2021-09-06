@@ -476,12 +476,66 @@ class Equivalences:
         if self.active or override:
             found_class = self.get_class_for_term(self.notebookname,
                                                               x)
-            results = self.get_all_terms_for_class(self.notebookname,
-                                                               found_class)
+            results = {x for x in self.get_all_terms_for_class(self.notebookname,
+                                                               found_class) if x[0]!='('}
             if not results:
                 results = {x}
             return results
         return {x}
+
+    def fetch_bracketed (self,x,override=False):
+
+        if self.active or override:
+            found_class = self.get_class_for_term(self.notebookname, x)
+            
+            results = {x for x in self.get_all_terms_for_class(self.notebookname,
+                                                               found_class) if x[0]=='('}
+            if not results:
+                return False
+            if len(results)>1:
+                return '('+'|'.join(results)+')'
+            return list(results)[0]
+
+    def fetch_all (self,x):
+
+        if self.active or override:
+            found_class = self.get_class_for_term(self.notebookname,
+                                                              x)
+            results = {x for x in self.get_all_terms_for_class(self.notebookname,
+                                                               found_class)}
+            if not results:
+                results = {x}
+            return results
+        return {x}
+
+        
+            
+            
+    def fetch_reverse_bracketed (self,matching_phrase,override=False):
+
+        
+
+        get_terms = lambda x:{y for y in x.replace('(',' ').replace(')',' ').replace('&',' ').replace('|',' ').split(' ') if y}
+        if isinstance (matching_phrase,str):
+            matching_phrase = get_terms(matching_phrase)
+        if isinstance (matching_phrase,list):
+            matching_phrase = set(matching_phrase)
+            
+        
+
+        if self.active or override:
+            return_dict = {}
+
+            terms = self.get_terms(self.notebookname)
+            bracketed = [x for x in terms if x.startswith('(') and x.endswith(')')]
+
+            for bt in bracketed:
+                if get_terms(bt).issubset(matching_phrase):
+                    terms2 = self.fetch_all(bt)
+                    
+                    return_dict[bt]=terms2
+        return return_dict
+       
 
     def toggle (self):
 
@@ -490,18 +544,19 @@ class Equivalences:
                                 str(self.active)))
         
 
-    def show (self):
+    def show (self,to_display=True):
 
         returntextlist = []
         
+        value_tuple = (self.notebookname,)
         
-        self.db_cursor.execute ("SELECT * FROM classes")
+        self.db_cursor.execute ("SELECT * FROM classes WHERE notebook=?;",value_tuple)
         classes = self.db_cursor.fetchall()
         
-        self.db_cursor.execute ("SELECT * FROM terms")
+        self.db_cursor.execute ("SELECT * FROM terms WHERE notebook=?;",value_tuple)
         terms = self.db_cursor.fetchall()
 
-        self.db_cursor.execute ("SELECT * FROM terms_for_classes")
+        self.db_cursor.execute ("SELECT * FROM terms_for_classes WHERE notebook=?;",value_tuple)
         terms_for_classes = self.db_cursor.fetchall()
         
         returntextlist.append('CLASSES '+','.join([str(x[1]) for x in classes]))
@@ -514,9 +569,11 @@ class Equivalences:
             else:
                 temp_dict[x[1]].add(x[2])
         returntextlist.append('')
+        
         for x in sorted(temp_dict.keys()):
-            returntextlist.append('CLASS = '+str(x)+'/'+', '.join(sorted(temp_dict[x])))
+            returntextlist.append(('CLASS = '+str(x)+'/')*to_display+', '.join(sorted(temp_dict[x])))
         return '\n'.join(returntextlist)
+        
         
     
 
@@ -537,6 +594,8 @@ class Equivalences:
                                       'M(erge) equivalence classes',
                                       'S(show)',
                                       'C(lear)',
+                                      'L(oad)',
+                                      'D(U)mp',
                                       'Q(uit)']+['T(test with iterations','X(=continous test)','V(alid?)']*self.testing,
                                         displayobject=self.display)
             command = input()
@@ -647,7 +706,7 @@ class Equivalences:
                   
 
                 if command[0] == 'S':
-                    self.display.noteprint(('RESULTS',self.show()))
+                    self.display.noteprint(('RESULTS for '+self.notebookname,self.show()))
 
                 if command[0] == 'C':
                     if input('ARE YOU SURE YOU WANT TO DELETE ALL EQUIVALENCE CLASSES?') in ['yes','YES']:
@@ -660,6 +719,21 @@ class Equivalences:
                         for term in terms_to_delete:
                             self.delete_all_equivalences(self.notebookname,
                                                          term)
+                if command[0] == 'L':
+                    self.display.noteprint(('TEXT TO LOAD',''))
+                    to_load = input('?')
+                    to_load = to_load.replace(';','\n')
+                    for line in to_load.split('\n'):
+                        terms = [x.strip() for x in line.split(',')]
+                        self.join_terms_in_equivalence_class(self.notebookname,terms)
+                if command[0] == 'U':
+                    print(self.show(to_display=False))
+                    input('')
+                    
+                    
+                    
+                            
+                    
                         
 
                             
@@ -669,7 +743,7 @@ class Equivalences:
 if __name__ == "__main__":
  
             
-    E = Equivalences(testing=True)
+    E = Equivalences(testing=True,filename='TEST')
     E.console()
 
 
