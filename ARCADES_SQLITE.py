@@ -7200,7 +7200,7 @@ class Note_Shelf:
                         phrase[pos] = '%'
                 return ''.join(phrase)
 
-            def elim_reduntant_parens (x):
+            def elim_redundant_parens (x):
                 level = 0
                 x = x.strip()
                 
@@ -7321,11 +7321,11 @@ class Note_Shelf:
                             non_query = query
                             if is_vapid(non_query):
                                 non_query = ''
-                                query =   '(' + elim_reduntant_parens(replace_phrase) + ')'
-                                alternate_query =  '(' + elim_reduntant_parens(alternative_replace_phrase)  + ')'
+                                query =   '(' + elim_redundant_parens(replace_phrase) + ')'
+                                alternate_query =  '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
                             else:
-                                query = '('+non_query + ') & ' + '(' + elim_reduntant_parens(replace_phrase) + ')'
-                                alternate_query = '('+non_query + ') & ' + '(' + elim_reduntant_parens(alternative_replace_phrase)  + ')'
+                                query = '('+non_query + ') & ' + '(' + elim_redundant_parens(replace_phrase) + ')'
+                                alternate_query = '('+non_query + ') & ' + '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
 
                             working_terms = {(query,alternate_query)}
  

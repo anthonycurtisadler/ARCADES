@@ -609,9 +609,37 @@ class Equivalences:
                     break
                 if command[0]=='A':
 
+                    def elim_redundant_parens (x):
+                        
+                        level = 0
+                        x = x.strip()
+                        
+                        for count, ch in enumerate(x):
+                            if ch == '(':
+                                level+=1
+                            if ch == ')':
+                                if count < len(x)-1:
+                                    level -= 1
+                                else:
+                                    return (x[1:-1])
+                                if level == 0:
+                                    return x
+                        return x
+
+                    def add_parens (x):
+                        if '&' in x or '|' in x or '(' in x or '|' in x:
+                            x = elim_redundant_parens (x)
+                            x = '(' + x + ')'
+                            
+                        return x
+                    
+                    
+                            
+                            
+
                     x = input('List terms to add as equivalence class?')
                     self.join_terms_in_equivalence_class(self.notebookname,
-                                                         [y.strip() for y in x.split(',')])
+                                                         [add_parens(y.strip()) for y in x.split(',')])
                 if command[0]=='F':
 
                     term = input('Find equivalence class for term=?')
