@@ -7044,6 +7044,83 @@ class Note_Shelf:
 
             return termlist
 
+        def substitute_simple_equivalences (query,done_terms=None,working_terms=None, simplify=False):
+
+            """For simple equivalences from one single term to another"""
+
+            def well_formed(x):
+
+                x = x.replace('&',' & ')
+                x = x.replace('|',' | ')
+                
+
+                while '  ' in x:
+                    x = x.replace('  ',' ')
+                x = x.replace('( ','(')
+                x = x.replace(' )',')')
+                x = x.replace(' (','(')
+                x = x.replace(') ',')')
+
+                x = x.replace('&',' & ')
+                x = x.replace('|',' | ')
+                while '  ' in x:
+                    x = x.replace('  ',' ')
+                
+                return x
+
+            def insert_perc (phrase):
+
+                """Inserts percentages in spaces between keywords"""
+                reserved_chars = '()&|<>'                
+                phrase = list(phrase)
+                for pos, ch in enumerate (range(1,len(phrase)-1)):
+                    if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
+                        phrase[pos] = '%'
+                return ''.join(phrase)
+
+            if done_terms is None:
+                done_terms = set()
+            if working_terms  is None:
+                working_terms = set()
+
+            get_terms = lambda x:{y for y in x.replace('(',' ').replace(')',' ').replace('&',' ').replace('|',' ').split(' ') if y}
+            extract_tag = lambda x:unbrack(x,'<#','>')
+            extract_key = lambda x:unbrack(x,'<','>')
+            unbrack = lambda x,y,z:({q[len(y):-len(z)] for q in x if q.startswith(y) and q.endswith(z)},{q for q in x if not (q.startswith(y) and q.endswith(z))})
+
+            query = insert_perc(well_formed (query))
+
+            all_terms = get_terms(query)
+
+            if simplify:
+
+                for count, x in enumerate(all_terms):
+                    query = query.replace(x,'['+str(count)+']')
+                return query 
+
+            tags, remainder = extract_tag(all_terms)
+            keywords, remainder = extract_key(remainder)  
+            textwords = remainder
+
+            for kw in keywords:
+               if not '<'+kw+'>' in done_terms:
+                   terms = {}
+                   if self.default_dict['equivalences'].exists(kw):
+                       terms = list(self.default_dict['equivalences'].fetch(kw))
+                       query = query.replace('<'+kw+'>','('+'|'.join(['<'+t+'>' for t in terms])+')')
+                       done_terms.update(['<'+t+'>' for t in terms])
+            for tw in textwords:
+               if not tw in done_terms:
+                   terms = {}
+                   
+                   if self.default_dict['equivalences'].exists(tw):
+                       terms = list(self.default_dict['equivalences'].fetch(tw))
+                       query = query.replace(tw,'('+'|'.join(terms)+')')
+                       done_terms.update(terms)
+
+            
+            return query, done_terms, working_terms 
+
         def substitute_equivalences (query,done_terms=None,working_terms=None):
 
             """In addition to simple equivalences, ARCADES allows a term to be substituted for search phrase.
@@ -7103,9 +7180,15 @@ class Note_Shelf:
                 query, done_terms, working_terms = substitute_equivalences(query,done_terms,working_terms)
             return query, done_terms, working_terms 
         
-        def substitute_complex_equivalences (query,done_terms=None,working_terms=None):
+        def substitute_complex_equivalences (query,done_terms=None,working_terms=None,initiating=True):
 
-            unbrack = lambda x,y,z:({q[len(y):-len(z)] for q in x if q.startswith(y) and q.endswith(z)},{q for q in x if not (q.startswith(y) and q.endswith(z))})
+            
+
+            def is_vapid (phrase):
+
+                for x in ('!allnotes!','<','>','#','(',')','&','|',' '):
+                    phrase = phrase.replace(x,'')
+                return not phrase 
 
             def insert_perc (phrase):
 
@@ -7116,8 +7199,24 @@ class Note_Shelf:
                     if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
                         phrase[pos] = '%'
                 return ''.join(phrase)
-                                        
-            
+
+            def elim_reduntant_parens (x):
+                level = 0
+                x = x.strip()
+                
+                for count, ch in enumerate(x):
+                    if ch == '(':
+                        level+=1
+                    if ch == ')':
+                        if count < len(x)-1:
+                            level -= 1
+                        else:
+                            return (x[1:-1])
+                        if level == 0:
+                            return x
+                return x
+                        
+          
             def well_formed(x):
 
                 x = x.replace('&',' & ')
@@ -7137,7 +7236,8 @@ class Note_Shelf:
                     x = x.replace('  ',' ')
                 
                 return x
-                
+
+            unbrack = lambda x,y,z:({q[len(y):-len(z)] for q in x if q.startswith(y) and q.endswith(z)},{q for q in x if not (q.startswith(y) and q.endswith(z))})            
             get_terms = lambda x:{y for y in x.replace('(',' ').replace(')',' ').replace('&',' ').replace('|',' ').split(' ') if y}
             extract_tag = lambda x:unbrack(x,'<#','>')
             extract_key = lambda x:unbrack(x,'<','>')
@@ -7153,21 +7253,32 @@ class Note_Shelf:
             # extract tags, keywords, texwords from query, since they will be evaluated separately.
             # A logical equivalence is only recognized in the same class
 
-            query = insert_perc(well_formed (query))
-##            print('QUERY 1')
-            
+           
+
+            if not working_terms and not initiating:
+
+                return query, done_terms, working_terms   
+            if working_terms is None:
+                working_terms  = set()
+            if done_terms is None:
+                done_terms  = set()
+            if initiating:
+                query = insert_perc(well_formed (query))
+                alternate_query = insert_perc(well_formed (query)) 
+
+            elif working_terms:
+                query = list(working_terms)[0][0]
+                alternate_query = list(working_terms)[0][1]
+                working_terms = set()
             
 
             all_terms = get_terms(query)
-##            print('ALL TERMS',all_terms)
+
             tags, remainder = extract_tag(all_terms)
             keywords, remainder = extract_key(remainder)
             
             textwords = remainder
 
-##            print('TAGS',tags)
-##            print('KEYWORDS',keywords)
-##            print('TEXTWORDS',textwords)
             
             
  
@@ -7181,25 +7292,51 @@ class Note_Shelf:
 
                 term_set, left_part, right_part = temp_dict[count]
                 complex_equivalent_terms = self.default_dict['equivalences'].fetch_reverse_bracketed(term_set)
-##                print('CET',term_set,complex_equivalent_terms)
+
                 
-                A = TruthTable (query.replace('<','').replace('>','').replace('#',''))
-##                print('A',A)
+                A = TruthTable (alternate_query.replace('<','').replace('>','').replace('#',''))
+                
+                changed = False 
                 for cet in complex_equivalent_terms:
-                    replace_phrase = augment('('+ ' | '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
-                    cet = insert_perc(cet)
-                    B = TruthTable (cet)
-##                    print(A>B)
-##                    print('B',B)
-                    if A>B: #Tests whether truth table A implies truth table B
-                        cet_aug = augment (well_formed(cet),left_part,right_part) 
-##                        if cet_aug in query:
-##                            query = query.replace(cet_aug, replace_phrase)
-                        for t in get_terms(well_formed(cet)):
-                            query = query.replace(left_part+t+right_part,'!allnotes!')
-                        query = '('+query + ') & ' + '(' + replace_phrase + ')'
-##            print('QUERY',query)
-            return query                               
+                    if cet  not in done_terms:
+                        changed = True 
+                        
+                        replace_phrase = augment('('+ ' | '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
+                        alternative_replace_phrase = augment('('+ ' & '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
+                        cet = insert_perc(cet)
+                        B = TruthTable (cet)
+                        
+
+                        
+                        if A>B: #Tests whether truth table A implies truth table B
+                            
+                            
+                            cet_aug = augment (well_formed(cet),left_part,right_part) 
+
+
+                            for t in get_terms(well_formed(cet)+' '+' '.join(done_terms)):
+                                query = query.replace(left_part+t+right_part,'!allnotes!')
+                            
+                            done_terms.add(cet.replace('%',' '))
+                            non_query = query
+                            if is_vapid(non_query):
+                                non_query = ''
+                                query =   '(' + elim_reduntant_parens(replace_phrase) + ')'
+                                alternate_query =  '(' + elim_reduntant_parens(alternative_replace_phrase)  + ')'
+                            else:
+                                query = '('+non_query + ') & ' + '(' + elim_reduntant_parens(replace_phrase) + ')'
+                                alternate_query = '('+non_query + ') & ' + '(' + elim_reduntant_parens(alternative_replace_phrase)  + ')'
+
+                            working_terms = {(query,alternate_query)}
+ 
+                        
+                            
+                                           
+
+            if working_terms:
+                return substitute_complex_equivalences (query,done_terms=done_terms,working_terms=working_terms,initiating=False)
+
+            return query, done_terms, working_terms                            
 
                                     
 
@@ -7474,28 +7611,55 @@ class Note_Shelf:
                 else:
                     returnlist += [term+qualifier]
 
-            finalreturnlist = []
-            for term in returnlist:
-
-                if self.default_dict['equivalences'].exists(term):
-                    finalreturnlist += list(self.default_dict['equivalences'].fetch(term))
-                else:
-                    finalreturnlist.append(term)
+##            finalreturnlist = []
+##            for term in returnlist:
+##
+##                if self.default_dict['equivalences'].exists(term):
+##                    finalreturnlist += list(self.default_dict['equivalences'].fetch(term))
+##                else:
+##                    finalreturnlist.append(term)
             
             
 
             
-            return finalreturnlist
+            return returnlist
 
         ##beginning of the main routine##
 
         returnstack = []
         foundterms = set()
 
+        counter = 1
+        done_terms = None
 
-        query, dummy, dummy = substitute_equivalences(query) 
-        query = substitute_complex_equivalences(query)
         
+        dis_text = []
+        while True:
+
+            try:
+
+                how_many_done = len(done_terms)
+            except:
+                how_many_done = 0
+            
+
+            query, done_terms, dummy = substitute_equivalences(query,done_terms)
+            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
+            counter += 1
+            query, done_terms, dummy = substitute_complex_equivalences(query,done_terms)
+            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
+            counter += 1
+            query, done_terms, dummy = substitute_simple_equivalences (query,done_terms)
+            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
+            counter += 1
+
+            if len (done_terms) <= how_many_done:
+                break
+            if counter == 60:
+                break
+
+        display.noteprint(('SEARCH CONSTITUTION','\n'.join(dis_text)))
+        display.noteprint(('SEARCH TERM',query))
 
         if onlyterms:
 

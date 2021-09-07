@@ -444,7 +444,7 @@ def get_variables (phrase):
      for char in '()&~|>#':
           phrase = phrase.replace(char,' ')
      phrase = phrase.split(' ')
-     phrase = list(set([x for x in phrase if x]))
+     phrase = list(set([x for x in phrase if x and x!='!allnotes!']))
      return phrase
 
 def generate_truth_tables (variables):
