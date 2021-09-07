@@ -6,15 +6,15 @@
 to_replace = {'=>':'>',
                    '->':'>',
                    '<>':'#',
-                   'AND':'&',
+                   ' AND ':'&',
                    '^':'&',
-                   'v':'|',
-                   'OR':'|',
-                   'and':'&',
-                   'or':'|',
-                   'iff':'#',
-                   'is equivalent to':'#',
-                   'implies':'>',
+                   ' V ':'|',
+                   ' OR ':'|',
+                   ' and ':'&',
+                   ' or ':'|',
+                   ' iff ':'#',
+                   ' is equivalent to ':'#',
+                   ' implies ':'>',
                    '[':'(',
                    ']':']',
                    '-':'~'}
@@ -489,28 +489,39 @@ def generate_truth_universes(phrase):
 def format_input (phrase):
 
      """Formats input to account for different symbolic conventions"""
+
+     def insert_perc (phrase):
+
+                """Inserst percentages in spaces between keywords"""
+                reserved_chars = '()&|<>[]~'                
+                phrase = list(phrase)
+                for pos, ch in enumerate (range(1,len(phrase)-1)):
+                    if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
+                        phrase[pos] = '%'
+                return ''.join(phrase)
      
 
      to_replace = {'=>':'>',
                    '->':'>',
                    '<>':'#',
-                   'AND':'&',
-                   '^':'&',
-                   'v':'|',
-                   'OR':'|',
-                   'and':'&',
-                   'or':'|',
-                   'iff':'#',
-                   'is equivalent to':'#',
-                   'implies':'>',
+                   ' AND ':'&',
+                   ' ^ ':'&',
+                   ' V ':'|',
+                   ' OR ':'|',
+                   ' and ':'&',
+                   ' or ':'|',
+                   ' iff ':'#',
+                   ' is equivalent to ':'#',
+                   ' implies ':'>',
                    '[':'(',
                    ']':']',
                    '-':'~'}
-
+     phrase = insert_perc(phrase)
      for x in to_replace:
 
           phrase = phrase.replace(x,to_replace[x])
-          phrase = phrase.replace(' ','')
+     phrase = phrase.replace(' ','')
+     
           
      return phrase
 

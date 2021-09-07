@@ -530,7 +530,7 @@ class Equivalences:
             bracketed = [x for x in terms if x.startswith('(') and x.endswith(')')]
 
             for bt in bracketed:
-                if get_terms(bt).issubset(matching_phrase):
+                if get_terms(bt).intersection(matching_phrase):
                     terms2 = self.fetch_all(bt)
                     
                     return_dict[bt]=terms2

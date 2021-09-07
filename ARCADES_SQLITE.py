@@ -7106,6 +7106,17 @@ class Note_Shelf:
         def substitute_complex_equivalences (query,done_terms=None,working_terms=None):
 
             unbrack = lambda x,y,z:({q[len(y):-len(z)] for q in x if q.startswith(y) and q.endswith(z)},{q for q in x if not (q.startswith(y) and q.endswith(z))})
+
+            def insert_perc (phrase):
+
+                """Inserst percentages in spaces between keywords"""
+                reserved_chars = '()&|<>'                
+                phrase = list(phrase)
+                for pos, ch in enumerate (range(1,len(phrase)-1)):
+                    if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
+                        phrase[pos] = '%'
+                return ''.join(phrase)
+                                        
             
             def well_formed(x):
 
@@ -7130,6 +7141,8 @@ class Note_Shelf:
             get_terms = lambda x:{y for y in x.replace('(',' ').replace(')',' ').replace('&',' ').replace('|',' ').split(' ') if y}
             extract_tag = lambda x:unbrack(x,'<#','>')
             extract_key = lambda x:unbrack(x,'<','>')
+            unparen = lambda x:{y.replace('%',' ') for y in x}
+            
             def augment (phrase,lp,rp):
 
                 for x in get_terms(phrase):
@@ -7139,36 +7152,54 @@ class Note_Shelf:
 
             # extract tags, keywords, texwords from query, since they will be evaluated separately.
             # A logical equivalence is only recognized in the same class
+
+            query = insert_perc(well_formed (query))
+##            print('QUERY 1')
+            
             
 
             all_terms = get_terms(query)
+##            print('ALL TERMS',all_terms)
             tags, remainder = extract_tag(all_terms)
             keywords, remainder = extract_key(remainder)
+            
             textwords = remainder
 
-            temp_dict = {1: (tags,'<#','>'),
-                         2: (keywords,'<','>'),
-                         3: (textwords,'','')}
-            query = well_formed (query)
+##            print('TAGS',tags)
+##            print('KEYWORDS',keywords)
+##            print('TEXTWORDS',textwords)
+            
+            
+ 
+
+            temp_dict = {1: (unparen(tags),'<#','>'),
+                         2: (unparen(keywords),'<','>'),
+                         3: (unparen(textwords),'','')}
+            
 
             for count in range(1,4):
 
                 term_set, left_part, right_part = temp_dict[count]
                 complex_equivalent_terms = self.default_dict['equivalences'].fetch_reverse_bracketed(term_set)
+##                print('CET',term_set,complex_equivalent_terms)
                 
-
                 A = TruthTable (query.replace('<','').replace('>','').replace('#',''))
+##                print('A',A)
                 for cet in complex_equivalent_terms:
-                    replace_phrase = augment('('+ ' | '.join(complex_equivalent_terms[cet]) + ')',left_part,right_part)
+                    replace_phrase = augment('('+ ' | '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
+                    cet = insert_perc(cet)
                     B = TruthTable (cet)
-                    if A>B:
-                        cet_aug = augment (cet,left_part,right_part) 
-                        if cet_aug in query:
-                            query = query.replace(cet_aug, replace_phrase)
-                        else:
-                            query = query + ' | ' + '(' + replace_phrase + ')'
-
-            return query.replace('_',' ')                                  
+##                    print(A>B)
+##                    print('B',B)
+                    if A>B: #Tests whether truth table A implies truth table B
+                        cet_aug = augment (well_formed(cet),left_part,right_part) 
+##                        if cet_aug in query:
+##                            query = query.replace(cet_aug, replace_phrase)
+                        for t in get_terms(well_formed(cet)):
+                            query = query.replace(left_part+t+right_part,'!allnotes!')
+                        query = '('+query + ') & ' + '(' + replace_phrase + ')'
+##            print('QUERY',query)
+            return query                               
 
                                     
 
@@ -7757,14 +7788,16 @@ class Note_Shelf:
                 is_a_single_word = False    
 
                 for word in el_temp:
-
+                    
                     qualifier = ''
 
                     if word.count('"')==2:
+                        #To extract the qualifier phrase and the word apart from the qualifier 
                         qualifier = '"'+word.split('"')[1]+'"'
                         word = EMPTYCHAR.join([word.split('"')[0],word.split('"')[2]])
 
-                    if word == '_ALLNOTES_':
+                    if word in ['!allnotes!']:
+                        
                         temp_set = set(searchset)
  
 
