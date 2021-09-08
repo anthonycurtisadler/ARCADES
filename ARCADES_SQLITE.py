@@ -7010,6 +7010,17 @@ class Note_Shelf:
 
         """
 
+        
+        def insert_perc (phrase):
+
+            """Inserst percentages in spaces between keywords"""
+            reserved_chars = '()&|<>'                
+            phrase = list(phrase)
+            for pos, ch in enumerate (range(1,len(phrase)-1)):
+                if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
+                    phrase[pos] = '%'
+            return ''.join(phrase)
+
         def stripped (term):
             unmodified = term
 
@@ -7068,15 +7079,6 @@ class Note_Shelf:
                 
                 return x
 
-            def insert_perc (phrase):
-
-                """Inserts percentages in spaces between keywords"""
-                reserved_chars = '()&|<>'                
-                phrase = list(phrase)
-                for pos, ch in enumerate (range(1,len(phrase)-1)):
-                    if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
-                        phrase[pos] = '%'
-                return ''.join(phrase)
 
             if done_terms is None:
                 done_terms = set()
@@ -7107,7 +7109,7 @@ class Note_Shelf:
                    terms = {}
                    if self.default_dict['equivalences'].exists(kw):
                        terms = list(self.default_dict['equivalences'].fetch(kw))
-                       query = query.replace('<'+kw+'>','('+'|'.join(['<'+t+'>' for t in terms])+')')
+                       query = query.replace('<'+kw+'>',insert_perc('('+'|'.join(['<'+t+'>' for t in terms])+')'))
                        done_terms.update(['<'+t+'>' for t in terms])
             for tw in textwords:
                if not tw in done_terms:
@@ -7115,7 +7117,7 @@ class Note_Shelf:
                    
                    if self.default_dict['equivalences'].exists(tw):
                        terms = list(self.default_dict['equivalences'].fetch(tw))
-                       query = query.replace(tw,'('+'|'.join(terms)+')')
+                       query = query.replace(tw,insert_perc('('+'|'.join(terms)+')'))
                        done_terms.update(terms)
 
             
@@ -7149,6 +7151,7 @@ class Note_Shelf:
                 
                 equivalent_term = self.default_dict['equivalences'].fetch_bracketed(x)
                 if equivalent_term:
+                    equivalent_term = insert_perc (equivalent_term)
                     new_terms = [left_part+t+right_part for t in get_terms_from_query(equivalent_term)]
                     working_terms.update(new_terms)
                     query = query.replace(left_part+x+right_part,'('+left_part+x+right_part+'|'+bracket_all(equivalent_term,left_part,right_part)+')')
@@ -7190,15 +7193,6 @@ class Note_Shelf:
                     phrase = phrase.replace(x,'')
                 return not phrase 
 
-            def insert_perc (phrase):
-
-                """Inserst percentages in spaces between keywords"""
-                reserved_chars = '()&|<>'                
-                phrase = list(phrase)
-                for pos, ch in enumerate (range(1,len(phrase)-1)):
-                    if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
-                        phrase[pos] = '%'
-                return ''.join(phrase)
 
             def elim_redundant_parens (x):
                 level = 0
