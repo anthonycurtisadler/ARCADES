@@ -7009,7 +7009,22 @@ class Note_Shelf:
             RETURNS tuple (query, result, foundterms)
 
         """
-
+        def elim_redundant_parens (x):
+                level = 0
+                x = x.strip()
+                
+                for count, ch in enumerate(x):
+                    if ch == '(':
+                        level+=1
+                    if ch == ')':
+                        if count < len(x)-1:
+                            level -= 1
+                        else:
+                            return (x[1:-1])
+                        if level == 0:
+                            return x
+                return x
+                        
         
         def insert_perc (phrase):
 
@@ -7105,18 +7120,20 @@ class Note_Shelf:
             textwords = remainder
 
             for kw in keywords:
-               if not '<'+kw+'>' in done_terms:
+               if not ('<'+kw+'>' in done_terms):  #or '~'+kw in done_terms):
                    terms = {}
                    if self.default_dict['equivalences'].exists(kw):
                        terms = list(self.default_dict['equivalences'].fetch(kw))
                        query = query.replace('<'+kw+'>',insert_perc('('+'|'.join(['<'+t+'>' for t in terms])+')'))
+                       print('TK',terms)
                        done_terms.update(['<'+t+'>' for t in terms])
             for tw in textwords:
-               if not tw in done_terms:
+               if not (tw in done_terms): #or '~'+tw in done_terms):
                    terms = {}
                    
                    if self.default_dict['equivalences'].exists(tw):
                        terms = list(self.default_dict['equivalences'].fetch(tw))
+                       
                        query = query.replace(tw,insert_perc('('+'|'.join(terms)+')'))
                        done_terms.update(terms)
 
@@ -7144,17 +7161,27 @@ class Note_Shelf:
                 return phrase 
                     
             def get (x,query,working_terms):
-
-
+                negating = False
+                if x[0] == '~':
+                    negating = True
+                    x = x[1:]
+                    
                 x, left_part, right_part = stripped(x)
 
                 
                 equivalent_term = self.default_dict['equivalences'].fetch_bracketed(x)
-                if equivalent_term:
-                    equivalent_term = insert_perc (equivalent_term)
-                    new_terms = [left_part+t+right_part for t in get_terms_from_query(equivalent_term)]
-                    working_terms.update(new_terms)
-                    query = query.replace(left_part+x+right_part,'('+left_part+x+right_part+'|'+bracket_all(equivalent_term,left_part,right_part)+')')
+                if not negating:
+                    if equivalent_term:
+                        equivalent_term = insert_perc (equivalent_term)
+                        new_terms = [left_part+t+right_part for t in get_terms_from_query(equivalent_term)]
+                        working_terms.update(new_terms)
+                        query = query.replace(left_part+x+right_part,'('+left_part+x+right_part+'|'+bracket_all(equivalent_term,left_part,right_part)+')')
+                else:
+                    if equivalent_term:
+                        equivalent_term = insert_perc (equivalent_term)
+                        new_terms = ['~'+left_part+t+right_part for t in get_terms_from_query(equivalent_term)]
+                        working_terms.update(new_terms)
+                        query = query.replace('~'+left_part+x+right_part,'('+'~'+left_part+x+right_part+'&'+bracket_all(equivalent_term,'~'+left_part,right_part)+')')
                 return query, working_terms
                     
 
@@ -7180,6 +7207,7 @@ class Note_Shelf:
                     working_terms.remove(term)
             
             if working_terms:
+                
                 query, done_terms, working_terms = substitute_equivalences(query,done_terms,working_terms)
             return query, done_terms, working_terms 
         
@@ -7194,22 +7222,7 @@ class Note_Shelf:
                 return not phrase 
 
 
-            def elim_redundant_parens (x):
-                level = 0
-                x = x.strip()
-                
-                for count, ch in enumerate(x):
-                    if ch == '(':
-                        level+=1
-                    if ch == ')':
-                        if count < len(x)-1:
-                            level -= 1
-                        else:
-                            return (x[1:-1])
-                        if level == 0:
-                            return x
-                return x
-                        
+            
           
             def well_formed(x):
 
@@ -7258,11 +7271,11 @@ class Note_Shelf:
                 done_terms  = set()
             if initiating:
                 query = insert_perc(well_formed (query))
-                alternate_query = insert_perc(well_formed (query)) 
+##                alternate_query = insert_perc(well_formed (query)) 
 
             elif working_terms:
-                query = list(working_terms)[0][0]
-                alternate_query = list(working_terms)[0][1]
+                query = list(working_terms)[0]
+##                alternate_query = list(working_terms)[0][1]
                 working_terms = set()
             
 
@@ -7287,16 +7300,15 @@ class Note_Shelf:
                 term_set, left_part, right_part = temp_dict[count]
                 complex_equivalent_terms = self.default_dict['equivalences'].fetch_reverse_bracketed(term_set)
 
-                
-                A = TruthTable (alternate_query.replace('<','').replace('>','').replace('#',''))
+                A = TruthTable (query.replace('||','&').replace('<','').replace('>','').replace('#',''))
                 
                 changed = False 
                 for cet in complex_equivalent_terms:
                     if cet  not in done_terms:
                         changed = True 
                         
-                        replace_phrase = augment('('+ ' | '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
-                        alternative_replace_phrase = augment('('+ ' & '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
+                        replace_phrase = augment('('+ ' || '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
+##                        alternative_replace_phrase = augment('('+ ' & '.join([insert_perc(well_formed(x)) for x in complex_equivalent_terms[cet]]) + ')',left_part,right_part)
                         cet = insert_perc(cet)
                         B = TruthTable (cet)
                         
@@ -7316,12 +7328,12 @@ class Note_Shelf:
                             if is_vapid(non_query):
                                 non_query = ''
                                 query =   '(' + elim_redundant_parens(replace_phrase) + ')'
-                                alternate_query =  '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
+##                                alternate_query =  '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
                             else:
                                 query = '('+non_query + ') & ' + '(' + elim_redundant_parens(replace_phrase) + ')'
-                                alternate_query = '('+non_query + ') & ' + '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
+##                                alternate_query = '('+non_query + ') & ' + '(' + elim_redundant_parens(alternative_replace_phrase)  + ')'
 
-                            working_terms = {(query,alternate_query)}
+                            working_terms = {query}
  
                         
                             
@@ -7329,8 +7341,7 @@ class Note_Shelf:
 
             if working_terms:
                 return substitute_complex_equivalences (query,done_terms=done_terms,working_terms=working_terms,initiating=False)
-
-            return query, done_terms, working_terms                            
+            return query.replace('||','|'), done_terms, working_terms                            
 
                                     
 
@@ -7635,17 +7646,26 @@ class Note_Shelf:
                 how_many_done = len(done_terms)
             except:
                 how_many_done = 0
-            
 
-            query, done_terms, dummy = substitute_equivalences(query,done_terms)
-            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
-            counter += 1
-            query, done_terms, dummy = substitute_complex_equivalences(query,done_terms)
-            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
-            counter += 1
+
             query, done_terms, dummy = substitute_simple_equivalences (query,done_terms)
-            dis_text.append(str(counter)+'/ ' + substitute_simple_equivalences (query,simplify=True))
+            dis_text.append(str(counter)+'/SE ' + substitute_simple_equivalences (query,simplify=True))
             counter += 1
+
+              
+            query, done_terms, dummy = substitute_equivalences(query,done_terms)
+            dis_text.append(str(counter)+'/E ' + substitute_simple_equivalences (query,simplify=True))
+            counter += 1
+
+            
+            query, done_terms, dummy = substitute_complex_equivalences(query,done_terms)
+            dis_text.append(str(counter)+'/CE' + substitute_simple_equivalences (query,simplify=True))
+            counter += 1
+
+
+            query = elim_redundant_parens(query)
+
+            
 
             if len (done_terms) <= how_many_done:
                 break

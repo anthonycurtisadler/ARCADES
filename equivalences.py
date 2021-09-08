@@ -479,7 +479,7 @@ class Equivalences:
 
             
             results = {x.lstrip("'") for x in self.get_all_terms_for_class(self.notebookname,
-                                                               found_class) if x[0]!='('}
+                                                               found_class) if '(' not in x}
             
             if not results:
                 results = {x}
@@ -492,7 +492,7 @@ class Equivalences:
             found_class = self.get_class_for_term(self.notebookname, x)
             
             results = {x for x in self.get_all_terms_for_class(self.notebookname,
-                                                               found_class) if x[0]=='('}
+                                                               found_class) if x[0]=='(' and '~' not in x}
             if not results:
                 return False
             if len(results)>1:
@@ -525,7 +525,7 @@ class Equivalences:
             matching_phrase = set(matching_phrase)
             
         
-
+        return_dict = {}
         if self.active or override:
             return_dict = {}
 
