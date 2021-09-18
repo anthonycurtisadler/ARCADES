@@ -492,7 +492,7 @@ class Equivalences:
             found_class = self.get_class_for_term(self.notebookname, x)
             
             results = {x for x in self.get_all_terms_for_class(self.notebookname,
-                                                               found_class) if x[0]=='(' and '~' not in x}
+                                                               found_class) if x[0]=='('}
             if not results:
                 return False
             if len(results)>1:

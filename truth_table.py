@@ -34,7 +34,7 @@ ENTERSCRIPT = ENTERSCRIPT.replace('*','\n')
 
               
 
-                    
+import extract                     
 
 def contains (phrase,chars):
 
@@ -441,7 +441,7 @@ def get_variables (phrase):
 
      """Get all variables from a phrase."""
 
-     for char in '()&~|>#':
+     for char in '()&~|<>':
           phrase = phrase.replace(char,' ')
      phrase = phrase.split(' ')
      phrase = list(set([x for x in phrase if x and x!='!allnotes!']))
@@ -493,13 +493,15 @@ def format_input (phrase):
      def insert_perc (phrase):
 
                 """Inserst percentages in spaces between keywords"""
-                reserved_chars = '()&|<>[]~'                
+                reserved_chars = '()&|<>[]~{} '
+                while '  ' in phrase:
+                     phrase = phrase.replace('  ',' ')
                 phrase = list(phrase)
                 for pos, ch in enumerate (range(1,len(phrase)-1)):
                     if phrase[pos] == ' ' and phrase[pos-1] not in reserved_chars and phrase[pos+1] not in reserved_chars:
                         phrase[pos] = '%'
                 return ''.join(phrase)
-     
+
 
      to_replace = {'=>':'>',
                    '->':'>',
@@ -544,6 +546,16 @@ class TruthTable:
           """
           self.finished_table = {}
           return_text = []
+          tags = extract.extract(phrase,'<#','>')
+          for t in tags:
+               phrase = phrase.replace('<#'+t+'>',t+'/TAG/')
+          
+          keys = extract.extract(phrase,'<','>')
+          for k in keys:
+               phrase = phrase.replace('<'+k+'>',k+'/KEY/')
+          
+                              
+
           return_text.append('TRUTH TABLE FOR '+phrase)
           return_text.append('_')
           phrase = format_input(phrase)
