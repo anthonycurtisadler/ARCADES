@@ -109,7 +109,7 @@ from substitutions import Substitutions
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
-from truth_table import truth_table, TruthTable
+from truth_table import truth_table, TruthTable,Simple_Sub
 from tutorial import TutorialManager
 import random
 ##client = False
@@ -7177,7 +7177,7 @@ class Note_Shelf:
  
                         
 
-                        replace_term_bracketed = negating*'~'+left_part+query.unencode(x)+right_part+ mark_dict[negating] + bracketed 
+                        replace_term_bracketed = negating*'~'+left_part+query.unencode(x)+right_part+ mark_dict[negating] + bracketed
                         
                 terms = [tt for tt in self.default_dict['equivalences'].fetch(query.unencode(x).replace('[/','').replace('/]','')) if tt  != x]
 
@@ -7198,6 +7198,8 @@ class Note_Shelf:
 
                     
                     final_term = (replace_term_bracketed + ' ' + inserting_mark + ' ' +replace_term_single).replace('~~','')
+                    if len(get_terms_from_query(final_term))>1:
+                        final_term = ' ( '+final_term+' ) '
                    
                     query.substitute(query.reverse().replace('~'*negating+left_part+query.unencode(x)+right_part,final_term))
                  
@@ -7332,6 +7334,11 @@ class Note_Shelf:
             # extract tags, keywords, texwords from query, since they will be evaluated separately.
             # A logical equivalence is only recognized in the same class
 
+            if initiating:
+                self.buffered_done_terms = set(done_terms)
+                done_terms = set()
+                
+
             if not working_terms and not initiating:
 
                 return query, done_terms, working_terms   
@@ -7371,8 +7378,6 @@ class Note_Shelf:
 
             for count in range(1,4):
 
-                
-
                 term_set, left_part, right_part = temp_dict[count]
   
                 complex_equivalent_terms = self.default_dict['equivalences'].fetch_reverse_bracketed(term_set)
@@ -7380,7 +7385,9 @@ class Note_Shelf:
 
                 if complex_equivalent_terms:
                 
-                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#','')).replace('[/','').replace('/]',''))
+                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#','')).replace('[/','').replace('/]',''),
+                                    log=self.truth_table_log,
+                                    subs=self.truth_table_subs)
                     #forms a truth table from the encoded terms
     
                
@@ -7406,7 +7413,10 @@ class Note_Shelf:
                         encoded_replace_phrase = query.partial(replace_phrase,delete_tildas=False)
                 
 
-                        B = TruthTable (query.reverse(encoded_cet).replace('[/','').replace('/]',''))
+                        B = TruthTable (query.reverse(encoded_cet).replace('[/','').replace('/]',''),
+                                    log=self.truth_table_log,
+                                    subs=self.truth_table_subs)
+
   
                         
                    
@@ -7454,7 +7464,7 @@ class Note_Shelf:
                 return substitute_complex_equivalences (query,done_terms=done_terms,working_terms=working_terms,initiating=False)
             query.query = query.query.replace('||','|')
 
-            return query, done_terms, working_terms                            
+            return query, done_terms.union(self.buffered_done_terms), working_terms                            
 
                                     
 
@@ -9817,6 +9827,8 @@ class Console (Note_Shelf):
 
         self.suspended_sequences = set()
         self.keypurger = KeyPurge()
+        self.truth_table_log = {}
+        self.truth_table_subs = Simple_Sub()
             
 
 ##        if self.using_shelf:

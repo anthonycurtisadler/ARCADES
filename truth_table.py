@@ -34,7 +34,7 @@ ENTERSCRIPT = ENTERSCRIPT.replace('*','\n')
 
               
 
-import extract                     
+import extract, copy                 
 
 def contains (phrase,chars):
 
@@ -492,7 +492,7 @@ def format_input (phrase):
 
      def insert_perc (phrase):
 
-                """Inserst percentages in spaces between keywords"""
+                """Inserts percentages in spaces between keywords"""
                 reserved_chars = '()&|<>[]~{} '
                 while '  ' in phrase:
                      phrase = phrase.replace('  ',' ')
@@ -529,16 +529,125 @@ def format_input (phrase):
 
 def help():
 
-     return ENTERSCRIPT 
+     return ENTERSCRIPT
+
+class Simple_Sub:
+
+     """This class is used to code and unencode the search terms, making it possible to keep a dynamic record of the schema of truth tables.
+     """
+     
+     
+
+     def __init__ (self,phrase=None):
+
+          if phrase:
+               self.phrase = ' '+phrase.replace('(',' ( ').replace(')',' ) ').replace('&',' & ').replace('|',' | ')+' '
+          else:
+               self.phrase = ''
+          self.sub_dictionary = {}
+          self.sub_reverse_dictionary = {}
+          self.marker = self.code()
+
+     def code (self):
+
+               count = 0
+               while True:
+                    count+=1
+                    yield '{'+str(count)+'}'
+          
+
+     def encode (self,phrase=None):
+          if not phrase:
+               using_phrase = self.phrase
+          else:
+               using_phrase = ' '+phrase.replace('(',' ( ').replace(')',' ) ').replace('&',' & ').replace('|',' | ')+' '
+               
+
+          
+          get = lambda x:[y.strip() for y in x.strip().replace('(','[ELIM]').replace(')','[ELIM]').replace('&','[ELIM]').replace('|','[ELIM]').replace('~','[ELIM]').split('[ELIM]') if y.strip()]
+                          
+
+          
+          
+
+         
+          for t in get(using_phrase):
+               if t not in self.sub_dictionary:
+                    mark = next(self.marker)
+                    using_phrase = using_phrase.replace(' '+t+' ',' '+mark+' ')
+                    using_phrase = using_phrase.replace(' ~'+t+' ',' ~'+mark+' ')
+                    self.sub_dictionary[t]=mark
+                    self.sub_reverse_dictionary[mark]=t
+               else:
+                    using_phrase = using_phrase.replace(' '+t+' ',' '+self.sub_dictionary[t]+' ')
+                    using_phrase = using_phrase.replace(' ~'+t+' ',' ~'+self.sub_dictionary[t]+' ')
+          using_phrase = using_phrase.replace(' ( ','(').replace(' ) ',')').replace(' & ','&').replace(' | ','|')
+               
+          while '  ' in using_phrase:
+               using_phrase = using_phrase.replace('  ',' ')
+          if phrase is None:
+               self.phrase = using_phrase
+               return using_phrase
+          return using_phrase 
+     
+     def unencode (self,phrase):
+
+          get = lambda x:[y.strip() for y in x.strip().replace('(','[ELIM]').replace(')','[ELIM]').replace('&','[ELIM]').replace('|','[ELIM]').replace('~','[ELIM]').split('[ELIM]') if y.strip()]
+
+          phrase = ' '+phrase.replace('(',' ( ').replace(')',' ) ').replace('&',' & ').replace('|',' | ')+' '
+          for t in get(phrase):
+           
+               if t in self.sub_reverse_dictionary:
+  
+                    phrase = phrase.replace(t,self.sub_reverse_dictionary[t])
+                    
+          phrase = phrase.replace(' ( ','(').replace(' ) ',')').replace(' & ','&').replace(' | ','|')
+           
+          while '  ' in phrase:
+               phrase = phrase.replace('  ',' ')
+          
+          return phrase
+     
 
 class TruthTable:
 
-     def __init__ (self,phrase):
+     def __init__ (self,phrase,log=None,subs=None,void=False):
+
+          if void:
+               return
 
           self.finished_table = {}
-          self.text = self.generate(phrase)
-          self.phrase = phrase
+          if log is None:
+               self.log = {}
+          else:
+               self.log = log
+
+          if subs is None:
+               self.subs = Simple_Sub (phrase)
+          else:
+               self.subs = subs
+          phrase = self.subs.encode(phrase)
+               #gets schema from phrase
+ 
           
+          if phrase in self.log:
+
+               #If schema has appeared before
+               print('<FETCHING TRUTH TABLE SCHEMA>')
+
+               self.finished_table = self.log[phrase].finished_table
+               self.text = self.log[phrase].text
+               self.phrase = self.log[phrase].phrase
+               self.subs = self.log[phrase].subs
+               
+          else:
+               #If appearing for the first time
+               
+               text = self.generate(phrase)
+               self.phrase = self.subs.unencode(phrase)
+               self.text = text
+               self.log[phrase] = self
+
 
      def generate (self,phrase):
 
@@ -609,15 +718,17 @@ class TruthTable:
 
           return TruthTable(self.phrase+'|'+other.phrase)
 
-     def __gt__ (self,phrase):
+     def __gt__ (self,other):
 
-          return self==(self/phrase)
+          return self==(self/other)
      
                             
      
 
                      
 def truth_table (x):
+
+     
 
      T = TruthTable(x)
      return_text = str(T)
