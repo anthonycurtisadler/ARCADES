@@ -7114,9 +7114,11 @@ class Note_Shelf:
 
 
             all_terms = get_terms(well_formed(query))
+
+            get_first_free = lambda x:x[0:min(len(x),3)]
             
             for count, x in enumerate(all_terms):
-                query = query.replace(x,'['+str(count)+']')
+                query = query.replace(x,'['+get_first_free(x)+']')
             return query
             
 
@@ -7138,16 +7140,18 @@ class Note_Shelf:
             mark_dict = {True: ' & ',
                          False: ' | '}
 
+                
+
             def bracket_all (phrase,left_part,right_part):
 
                 for term in get_terms_from_query (phrase):
                     
-
                     phrase = phrase.replace(term,left_part+term+right_part)
+                    
                 return phrase 
                     
             def get (x,query,working_terms):
-
+                
                
                 negating = query.get_negated(x)
  
@@ -7157,6 +7161,7 @@ class Note_Shelf:
                 
                 cancel_negation = False
                 equivalent_term = self.default_dict['equivalences'].fetch_bracketed(query.unencode(x))
+                 #To fetch logical phrases rather than single terms.
 
                 replace_term_bracketed = ''
                 replace_term_single = ''
@@ -7165,11 +7170,13 @@ class Note_Shelf:
                         equivalent_term = insert_perc (equivalent_term)
                         if negating:
                             equivalent_term = equivalent_term.replace('&','/&/').replace('|','&').replace('/&/','|')
-                        
+
                             
                         new_terms = ['~'*negating+left_part+t+right_part.replace('~~','') for t in get_terms_from_query(equivalent_term)]
                         
                         working_terms.update(new_terms)
+
+                        new_terms = [t for t in new_terms]
 
  
                         bracketed = bracket_all(equivalent_term,'~'*negating+left_part,right_part).replace('~~','')
@@ -7178,9 +7185,12 @@ class Note_Shelf:
                         
 
                         replace_term_bracketed = negating*'~'+left_part+query.unencode(x)+right_part+ mark_dict[negating] + bracketed
-                        
-                terms = [tt for tt in self.default_dict['equivalences'].fetch(query.unencode(x).replace('[/','').replace('/]','')) if tt  != x]
 
+                                        
+                terms = [tt for tt in self.default_dict['equivalences'].fetch(query.unencode(x).replace('[/','').replace('/]','')) ]#if tt  != query.unencode(x).replace('[/','').replace('/]','')
+                    #For the single terms
+                
+                    
                     
                 
 #                       
@@ -7190,6 +7200,8 @@ class Note_Shelf:
                         replace_term_single = insert_perc(mark_dict[negating].join(['~'*negating+left_part+t+right_part for t in terms ]))
                         done_terms.update([(negating*'~'+left_part+t+right_part) for t in terms if not t==query.unencode(x)])
 
+                if len(get_terms(replace_term_single)) < 2 and replace_term_bracketed:
+                    replace_term_single = ''
                 
                 if replace_term_bracketed or replace_term_single:
                     inserting_mark = ''
@@ -7200,8 +7212,10 @@ class Note_Shelf:
                     final_term = (replace_term_bracketed + ' ' + inserting_mark + ' ' +replace_term_single).replace('~~','')
                     if len(get_terms_from_query(final_term))>1:
                         final_term = ' ( '+final_term+' ) '
+
                    
                     query.substitute(query.reverse().replace('~'*negating+left_part+query.unencode(x)+right_part,final_term))
+
                  
                     
 
@@ -7250,6 +7264,14 @@ class Note_Shelf:
 
             
 
+            def adjust_tilda (x):
+
+                """Moves the tilda to the beginning"""
+
+                
+                tilda = '~' in x
+                return tilda*'~'+x.replace('~','')
+            
             def is_vapid (phrase):
 
                 """Identifies a search phrases that have no logical meaning"""
@@ -7325,6 +7347,7 @@ class Note_Shelf:
                     if '~' in x:
                         tilda = '~'
                     x = x.replace('~','')
+                
                     if lp not in x and rp not in x:
                         phrase = phrase.replace(' '+tilda+x+' ',' '+tilda+lp+x+rp+' ')
 
@@ -7357,7 +7380,7 @@ class Note_Shelf:
 
 
             
-            all_terms = get_terms(query.query)
+##            all_terms = get_terms(query.query)
                 #Gets all encoded terms 
  
 
@@ -7373,7 +7396,7 @@ class Note_Shelf:
 
             temp_dict = {1: (tags_unencoded,'<#','>'),
                          2: (keywords_unencoded,'<','>'),
-                         3: (textwords_unencoded,'','')}
+                         3: (textwords_unencoded,'[/','/]')}
             
 
             for count in range(1,4):
@@ -7385,10 +7408,16 @@ class Note_Shelf:
 
                 if complex_equivalent_terms:
                 
-                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#','')).replace('[/','').replace('/]',''),
+                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#',''),transform=True)
+                                                  .replace('[/', '').replace('/]',''),
                                     log=self.truth_table_log,
-                                    subs=self.truth_table_subs)
+                                    subs=self.truth_table_subs) #CHANGED
+
+                    
                     #forms a truth table from the encoded terms
+
+                    
+
     
                
                 
@@ -7409,20 +7438,20 @@ class Note_Shelf:
                         
                         additional_phrases = [augment(insert_perc(well_formed(x)),left_part,right_part) for x in  complex_equivalent_terms[cet]]
                       
-                        replace_phrase = augment('( '+ ' || '.join(additional_phrases) + ' )',left_part,right_part)
-                        encoded_replace_phrase = query.partial(replace_phrase,delete_tildas=False)
+                        replace_phrase = augment('( '+ ' | '.join(additional_phrases) + ' )',left_part,right_part)
+                        encoded_replace_phrase = query.partial(replace_phrase,delete_tildas=False) # || > |
                 
 
                         B = TruthTable (query.reverse(encoded_cet).replace('[/','').replace('/]',''),
                                     log=self.truth_table_log,
                                     subs=self.truth_table_subs)
 
-  
-                        
-                   
 
-                        
+  
                         if A>B: #Tests whether truth table A implies truth table B
+
+                            
+
 
 
                             
@@ -7432,13 +7461,16 @@ class Note_Shelf:
 
  
                             temp_query = query.reverse()
-
+                            
                             for t in get_terms(well_formed(cet)+' '+' '.join(done_terms)):
-                                temp_query = temp_query.replace(left_part+t+right_part,'!allnotes!')
+
+                                temp_query = temp_query.replace(adjust_tilda(left_part+t+right_part),'!allnotes!')
+                                
         
                             
-                            done_terms.add(cet.replace('%',' '))
+                            done_terms.add(cet)
                             non_query = temp_query
+
                             if is_vapid(non_query):
                                 non_query = ''
                                 temp_query =   '( ' + elim_redundant_parens(replace_phrase) + ' )'
@@ -7802,7 +7834,16 @@ class Note_Shelf:
             if counter == 10:
                 break
 
-        query = query.reverse().replace('( ','(').replace(' )',')').replace('[/','').replace('/]','')
+        query = query.reverse()
+
+        
+        
+        for t in extract.extract(query,'[/','/]'):
+            query = query.replace('[/'+t+'/]','[/'+t.replace(' ','$')+'/]')
+            #For multi-word text search terms
+            
+            
+        query = query.replace('( ','(').replace(' )',')').replace('[/','').replace('/]','')
         
         display.noteprint(('SEARCH CONSTITUTION','\n'.join(dis_text)))
         display.noteprint(('SEARCH TERM',query))

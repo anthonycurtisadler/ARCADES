@@ -90,7 +90,6 @@ def split_into_phrases (phrase):
      If the list if of elements to be combined with OR, then '@' at the head of the list.
 
      """
-
      if not contains(phrase,'()'):
 
           #For a phrase without parantheses
@@ -107,7 +106,7 @@ def split_into_phrases (phrase):
          #convert string into a list of chars
      level = 0
      found = False # if one of the operators is found in the phrase 
-
+     
      for operator in ['#','>','|','&']:
           level = 0 # reset level
           if not found:
@@ -344,6 +343,7 @@ def multiply (phrase):
      The PRODUCT of OR lists is used to generate the TRUTH TABLE.
      """
 
+
      if not isinstance(phrase,list):
           return phrase
      
@@ -557,6 +557,8 @@ class Simple_Sub:
           
 
      def encode (self,phrase=None):
+
+     
           if not phrase:
                using_phrase = self.phrase
           else:
@@ -591,6 +593,7 @@ class Simple_Sub:
           return using_phrase 
      
      def unencode (self,phrase):
+
 
           get = lambda x:[y.strip() for y in x.strip().replace('(','[ELIM]').replace(')','[ELIM]').replace('&','[ELIM]').replace('|','[ELIM]').replace('~','[ELIM]').split('[ELIM]') if y.strip()]
 
@@ -698,6 +701,7 @@ class TruthTable:
                     final_text += x+(max_length-len(x))*' '+'\n'
                else:
                     final_text += '_'*max_length+'\n'
+
           return final_text
      
 
@@ -712,7 +716,7 @@ class TruthTable:
 
      def __truediv__ (self,other):
 
-          return TruthTable(self.phrase+'&'+other.phrase)
+          return TruthTable(self.phrase+'&'+other.phrase,self.log,self.subs)
 
      def __mul__ (self,other):
 
@@ -721,6 +725,8 @@ class TruthTable:
      def __gt__ (self,other):
 
           return self==(self/other)
+
+     
      
                             
      

@@ -3,6 +3,27 @@ from globalconstants import LEFTPAREN, RIGHTPAREN, \
      ANDSIGN, VERTLINE, BLANK,\
      PERCENTAGE, LEFTNOTE, RIGHTNOTE, EMPTYCHAR, POUND, TILDA
 
+
+def transform_or_to_and (phrase,left_b='(',right_b=')',to_find='|',to_replace='&'):
+
+    phrase = list(phrase)
+    degree = 0
+    results = []
+    for count, ch in enumerate(phrase):
+
+        if ch == left_b:
+            degree+=1
+        elif ch == right_b:
+            degree-=1
+        if ch==to_find and degree==0:
+            results.append(count)
+
+    for p in results:
+        phrase[p] = to_replace
+
+    return ''.join(phrase)
+
+
 def get_terms_from_query (query, delete_tilda=False):
 
     """Fetches terms form query"""
@@ -159,9 +180,9 @@ class Substitutions:
                     
                     self.encloser_dictionary[new_code]= (left_part,right_part)
                    
-                    
+              
                    
-                
+                    
                 else:
 
                     # For a term being used again, replace with same code as before
@@ -173,16 +194,18 @@ class Substitutions:
                         query = query.replace(' '+negated*'~'+at+' ',' '+((not delete_tildas)*negated)*'~'+self.reverse_substitution_dictionary[(not_key_bracket(at),negated)]+' ').strip()
                         
                 
-##            else remove_enclosing(at) in self.substitution_dictionary:
-##                #if a code is appearing again
-##                pass 
+    ##            else remove_enclosing(at) in self.substitution_dictionary:
+    ##                #if a code is appearing again
+    ##                pass
+            query = query.strip()   
+            
                            
         if not keeping:
             self.query = query.strip()
         
         return ' '+query.strip()+' '
 
-    def reverse (self,query=None):
+    def reverse (self,query=None,transform=False):
         if query is None:
             return_query = self.query
         else:
@@ -200,6 +223,9 @@ class Substitutions:
             
             
             return_query = return_query.replace(' '+code+' ',' '+term_to_replace+' ')
+
+        if transform:
+            return transform_or_to_and(return_query.strip())
 
         return return_query.strip()
 
