@@ -702,6 +702,9 @@ class TruthTable:
                else:
                     final_text += '_'*max_length+'\n'
 
+          if final_text.count('\n')<30:
+               print(final_text)
+          
           return final_text
      
 

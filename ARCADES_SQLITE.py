@@ -7115,7 +7115,7 @@ class Note_Shelf:
 
             all_terms = get_terms(well_formed(query))
 
-            get_first_free = lambda x:x[0:min(len(x),3)]
+            get_first_free = lambda x:x.replace('[/','').replace('/]','')[0:min(len(x),10)]
             
             for count, x in enumerate(all_terms):
                 query = query.replace(x,'['+get_first_free(x)+']')
@@ -7260,7 +7260,7 @@ class Note_Shelf:
 
             return query, done_terms, working_terms 
         
-        def substitute_complex_equivalences (query,done_terms=None,working_terms=None,initiating=True):
+        def substitute_complex_equivalences (query,done_terms=None,working_terms=None,initiating=True,iteration=0):
 
             
 
@@ -7408,7 +7408,7 @@ class Note_Shelf:
 
                 if complex_equivalent_terms:
                 
-                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#',''),transform=True)
+                    A = TruthTable (query.reverse(query.query.replace('||','&').replace('<','').replace('>','').replace('#',''),transform=iteration>2 and self.search_equiv_multiplied)
                                                   .replace('[/', '').replace('/]',''),
                                     log=self.truth_table_log,
                                     subs=self.truth_table_subs) #CHANGED
@@ -7462,9 +7462,9 @@ class Note_Shelf:
  
                             temp_query = query.reverse()
                             
-                            for t in get_terms(well_formed(cet)+' '+' '.join(done_terms)):
-
-                                temp_query = temp_query.replace(adjust_tilda(left_part+t+right_part),'!allnotes!')
+##                            for t in get_terms(well_formed(cet)+' '+' '.join(done_terms)):
+##
+##                                temp_query = temp_query.replace(adjust_tilda(left_part+t+right_part),'!allnotes!')
                                 
         
                             
@@ -7493,7 +7493,7 @@ class Note_Shelf:
                
                 
 ##                query.delete_tildas()
-                return substitute_complex_equivalences (query,done_terms=done_terms,working_terms=working_terms,initiating=False)
+                return substitute_complex_equivalences (query,done_terms=done_terms,working_terms=working_terms,initiating=False,iteration=iteration)
             query.query = query.query.replace('||','|')
 
             return query, done_terms.union(self.buffered_done_terms), working_terms                            
@@ -7809,7 +7809,7 @@ class Note_Shelf:
             
             # Applies substitutions from a single term to a logical phrase      
             query, done_terms, dummy = substitute_equivalences(query,done_terms)
-            dis_text.append(str(counter)+'/E ' + simplify_equivalences (reduce_gaps(query.query).replace(' ','')))
+            dis_text.append(str(counter)+'/E ' + simplify_equivalences (reduce_gaps(query.reverse()).replace(' ','')))
 
             counter += 1
 
@@ -7817,9 +7817,10 @@ class Note_Shelf:
             
 
             # Applies substitutions from a logical phrase to a set of terms/logical phrases
+
             
-            query, done_terms, dummy = substitute_complex_equivalences(query,done_terms)
-            dis_text.append(str(counter)+'/CE' + simplify_equivalences (reduce_gaps(query.query).replace(' ','')))
+            query, done_terms, dummy = substitute_complex_equivalences(query,done_terms,iteration=counter)
+            dis_text.append(str(counter)+'/CE' + simplify_equivalences (reduce_gaps(query.reverse()).replace(' ','')))
             counter += 1
 
 
@@ -7837,10 +7838,10 @@ class Note_Shelf:
         query = query.reverse()
 
         
-        
-        for t in extract.extract(query,'[/','/]'):
-            query = query.replace('[/'+t+'/]','[/'+t.replace(' ','$')+'/]')
-            #For multi-word text search terms
+        if self.convert_text_terms:
+            for t in extract.extract(query,'[/','/]'):
+                query = query.replace('[/'+t+'/]','[/'+t.replace(' ','$')+'/]')
+                #For multi-word text search terms
             
             
         query = query.replace('( ','(').replace(' )',')').replace('[/','').replace('/]','')
@@ -9870,6 +9871,10 @@ class Console (Note_Shelf):
         self.keypurger = KeyPurge()
         self.truth_table_log = {}
         self.truth_table_subs = Simple_Sub()
+
+        self.search_equiv_multiplied = True #To automatically convert OR into AND after first
+                                            #iteration of equivalence substitutions with search
+        self.convert_text_terms = True 
             
 
 ##        if self.using_shelf:

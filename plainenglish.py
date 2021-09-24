@@ -522,7 +522,9 @@ binary_settings =    {'abbreviateinput':('self.apply_abr_inp',labels.APPLY_ABR_I
                       'carrykeys':("self.carry_keys",labels.CARRY_KEYS),
                       'abridgedformat':("self.abridgedformat",labels.ABRIDGEDFORMAT),
                       'nameinterpret':("self.name_interpret",labels.NAME_INTERPRET),
-                      'useallphabets':("self.use_alphabets","USE ALPHABETS")}
+                      'useallphabets':("self.use_alphabets","USE ALPHABETS"),
+                      'equivmultiply':("self.search_equiv_multiplied","EQUIVALENCE MULTIPLIER"),
+                      'converttextphrase':("self.convert_text_terms","Convert multiple word terms for text search")}
                       
 
 LOAD_COM = 'self.loadtext_com(otherterms=otherterms,predicate=predicate)'

@@ -396,6 +396,10 @@ changeknowledge| |change knowledgebase
 changeequivalences| |change equivalences
 yieldequivalences|  |suspects or unsuspends automatic yielding
     | |of equivalences during searches
+equivmultiply |  |Converts OR to AND for second
+                 |iteration of equivalence substitutions
+converttextphrase | |Adds DOLLAR to spaces
+                    |of substituted multi-word text search phrase
 changegeneralknowledge| |change general knowledge
 ||
 defaultcodes| |load codes embedded with kw CODES
