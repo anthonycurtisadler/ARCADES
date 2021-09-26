@@ -1339,10 +1339,10 @@ class Note_Shelf:
         def expand (keys):
 
             """returns variant forms of a name"""
-
-            returnkeyset = set()
-            for key in keys:
+            finalkeys = set()
             
+            for key in keys:
+                returnkeyset = set()
 
                 if SLASH in key:
                     has_tags = True
@@ -1369,7 +1369,19 @@ class Note_Shelf:
                                     abbreviated+BLANK+key_parts[-1]]
                 for k in all_keys:
                     returnkeyset.add(k+SLASH*has_tags+tag_tail)
-            return returnkeyset
+
+                if len(returnkeyset) > 1:
+                    if input('ADD '+', '.join(returnkeyset)+' AS EQUIVALENCES?') in YESTERMS:
+                        
+                        display.noteprint(('ADDING EQUIVALENTS',', '.join(returnkeyset)))
+                        self.default_dict['equivalences'].new_class(list(returnkeyset))
+                        finalkeys.add(key.replace('.',' '))
+                    else:
+                        finalkeys.update(returnkeyset)
+                else:
+                    finalkeys.update(returnkeyset)
+                    
+            return finalkeys
                         
                         
                     
