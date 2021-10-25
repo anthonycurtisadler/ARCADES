@@ -4990,6 +4990,15 @@ class Note_Shelf:
                         if xt_temp == '/':
                             self.suspended_sequences.add(k_temp)
                             satisfied = True
+                        elif xt_temp == ' ':
+                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp))
+                            satisfied = True
+                        elif xt_temp and not xt_temp.replace('+',''):
+                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp))
+                            satisfied = True
+                            
+
+                                                       
                         else:
                             for x_temp in xt_temp.split(COMMA):
                                 x_temp = self.default_dict['abbreviations'].undo(x_temp)
@@ -5026,8 +5035,10 @@ class Note_Shelf:
                                             if DASH not in x_temp or (x_temp.count(DASH)==1
                                                                       and x_temp[0]==DASH):
 
+                                                         
                                                 keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
                                                 satisfied = True
+                                            
                                             elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
                                                 keysetobject.add(k_temp.replace(ATSIGN+QUESTIONMARK,
                                                                                 'from'+ATSIGN+x_temp.split(DASH)[0]))
@@ -5082,6 +5093,7 @@ class Note_Shelf:
                                     
                 else:
                     keysetobject.add(k_temp)
+                
                         
         def auto_sequence_keys(keysetobject=None):
 
