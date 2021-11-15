@@ -360,6 +360,7 @@ loadprojects | |load a backup textfile of projects
 clearprojects | |clear existing projects
 truthtable |string |generates a truth table for a logical expression
 calculate | |enter the calculator mode
+kindle|  |activate the kindle note interpreter
 ||
 """
 HYPERLINKS = """
