@@ -3,6 +3,20 @@ table=(['m',1000],['cm',900],['d',500],
        ['xc',90],['l',50],['xl',40],
        ['x',10],['ix',9],['v',5],['iv',4],['i',1])
 
+def is_roman (entrystring):
+
+    entrystring_copy = entrystring
+    for x in ['cm','cd','xc','xl','ix','iv','m','c','d','l','x','v','i']:
+        entrystring_copy = entrystring_copy.replace(x,'')
+    if entrystring_copy:
+        return False
+
+    for x in ['m','c','x','i']:
+        if entrystring.count(x)>5 or x*5 in entrystring:
+            return False
+    return True 
+    
+
 def rom_to_int(entrystring):
 
 
