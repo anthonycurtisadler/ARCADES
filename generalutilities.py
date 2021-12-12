@@ -1,15 +1,205 @@
 from globalconstants import BOX_CHAR, UNDERLINE, ATSIGN, \
      EMPTYCHAR, BLANK, PERIOD, COMMA, COLON, EOL, \
-     POUND, STAR, DASH, PLUS, TAB, SLASH, VERTLINE
+     POUND, STAR, DASH, PLUS, TAB, SLASH, VERTLINE, LEFTNOTE, RIGHTNOTE, \
+     EQUAL, CARET, PERCENTAGE, LEFTBRACKET, RIGHTBRACKET, DOLLAR 
 import nformat
 from itertools import product
 import datetime
 from displaylist import DisplayList
 from rangelist import range_find
 from indexorderer  import index_orderer
+from indexclass import Index 
+from indexutilities import index_expand
+import string
+
+
+
 
 
 ind_ord = index_orderer()
+
+
+def add_form(keyset,
+             text,
+             meta=None,
+             right_at=False,
+             as_next=False,
+             as_child=False,
+             index=0):
+
+    """ formats note data including metadata into textformat """
+    if meta is None:
+        meta = {}
+    returntext = LEFTNOTE
+
+    returntext += DOLLAR
+    # adds key definition in arrow brackets
+    for k_temp in keyset:
+        returntext += k_temp.replace(RIGHTNOTE, EQUAL) + COMMA
+    returntext = returntext[0:-1]
+    returntext += BLANK + RIGHTNOTE + EOL
+    metatext = EMPTYCHAR
+    if 'date' in meta and not isinstance(meta['date'], list):
+        if not isinstance(meta['date'], str):
+            meta['date'] = [str(meta['date'])]
+        else:
+            meta['date'] = [meta['date']]
+    for key in meta.keys():
+        metatext += (CARET+COLON+str(key) + VERTLINE
+                     + {"<class 'str'>":'S',
+                        "<class 'int'>":'I',
+                        "<class 'list'>":'L'}
+                     [str(type(meta[key]))]+VERTLINE
+                     + str(meta[key])+COLON+CARET+EOL)
+
+    returntext += LEFTNOTE
+    #adds text in arrow brackets
+    if right_at:
+
+        if not as_child:
+            returntext += ATSIGN + str(index) + ATSIGN + BLANK
+            # to specify the index position
+        else:
+            returntext += PERCENTAGE + str(index) + PERCENTAGE + BLANK
+
+    else:
+        if as_child:
+            returntext += '" '    # mark for a child note
+        if as_next:
+            returntext += "' "    # mark for a next note
+
+    returntext += (text.replace(LEFTNOTE,
+                                LEFTBRACKET).replace(RIGHTNOTE,
+                                                     RIGHTBRACKET)
+                   +EOL+metatext[0:-1]+' >'+EOL*2)
+    # transforms the arrow brackets into square brackets
+    #to make sure  that encoding is possible
+
+    return returntext
+
+def reduce_tupples(entrylist):
+
+
+    """provides a list of tupples giving the 'moves'
+    needed to reduce a NoteBook"""
+
+    #Create a list of top-level (non-child) indexes.
+    entrylist = [a_temp for a_temp in entrylist if a_temp.is_top()]
+
+    returnlist = []
+    last_e = Index(0)
+    for e_temp in entrylist:
+
+        if e_temp-1 == last_e:
+            pass
+        else:
+            returnlist.append((e_temp,
+                               last_e+1))
+        last_e += 1
+    return returnlist
+
+
+def get_words(text):
+
+
+    """ parses text into words"""
+
+    for a_temp in string.punctuation:
+        text = text.replace(a_temp,
+                            BLANK+a_temp
+                            +BLANK)
+    for a_temp in string.whitespace:
+        text = text.replace(a_temp,
+                            BLANK)
+    text = nformat.reduce_blanks(text)
+    return text.split(BLANK)
+
+
+def get_range(entryterm,
+              orequal=True,
+              complete=False,
+              sort=True,
+              many=False,
+              indexes=True,
+              notebook=None):
+
+    """gets a range of indexes from a string of index ranges
+    IR1, IR2, IR3... Each indexrange is formated INDEXFROM-INDEXTO
+    or -INDEXFROM/-INDEXTO. orequal True is less than equal to
+    upper range. if complete true find top level indexes between
+    top-level form of entered indexes. Sort is true to sort output.
+    Many is true if term includes a number of ranges
+    """
+    term = entryterm
+
+
+    # For more than one range of indexes
+    returnrange = []
+    bigterm = term
+    for term in bigterm.split(COMMA):
+        if term.strip():
+            term = term.strip()
+            if (term[0]!=DASH and (SLASH in term or DASH in term)) \
+               or (term[0]==DASH and (SLASH in term[1:] or DASH in term[1:])):
+
+                if DASH + DASH in term:
+                    term = term.replace(DASH+DASH,
+                                        SLASH+DASH)
+                if SLASH not in term:
+                    if term[0] != DASH:
+                        term = term.replace(DASH,
+                                            SLASH)
+                    else:
+                        term = term[0] + term[1:].replace(DASH,SLASH)
+
+                if POUND not in term:
+                    termfrom = Index(index_expand(term.split(SLASH)[0]))
+                    termto = Index(index_expand(term.split(SLASH)[1]))
+
+                else:
+                    termfrom = term.split(SLASH)[0]
+                    termto = term.split(SLASH)[1]
+    
+                    
+                if indexes:
+                    returnrange += notebook.find_within(termfrom,
+                                                            termto,
+                                                            orequal=orequal)
+                else:
+                    returnrange += [str(a_temp)
+                                    for a_temp
+                                    in notebook.find_within(termfrom,
+                                                            termto,
+                                                            orequal=orequal)]
+
+            else:
+                if indexes:
+                    returnrange += [Index(term)]
+                else:
+                    returnrange += [int(term)]
+        if complete and returnrange == []:
+            if indexes:
+                returnrange = [Index(a_temp) for a_temp
+                               in range(int(termfrom), int(termto)+1)]
+            else:
+                returnrange = [a_temp for a_temp in range(int(termfrom),
+                                                          int(termto)+1)]
+            if sort:
+
+
+                return sorted(returnrange,
+                          key=lambda x_temp: Index(str(x_temp)))
+
+            return returnrange
+
+
+    if sort:
+
+
+        return sorted(returnrange,
+                          key=lambda x_temp: Index(str(x_temp)))
+
+    return returnrange
 
 def dummy(x_temp):
 

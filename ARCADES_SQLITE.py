@@ -19,10 +19,6 @@ def aprint(x):
 
 sequences = None 
 
-
-
-
-
 import _pickle as pickle
 
 from abbreviate import Abbreviate                                       #pylint 9.63/10
@@ -46,13 +42,16 @@ import consolidate                                                      #Stack O
 from convert import Convert
 import copy
 import curses 
+from databasedefinitions import create_database
 from defaultscripts import COMMANDMACROSCRIPT
 from defaultmanager import DefaultManager
 from diagnostics import DiagnosticTracking
 from display import Display                                             #pylint 9.2/10
 from displaylist import DisplayList                                     #pylint 9.6/10
+from editor import textedit_new, edit_keys
 import emptymovingwindow
 import extract                                                          #pylint 9.64/10
+from fileutilities import FileAccess
 import flatten                                                          #pylint 10.0/10
 from indexutilities import index_is_reduced, index_reduce, index_expand
 try:
@@ -60,10 +59,11 @@ try:
 except:
     print('INDEXER FUNCTION NOT AVAILABLE. MUST INSTALL fPLUMBER!')
 from equivalences import Equivalences
-from generalutilities import side_note, split_into_columns, repeat_function_on_set,\
+from formatutilities import nprint, si_input
+from generalutilities import get_range, side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values, \
-     remove_tags, sort_keyset, reform_text, remove_tag, modify_keys, stack_input
+     remove_tags, sort_keyset, reform_text, add_form, remove_tag, modify_keys, reduce_tupples, stack_input, get_words 
 
 
      
@@ -81,6 +81,7 @@ from lexical import English_frequent_words
 import movingwindow
 from multidisplay import Note_Display                                   #pylint 9.6/10
 from noteclass import Note                                              #pylint 10.0/10
+from notebookutilities import check_hyperlinks, transpose_keys, how_common, next_next, next_child 
 from orderedlist import OrderedList, convert_to_type
 import simple_parser as parser
 import pointerclass#pylint 9.62/10
@@ -107,6 +108,8 @@ import stack                                                            #pylint 
 
 from substitutions import Substitutions
 from temporaryholder import TemporaryHolder                             #pylint 10.0/10
+from editor import textedit_new, edit_keys 
+
 import terminalsize                                                     #Stack Overflow
 from transpositiontable import TranspositionTable
 from truth_table import truth_table, TruthTable,Simple_Sub
@@ -172,374 +175,29 @@ histo_word_dict = None
 histo_key_dict = None
 histo_tag_dict = None
 
+# OPEN DATEBASE CONNECTION
+
+
+##default_connection = sqlite3.connect('notebooks'+SLASH+'defaults.db')
+##default_cursor = default_connection.cursor()
+##
+##
+
+db_connection = sqlite3.connect('notebooks'+SLASH+'notebook.db')
+db_cursor = db_connection.cursor()
+file_access = FileAccess(db_cursor=db_cursor)
+
+
 
 
 # other utilities
-
-
-def nprint(*entries):
-    """For printing in a boxed note"""
-    
-    text = ''
-    for entry in entries:
-        text += entry + BLANK
-
-    if text.strip:    
-        display.noteprint(('',text))
-    else:
-        print()
-    
-
-    
-
-def si_input (prompt=EMPTYCHAR,
-              inputtext=EMPTYCHAR,
-              inputrange=range(-100000,100000),
-              alert=(EMPTYCHAR,EMPTYCHAR)):
-
-    """Inputs an integer value"""
-
-    while True:
-        if inputtext  in [EMPTYCHAR, QUESTIONMARK]:
-            inputtext = input(prompt)
-        if inputtext.isnumeric() and int(inputtext) in inputrange:
-              return int(inputtext)
-        inputtext = EMPTYCHAR
-        display.noteprint(alert)
-
-
-def check_hyperlinks(entry=[],purge=False):
-
-    """Checks to see if hyperlinks
-    are contained in notebook; assigns new if not"""
-
-    
-
-    if not entry:
-        return []
-    if isinstance(entry,set):
-        is_set = True
-        entry = list(entry)
-
-    else:
-        is_set = False
-
-   
-    
-
-
-    if isinstance(entry,list):
-        returning = []
-
-        for x_temp in entry:
-            x_temp = str(x_temp)
-            if isindex(x_temp):
-                if x_temp not in notebook.indexes():
-                    display.noteprint((alerts.ATTENTION,
-                                       alerts.INDEX + x_temp
-                                       + alerts.NOT_FOUND_IN_NOTEBASE))
-                else:
-                    if x_temp not in notebook.default_dict['indextable'].all_from():
-                        x_temp = notebook.default_dict['indextable'].assign(x_temp)
-                        
-                    else:
-                        x_temp = notebook.default_dict['indextable'].get_assigned(x_temp)
-                    returning.append(x_temp)
-            
-            elif x_temp and x_temp[0] == '#':
-                if x_temp in notebook.default_dict['indextable'].all_from():
-                    returning.append(x_temp)
-
-            else:
-                if not purge:
-                    
-                    returning.append(x_temp)
-
-                
-    if is_set:
-        returning = set(returning)
-    return returning
-
-
-def transpose_keys(entry_list=None,
-                   surround=True):
-
-    """Transpose keys that are indexes"""
-
-    to_return = []
-
-    if isinstance(entry_list,list):
-        to_return = []
-        
-        for x_temp in entry_list:
-            to_return.append(str(notebook.default_dict['indextable']
-                                 .transform(x_temp,surround=surround)))
-        return to_return
-
-    elif isinstance(entry_list,set):
-        to_return = set()
-        
-        for x_temp in entry_list:
-            to_return.add(str(notebook.default_dict['indextable']
-                              .transform(x_temp,surround=surround)))
-        return to_return
-
-    else:
-        to_return = notebook.default_dict['indextable']\
-                    .transform(entry_list,surround=surround)
-
-    return to_return
-
-
-def how_common(entrylist,
-               dictionaryobject=None):
-
-    """ For a given dictionaryobject, returns a
-    sorted list of tuples containing two entries:
-    the key in the dictionary, and either
-    the size of its value, if a set or list,
-    or the integer value.
-    """
-
-
-    returnlist = []
-
-
-    if dictionaryobject:
-
-        for w_temp in entrylist:
-            if w_temp in dictionaryobject:
-                if isinstance(dictionaryobject[w_temp],
-                              (set,list)):
-                    returnlist.append((w_temp,
-                                       len(dictionaryobject[w_temp])))
-                if isinstance(dictionaryobject[w_temp],int):
-                    returnlist.append((w_temp,
-                                       dictionaryobject[w_temp]))
-
-        return sorted(returnlist,
-                      key=lambda x_temp: x_temp[1])
-    else:
-        display.noteprint((alerts.ATTENTION,
-                           alerts.NO_DICTIONARY_OBJECT))
 
 def formkeys(entry_temp):
 
     """ combines format key and transpose keys """
 
-    return nformat.format_keys(transpose_keys(entry_temp))
-
-
-def switchlanguage(language='ple'):
-
-    """ switches from the instruction set
-    in one language to another language.
-    loads definitions from appropriate module
-    and then also runs the language_switching method
-    in the necessary objects, sending the default terms to them.
-    """
-    
-    global Queries, Alerts, Labels, queries, alerts, labels
-
-    del Queries
-    del Alerts
-    del Labels
-
-    if language == 'ple':
-        from plainenglish import Queries, Alerts,\
-             Labels, Spelling, DefaultConsoles,\
-             BREAKTERMS, NEWTERMS, QUITALLTERMS,\
-             QUITTERMS, YESTERMS, NOTERMS,\
-             DELETETERMS, SHOWTERMS, ADDTERMS, \
-             CLEARTERMS, LEARNTERMS, UNLEARNTERMS,\
-             binary_settings, simple_commands
-        
-        
-
-    if language == 'poe':
-        from politeenglish import Queries, Alerts,\
-             Labels, Spelling, DefaultConsoles,\
-             BREAKTERMS, NEWTERMS, QUITALLTERMS, \
-             QUITTERMS, YESTERMS, NOTERMS,\
-             DELETETERMS, SHOWTERMS, ADDTERMS, \
-             CLEARTERMS, LEARNTERMS, UNLEARNTERMS,\
-             binary_settings, simple_commands
-
-    if language == 'rue':
-        from rudeenglish import Queries, Alerts,\
-             Labels, Spelling, DefaultConsoles,\
-             BREAKTERMS, NEWTERMS, QUITALLTERMS,\
-             QUITTERMS, YESTERMS, NOTERMS,\
-             DELETETERMS, SHOWTERMS, ADDTERMS,\
-             CLEARTERMS, LEARNTERMS, UNLEARNTERMS,\
-             binary_settings, simple_commands
-        
-    spellingheadings = Spelling() 
-    notebook.speller = SpellCheck(display,
-                                  headings=spellingheadings)
-    defaultheadings = DefaultConsoles()
-    defaultterms = (ADDTERMS,
-                    DELETETERMS,
-                    SHOWTERMS,
-                    QUITTERMS,
-                    CLEARTERMS,
-                    LEARNTERMS,
-                    UNLEARNTERMS,
-                    YESTERMS,
-                    NOTERMS)
-    queries = Queries()
-    alerts = Alerts()
-    labels = Labels()
-    
-    # To set language for persistent objects 
-    notebook.default_dict['keymacros'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    notebook.default_dict['definitions'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    notebook.default_dict['macros'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    notebook.default_dict['abbreviations'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    notebook.default_dict['commands'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    notebook.default_dict['knower'].change_language(headings=defaultheadings,
-                                                   terms=defaultterms)
-    
- 
-
-
-
-
-
-
-def get_range(entryterm,
-              orequal=True,
-              complete=False,
-              sort=True,
-              many=False,
-              indexes=True):
-
-    """gets a range of indexes from a string of index ranges
-    IR1, IR2, IR3... Each indexrange is formated INDEXFROM-INDEXTO
-    or -INDEXFROM/-INDEXTO. orequal True is less than equal to
-    upper range. if complete true find top level indexes between
-    top-level form of entered indexes. Sort is true to sort output.
-    Many is true if term includes a number of ranges
-    """
-    term = entryterm
-
-
-    # For more than one range of indexes
-    returnrange = []
-    bigterm = term
-    for term in bigterm.split(COMMA):
-        if term.strip():
-            term = term.strip()
-            if (term[0]!=DASH and (SLASH in term or DASH in term)) \
-               or (term[0]==DASH and (SLASH in term[1:] or DASH in term[1:])):
-
-                if DASH + DASH in term:
-                    term = term.replace(DASH+DASH,
-                                        SLASH+DASH)
-                if SLASH not in term:
-                    if term[0] != DASH:
-                        term = term.replace(DASH,
-                                            SLASH)
-                    else:
-                        term = term[0] + term[1:].replace(DASH,SLASH)
-
-                if POUND not in term:
-                    termfrom = Index(index_expand(term.split(SLASH)[0]))
-                    termto = Index(index_expand(term.split(SLASH)[1]))
-
-                else:
-                    termfrom = term.split(SLASH)[0]
-                    termto = term.split(SLASH)[1]
-    
-                    
-                if indexes:
-                    returnrange += notebook.find_within(termfrom,
-                                                            termto,
-                                                            orequal=orequal)
-                else:
-                    returnrange += [str(a_temp)
-                                    for a_temp
-                                    in notebook.find_within(termfrom,
-                                                            termto,
-                                                            orequal=orequal)]
-
-            else:
-                if indexes:
-                    returnrange += [Index(term)]
-                else:
-                    returnrange += [int(term)]
-        if complete and returnrange == []:
-            if indexes:
-                returnrange = [Index(a_temp) for a_temp
-                               in range(int(termfrom), int(termto)+1)]
-            else:
-                returnrange = [a_temp for a_temp in range(int(termfrom),
-                                                          int(termto)+1)]
-            if sort:
-
-
-                return sorted(returnrange,
-                          key=lambda x_temp: Index(str(x_temp)))
-
-            return returnrange
-
-
-    if sort:
-
-
-        return sorted(returnrange,
-                          key=lambda x_temp: Index(str(x_temp)))
-
-    return returnrange
-
-
-
-
-def get_text_file(filename,folder=os.altsep+'textfiles',suffix='.txt'):
-
-
-    """opens a text file a returns the text"""
-
-    directoryname = os.getcwd()+folder
-    if os.altsep+'notebooks'+os.altsep+'textfiles' in directoryname:
-        nprint(directoryname)
-        directoryname = directoryname.replace(os.altsep + 'notebooks'
-                                              + os.altsep+'textfiles',
-                                              os.altsep+'textfiles')
-        nprint(directoryname)
-    if  os.altsep+'notebooks'+'/'+'textfiles' in directoryname:
-        nprint(directoryname)
-        directoryname = directoryname.replace(os.altsep + 'notebooks'
-                                              + '/' + 'textfiles',
-                                              os.altsep+'textfiles')
-        nprint(directoryname)
-        
-    
-    with open(directoryname+os.altsep+filename+suffix,'r',
-                    encoding='utf-8') as textfile:
-        returntext = textfile.read().replace('\ufeff',
-                                         EMPTYCHAR)
-    return returntext
-
-def get_words(text):
-
-
-    """ parses text into words"""
-
-    for a_temp in string.punctuation:
-        text = text.replace(a_temp,
-                            BLANK+a_temp
-                            +BLANK)
-    for a_temp in string.whitespace:
-        text = text.replace(a_temp,
-                            BLANK)
-    text = nformat.reduce_blanks(text)
-    return text.split(BLANK)
+    return nformat.format_keys(transpose_keys(entry_temp,
+                                              notebook=notebook))
 
 
 def get_keys_to_add(keys_to_add):
@@ -555,295 +213,11 @@ def get_keys_to_add(keys_to_add):
                              get_definition(k_temp[1:]))
            else:
                keyset.add(k_temp)
-    return list(check_hyperlinks(keyset))
+    return list(check_hyperlinks(keyset,display=display,notebook=notebook))
 
 
 
 
-
-
-
-def textedit_new(text,
-                 size=60,
-                 splitchar=BLANK,
-                 annotate=False):
-
-    """ updated text editing function.
-    Allows the user to edit inputed text"""
-
-    text = text.replace(EOL,VERTLINE)
-    # add the annotation mark if needed.
-    if annotate and '/COL/' not in text:
-        text = '/COL/|' + text
-    maxlen = 0
-    text = text.replace('/COL/|',
-                        '/COL/'+EOL).replace(VERTLINE+'/ENDCOL/',
-                                             EOL+'/ENDCOL/')
-    # to establish the maximum length of the line.
-    maxlen = max(len(l_temp)
-                 for l_temp
-                 in text.split(VERTLINE))
-    # the actual size of the note.
-    size = min(size, maxlen+5)
-    go_on_deleting = False
-    
-
-
-    linelist = [] 
-    # either add line, if less than size,
-    #or split into smaller lines.
-    for l_temp in text.split(VERTLINE):
-        if len(l_temp) < size:
-            linelist.append(l_temp+VERTLINE)
-        else:
-            nextline = EMPTYCHAR
-            for word in format(l_temp).split(splitchar):
-                nextline += str(word)+splitchar
-                if len(nextline) > size-int(size/3) or EOL in nextline:
-                    linelist.append(nextline)
-                    nextline = EMPTYCHAR
-            if nextline != EMPTYCHAR:
-                linelist.append(nextline+VERTLINE)
-            else:
-                linelist.append(VERTLINE)
-
-    returnlist = []
-    returntext = EMPTYCHAR
-    counter = 1
-
-    display.noteprint((alerts.EDITING,
-                       queries.EDIT_OPTIONS))
-    maxcolumns = max(x_temp.count(UNDERLINE) for x_temp in linelist)
-    # Goes through linelist line by line and requests changes
-    for l_temp in linelist:
-
-
-
-        annotation = UNDERLINE * annotate
-        if not go_on_deleting:
-            nl_temp = input(DOLLAR+str(counter)
-                        +(4-len(str(counter)))
-                        *BLANK+l_temp+(size-len(l_temp)-5)*BLANK+VERTLINE)
-
-            if UNDERLINE in nl_temp:
-                # if an ANNOTATION
-                annotation +=' _'.join(nl_temp.split(UNDERLINE)[1:])
-                nl_temp = nl_temp.split(UNDERLINE)[0]
-
-            if UNDERLINE in l_temp and SLASH in nl_temp:
-                    # replacing a previous annotation
-
-                    ls_temp = nl_temp.split(SLASH)
-                    nls_temp = l_temp.split(UNDERLINE)
-                    if len(ls_temp) <= len(nls_temp):
-
-                        l_temp=UNDERLINE.join(nls_temp[0:len(nls_temp)
-                                                       -len(ls_temp)]+ls_temp)
-
-                    returnlist.append(l_temp+(maxcolumns-len(nls_temp))
-                                      *' _ '*(len(annotation)>1)
-                                      +annotation+VERTLINE)
-
-            elif not nl_temp:
-                # if RETURN then keep as it was.
-                counter += 1
-                if annotate:
-                    returnlist.append(l_temp.replace(VERTLINE,
-                                                     EMPTYCHAR)
-                                      +annotation+VERTLINE)
-                else:
-                    returnlist.append(l_temp)
-                print(returnlist[-1])
-            elif nl_temp == DASH:
-                # DASH to delete the line. 
-                pass
-            elif nl_temp == DASH+DASH:
-                go_on_deleting = True
-                pass
-            elif nl_temp[0] == DOLLAR:
-                # to add to the LEFT.
-                counter += 1
-                returnlist.append(nl_temp[1:]+l_temp)
-            elif nl_temp[0] == POUND:
-                counter += 1
-                # to add to the RIGHT 
-                returnlist.append(l_temp.replace(EOL,
-                                                 EMPTYCHAR)
-                                  +nl_temp[1:]+VERTLINE)
-            elif nl_temp[0] in [PLUS,
-                                CARET]:
-                # to insert new lines before 
-                keepgoing = True
-                addline = EOL
-                
-                while keepgoing:
-                    if len(nl_temp) > 1:  #to carry over text after plus or caret
-                        nnl_temp = nl_temp[1:]
-                        nl_temp = EMPTYCHAR
-                    else:
-                        nnl_temp = input(PLUS+str(counter)
-                                         +(4-len(str(counter)))
-                                         *BLANK+l_temp
-                                         +(size-len(l_temp)-5)
-                                         *BLANK+VERTLINE)
-                    if nnl_temp and nnl_temp[-1] != VERTLINE:
-                        addline += nnl_temp + BLANK
-                    elif nnl_temp and nnl_temp[-1] == VERTLINE:
-                        addline += nnl_temp[:-1]
-                        returnlist.append(addline+VERTLINE)
-                        addline = EMPTYCHAR
-                    else:
-                        keepgoing = False
-                        returnlist.append(addline+VERTLINE)
-                    counter += 1
-                if nl_temp == PLUS:
-                    returnlist.append(l_temp)
-            else:
-
-                # to replace with new line/lines
-                for ll in nl_temp.split(VERTLINE):
-                    returnlist.append(ll+annotation
-                                      +VERTLINE*annotate)
-                    annotation = UNDERLINE * annotate
-                    counter += 1
-    for l_temp in returnlist:
-        # to replcae VERTLINE with EOL
-
-        l_temp = l_temp.replace(VERTLINE+VERTLINE,
-                                VERTLINE).replace(EOL+VERTLINE,
-                                                  VERTLINE)\
-                      .replace(VERTLINE+EOL,VERTLINE)\
-                      .replace(VERTLINE,EOL)
-        if l_temp:
-            returntext += l_temp + BLANK*(l_temp[-1]!=EOL)
-
-    #if annotated, add mark 
-    if annotate and '/ENDCOL/' not in returntext:
-        returntext = returntext + EOL + '/ENDCOL/'
-    return returntext
-
-
-
-def next_next(index,
-              index_list=None,
-              rightat=False):
-
-
-    """ returns the next available 'next' note"""
-
-    #For an unrestricted index domain 
-    if index_list is None:
-        index_list = notebook.indexes()
-
-    #If no note exists at the given index, then return given index
-    if rightat:
-
-        if str(index) not in index_list:
-            return index
-
-    #Otherwise, fetch the next index.    
-    while True:
-        if str(index.next()) not in index_list:
-            return index.next()
-        index = index.next()
-
-
-def next_child(index,
-               index_list=None):
-
-
-    """ returns the next available 'child' note"""
-
-    #For an unrestricted index domain
-    if index_list is None:
-        index_list = notebook.indexes()
-
-    #If no note exists at the given index, then return given index
-    if str(index.child()) not in index_list:
-        return index.child()
-
-    #Return child index 
-    return index.child().next()
-
-
-def reduce_tupples(entrylist):
-
-
-    """provides a list of tupples giving the 'moves'
-    needed to reduce a NoteBook"""
-
-    #Create a list of top-level (non-child) indexes.
-    entrylist = [a_temp for a_temp in entrylist if a_temp.is_top()]
-
-    returnlist = []
-    last_e = Index(0)
-    for e_temp in entrylist:
-
-        if e_temp-1 == last_e:
-            pass
-        else:
-            returnlist.append((e_temp,
-                               last_e+1))
-        last_e += 1
-    return returnlist
-
-def add_form(keyset,
-             text,
-             meta=None,
-             right_at=False,
-             as_next=False,
-             as_child=False,
-             index=0):
-
-    """ formats note data including metadata into textformat """
-    if meta is None:
-        meta = {}
-    returntext = LEFTNOTE
-
-    returntext += DOLLAR
-    # adds key definition in arrow brackets
-    for k_temp in keyset:
-        returntext += k_temp.replace(RIGHTNOTE, EQUAL) + COMMA
-    returntext = returntext[0:-1]
-    returntext += BLANK + RIGHTNOTE + EOL
-    metatext = EMPTYCHAR
-    if 'date' in meta and not isinstance(meta['date'], list):
-        if not isinstance(meta['date'], str):
-            meta['date'] = [str(meta['date'])]
-        else:
-            meta['date'] = [meta['date']]
-    for key in meta.keys():
-        metatext += (CARET+COLON+str(key) + VERTLINE
-                     + {"<class 'str'>":'S',
-                        "<class 'int'>":'I',
-                        "<class 'list'>":'L'}
-                     [str(type(meta[key]))]+VERTLINE
-                     + str(meta[key])+COLON+CARET+EOL)
-
-    returntext += LEFTNOTE
-    #adds text in arrow brackets
-    if right_at:
-
-        if not as_child:
-            returntext += ATSIGN + str(index) + ATSIGN + BLANK
-            # to specify the index position
-        else:
-            returntext += PERCENTAGE + str(index) + PERCENTAGE + BLANK
-
-    else:
-        if as_child:
-            returntext += '" '    # mark for a child note
-        if as_next:
-            returntext += "' "    # mark for a next note
-
-    returntext += (text.replace(LEFTNOTE,
-                                LEFTBRACKET).replace(RIGHTNOTE,
-                                                     RIGHTBRACKET)
-                   +EOL+metatext[0:-1]+' >'+EOL*2)
-    # transforms the arrow brackets into square brackets
-    #to make sure  that encoding is possible
-
-    return returntext
 
 def select_func (entrylist):
 
@@ -856,168 +230,6 @@ def select_func (entrylist):
             if a_temp in range(len(entrylist))]
 
 
-def save_file(returntext=EMPTYCHAR,
-              filename=EMPTYCHAR,
-              folder=os.altsep+'textfiles'):
-
-    """for saving a file"""
-    
-              
-    directoryname = os.getcwd()+folder
-    nprint(directoryname)
-    with open(directoryname+os.altsep
-                    +filename+'.txt',
-                    'x',
-                    encoding='utf-8') as textfile:
-        textfile.write(returntext.replace('\ufeff', ' '))
-
-    return 'Saved to ' + directoryname+SLASH+filename+'.txt'
-
-def make_new_directory (directory_name='testnotebook',
-                        file_path=EMPTYCHAR,):
-
-    full_path = os.getcwd()+file_path
-    allfiles = os.listdir(full_path)
-    return_text = ""
-
-    if directory_name not in allfiles:
-        try:
-            os.mkdir(full_path+os.altsep+directory_name)
-            return_text = 'NEW FOLDER CREATED: '+directory_name
-        except:
-            return_text = 'NEW FOLDER CREATION FAILED'
-    else:
-        return_text = directory_name + ' ALREADY EXISTS'
-    return return_text
-   
-def get_file_name(file_path=EMPTYCHAR,
-                  file_suffix=EMPTYCHAR,
-                  file_prefix=EMPTYCHAR,
-                  get_filename=EMPTYCHAR,
-                  justshow=False,
-                  show_notebooks_too=False):
-
-    """Lists files in directory asks the user to make a selection.
-    returns the name of the file
-    """
-
-    def directory ():
-
-        """gets directory"""
-
-            
-        allfiles = os.listdir(file_path)
-
-        filelist = [a_temp[0: -len(file_suffix)]
-                    for a_temp in allfiles
-                    if (a_temp.startswith(file_prefix)
-                        and a_temp.endswith(file_suffix))]
-
-        if show_notebooks_too:
-            db_cursor.execute("SELECT notebook FROM notebooks")
-            filelist += list([i[0] for i in db_cursor.fetchall()])
-        
-        dirlist = [a_temp for a_temp in allfiles if PERIOD not in a_temp]
-        
-        textlist = []
-        display_path = abridge(file_path,30,rev=True)
-
-        for temp_counter, filename in enumerate(filelist):
-            #Files
-            l_temp = filename
-            textlist.append((l_temp,file_suffix))
-
-        for temp_counter, filename in enumerate(dirlist):
-            #Directories
-            l_temp = filename
-            textlist.append((l_temp,'DIR'))
-
-        show_list(textlist,display_path+'\n'+\
-                  (max([(int(len(file_path)/2))-5,0])*BLANK),0,20,
-                  select=True,
-                  func=zformat,
-                  sfunc=dummy,
-                  present=True,
-                  display=display)
-
-        return filelist,dirlist
-    
-    def zformat (x_temp):
-
-        """formating function for columns"""
-        
-        return x_temp[0] + VERTLINE + x_temp[1] 
-    
-    def select_file (filelist):
-
-        """selecting function"""
-        
-        go_on = True
-        while go_on:
-            newfile = input(queries.SELECT_FILE)
-            nprint()
-
-            if newfile in ['b','B','BACK','back']:
-                return 'BACK', EMPTYCHAR
-            elif (newfile.isnumeric() and int(newfile) > 0
-                    and int(newfile) < len(filelist)+1):
-                newfile = filelist[int(newfile)-1]
-                tag = 'w'
-            else:
-                newfile = file_prefix+newfile
-                tag = 'c'
-            if input(queries.OPEN_CONFIRM+newfile+QUESTIONMARK+BLANK) in YESTERMS:
-                go_on = False
-
-        return newfile, tag
-
-    """fetches a filename to load"""
-
-    if get_filename != EMPTYCHAR:
-        return get_filename, EMPTYCHAR
-##    if 'simple note' in os.getcwd():
-##        file_path = os.getcwd() + file_path
-##    else:
-##        file_path = os.getcwd()
-    file_path = os.getcwd() + file_path
-        
-    old_file_path = file_path
-    added_path = EMPTYCHAR
-
-
-    filelist,dirlist = directory()
-
-
-
-    if not justshow:
-
-        while True:
-
-            selected = select_file(filelist+dirlist)
-
-            if selected[0] != 'BACK' and selected[0] not in dirlist:
-                #to go back to last directory
-                return added_path + selected[0],selected[1]
-            else:
-                if selected[0] == 'BACK':
-                    file_path = old_file_path
-                    added_path = EMPTYCHAR
-
-                else:
-                    file_path += os.altsep + selected[0]
-                    added_path += os.altsep + selected[0]
-                os.chdir (file_path)
-                    
-
-
-                filelist,dirlist = directory()
-                if not filelist and not dirlist:
-                    display.noteprint((file_path,'EMPTY'))
-                
-
-    return EMPTYCHAR, EMPTYCHAR
-
-
 def show_setting(message,
                  toggle):
 
@@ -1028,116 +240,6 @@ def show_setting(message,
         display.noteprint((message,alerts.ON))
     else:
         display.noteprint((message,alerts.OFF))
-
-
-
-
-def get_all_notebooks ():
-
-    """Returns a list of all the notebooks in the database"""
-
-
-    db_cursor.execute("SELECT * FROM notebooks;")
-    temp_list = db_cursor.fetchall()
-    returnlist = [x[0] for x in temp_list]
-    return returnlist 
- 
-
-def edit_keys (keyobject,
-               displayobject=None,
-               prompt='Default Keys',
-               deletekeys=True,
-               addkeys=False,
-               ddkeys=False,
-               askabort=False,
-               vertmode=True,
-               notebookobject=None):
-
-    """ Adds to and deletes to the autokeys.
-    """
-
-    if notebookobject is None:
-        notebookobject=notebook
-
-    if deletekeys:
-
-        keylist = DisplayList(displayobject=displayobject)
-        listcopy = list(keyobject)
-        for counter, key in enumerate(listcopy):
-            keylist.append(str(counter)+' : '+key)
-
-        if not vertmode:
-             keylist.show(header=prompt,
-                          centered=True)
-
-             
-             i_temp = input(queries.AUTOKEYS_KEEP+askabort*queries.ALSO_ABORT)
-
-             if i_temp:
-                 if askabort  and i_temp.lower() == 'abort':
-                     return {'ABORTNOW'}
-                 if i_temp.lower()[0] == 'a':
-                     keyobject = []
-                 elif i_temp.lower()[0] == 's':
-                      command_stack.add('deletedefaultkeys')
-                      command_stack.add('keyeditmode')
-                      
-                 
-                 else:
-                     if i_temp[0] == DOLLAR:
-                         i_temp = i_temp[1:]
-                         keyobject = [listcopy[int(a_temp)]  for a_temp in range(0,
-                                                                                 len(listcopy))
-                                                             if Index(a_temp) not in get_range
-                                                             (i_temp, orequal=True,
-                                                              complete=False,
-                                                              many=True,
-                                                              indexes=False)]
-                     else:
-
-                         keyobject = [listcopy[int(a_temp)] for a_temp in get_range(i_temp,
-                                                                                     orequal=True,
-                                                                                     complete=False,
-                                                                                     many=True,
-                                                                                     indexes=False)
-                                                             if int(a_temp) < len(listcopy)
-                                                             and int(a_temp) >= 0]
-        else:
-             nprint('X to delete, O to keep, or SWITCH to change to regular mode')
-             print(vertical_display(listcopy))
-             tokeep = input(7*BLANK)
-             keeplist = []
-             for counter in range(len(tokeep)):
-                  if counter%2 == 0:
-                       if tokeep[counter] != BLANK:
-                            keeplist.append(int(counter/2))
-             if 'O' in tokeep:
-                  keyobject = [listcopy[int(a_temp)]
-                               for a_temp in range(0, len(listcopy))
-                               if Index(a_temp) in keeplist]
-             elif tokeep and tokeep.lower()[0] == 's':
-                  command_stack.add('deletedefaultkeys')
-                  command_stack.add('keyeditmode')
-                  
-             else:
-                  keyobject = [listcopy[int(a_temp)]
-                               for a_temp in range(0, len(listcopy))
-                               if Index(a_temp) not in keeplist]
-                     
-
-        display.noteprint((alerts.OLD+prompt,
-                           formkeys(keyobject)))
-
-    if addkeys:
-
-        in_temp = notebookobject.default_dict['abbreviations'].undo(input(queries.KEYS))
-        if in_temp:
-                
-            keyobject += in_temp.split(COMMA)
-
-        
-    return keyobject
-
 
 
 
@@ -1727,7 +829,8 @@ class Note_Shelf:
             dictionaryobject = self.word_dict 
 
         temp_words = how_common(entrylist=words,
-                                dictionaryobject=dictionaryobject)
+                                dictionaryobject=dictionaryobject,
+                                display=display)
         number = min([number,len(temp_words)])
 
 
@@ -2961,7 +2064,7 @@ class Note_Shelf:
 
         if self.using_shelf:
             
-            save_file(returntext=project,
+            file_access.save_file(returntext=project,
                       filename='PROJ'+notebookname+datesuffix,
                       folder='/textfiles')
         if self.using_database:
@@ -3074,7 +2177,9 @@ class Note_Shelf:
                 #position for the note has been passed into the function
                 if not re_entering:
                     if not as_child:
-                        index = next_next(ind,rightat=True)
+                        index = next_next(ind,
+                                          rightat=True,
+                                          notebook=notebook)
                         if not ind.is_top():
                             if self.defaults.get('carryoverkeys'):
                                 if self.defaults.get('carryall'):
@@ -3094,7 +2199,7 @@ class Note_Shelf:
                                     
 
                     else:
-                        index = next_child(ind)
+                        index = next_child(ind,notebook=notebook)
                         if self.defaults.get('carryoverkeys'):
                             if self.defaults.get('carryall'):
                                 for x_temp in index.all_parents():
@@ -3135,7 +2240,7 @@ class Note_Shelf:
                 return index
             keyset = {index_expand(x_temp) for x_temp in keyset}
             newkeyset = self.add_keys_tags(index, keyset)
-            newkeyset = check_hyperlinks(newkeyset)
+            newkeyset = check_hyperlinks(newkeyset,display=display,notebook=notebook)
 
             
 
@@ -3544,7 +2649,8 @@ class Note_Shelf:
             keyset_temp = oldkeys - seq_keys
 
         kl = self.abridged_str_from_list(remove_tags(
-            self.return_least_keys(transpose_keys(keyset_temp),
+            self.return_least_keys(transpose_keys(keyset_temp,
+                                                  notebook=notebook),
                                    override=not self.defaults.get('orderkeys'),
                                    add_number=True,no_allcaps=False), override=yestags),
                                          override=not shortform)
@@ -3620,7 +2726,7 @@ class Note_Shelf:
                                            STAR:'/attachments'}[n_temp[0]]
                             n_temp = n_temp[1:]
                             try:
-                                textfile = get_text_file(n_temp,
+                                textfile = file_access.get_text_file(n_temp,
                                                          folder=folder_temp)
                                 tex_temp = tex_temp.replace('{{'+ATSIGN+n_temp+'}}',
                                                             textfile)
@@ -4029,7 +3135,7 @@ class Note_Shelf:
 
                     if str(self.find_parent(e_temp)) in self.indexes():
                         self.move(e_temp,
-                                  next_child(self.find_parent(e_temp)))
+                                  next_child(self.find_parent(e_temp),notebook=notebook))
                     else: self.move(e_temp,
                                     self.find_parent(e_temp))
                 else:
@@ -4935,7 +4041,8 @@ class Note_Shelf:
             if self.use_alphabets:
                 key_text = self.alphabet_manager.interpret(key_text)
             
-            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(key_text).split(COMMA)):
+            for k_temp in check_hyperlinks(self.default_dict['abbreviations'].undo(key_text).split(COMMA),
+                                           display=display,notebook=notebook):
                 if isinstance(k_temp,str) and len(k_temp) > 0:
                     if k_temp[0] == DOLLAR:
                         keysetobject.update(self.default_dict['keymacros'].get_definition(k_temp[1:]))
@@ -8637,7 +7744,8 @@ class Note_Shelf:
                 self.display_buffer.append(alerts.SAVING+str(i_temp))
 
                 returntext += (add_form(transpose_keys(self.get_keys_from_note(i_temp),
-                                                       surround=False),
+                                                       surround=False,
+                                                       notebook=notebook),
                                         self.get_text_from_note(i_temp),
                                         self.get_metadata_from_note(i_temp),
                                         right_at=right_at, index=i_temp))
@@ -8647,7 +7755,8 @@ class Note_Shelf:
 
                 self.display_buffer.append(alerts.SAVING+index_reduce(str(i_temp)))
                 returntext += (add_form(transpose_keys(self.get_keys_from_note(i_temp),
-                                                       surround=False),
+                                                       surround=False,
+                                                       notebook=notebook),
                                         self.get_text_from_note(i_temp),
                                         right_at=right_at, index=i_temp))
                 lastindex = i_temp
@@ -8658,7 +7767,7 @@ class Note_Shelf:
                           + '<<<<PROJECTEND>>>>'
 
         if saveyes:
-            save_file(returntext,filename)
+            file_access.save_file(returntext,filename)
 
             display.noteprint((alerts.ATTENTION,filename+alerts.SAVED))
 
@@ -8923,7 +8032,7 @@ class Note_Shelf:
         return newindex
 
     def dictionaryload(self,filename):
-        entertext = get_text_file(filename)
+        entertext = file_access.get_text_file(filename)
 
         if '<PROGRAM>' in entertext and '</PROGRAM>' in entertext:
             generic_program = EMPTYCHAR.join(entertext.split('<PROGRAM>')[1:]).split('</PROGRAM>')[0]
@@ -8979,7 +8088,7 @@ class Note_Shelf:
 
         if not analysetext and filename:
         
-            analysetext = get_text_file(filename)
+            analysetext = file_access.get_text_file(filename)
         analysetext = '\n'.join([x for x in analysetext.split('\n') if not x.startswith('/#/')])
 
         if '<<<<PROJECTBEGIN>>>>' and '<<<<PROJECTEND>>>>' in analysetext:
@@ -9204,7 +8313,7 @@ class Note_Shelf:
         """
 
 
-        analysetext = get_text_file(filename)
+        analysetext = file_access.get_text_file(filename)
         #load the text to be analysed
 
         if keys:
@@ -9461,7 +8570,10 @@ class Note_Shelf:
                 index = Index(random.choice(list(self.indexes())))
 
             keylist_temp = list(self.get_keys_from_note(index))
-            keylist_temp = transpose_keys(check_hyperlinks(keylist_temp,purge=True))
+            keylist_temp = transpose_keys(check_hyperlinks(keylist_temp,
+                                                           purge=True,
+                                                           display=display,notebook=notebook),
+                                                           notebook=notebook)
             keylist_temp = sorted([x_temp
                             .replace('<',EMPTYCHAR)
                             .replace('>',EMPTYCHAR) for x_temp in keylist_temp])
@@ -9522,9 +8634,11 @@ class Note_Shelf:
                                 * BLANK + ']/'
                 if len(projectobject[temp_key]['indexes']) > 1:
                        line_temp += index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
-                                                       surround=False)[0]))\
+                                                                    surround=False,
+                                                                    notebook=notebook)[0]))\
                                                        +':'+index_reduce(str(transpose_keys(projectobject[temp_key]['indexes'].list,
-                                                                                                surround=False)[-1]))
+                                                                                            surround=False,
+                                                                                            notebook=notebook)[-1]))
                 elif len(projectobject[temp_key]['indexes'].list) == 1:
                     line_temp += str(projectobject[temp_key]['indexes'].list[0])
                     
@@ -9560,7 +8674,7 @@ class Note_Shelf:
             filename = input('FILENAME?')
             
         try:
-            note_text = get_text_file(filename)
+            note_text = file_access.get_text_file(filename)
         except:
             display.noteprint(('ATTENTION','File cannot be found!'))
             note_text = ''
@@ -10873,16 +9987,21 @@ class Console (Note_Shelf):
             self.default_dict['marked'].update({str(a_temp) for a_temp
                                                 in get_range(s_input(queries.DELETE_FROM_TO,
                                                                      otherterms[0]),
-                                                             True, False,
+                                                             orequal=True,
+                                                             complete=False,
                                                              sort=True,
-                                                             many=True)})
+                                                             many=True,
+                                                             notebook=notebook)})
             self.dd_changed = True
         elif mainterm in ['deletemarks']:
             self.default_dict['marked'].difference_update({str(a_temp) \
                                                            for a_temp
                                                            in get_range(s_input(queries.DELETE_FROM_TO,otherterms[0]),
-                                                                                   True,False,
-                                                                                   sort=True,many=True)})
+                                                                        orequal=True,
+                                                                        complete=False,
+                                                                        sort=True,
+                                                                        many=True,
+                                                                        notebook=notebook)})
             self.dd_changed = True
 
     def documentation_com(self):
@@ -10904,7 +10023,7 @@ class Console (Note_Shelf):
             self.defaults.set('defaultkeys',[])
             self.dd_changed = True
 
-        filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+        filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
                                     get_filename=otherterms[0])[0].rstrip()
         display.noteprint((alerts.LOADING_FILE,filename_temp))
@@ -10920,7 +10039,7 @@ class Console (Note_Shelf):
     def loadby_com(self,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
         
         if mainterm in ['loadbyparagraph']:
-            self.text_by_paragraph(get_file_name(file_path=os.altsep +'textfiles',
+            self.text_by_paragraph(file_access.get_file_name(file_path=os.altsep +'textfiles',
                                                  file_suffix='.txt',
                                                  file_prefix=EMPTYCHAR,
                                                  get_filename=otherterms[0])[0],
@@ -10928,7 +10047,7 @@ class Console (Note_Shelf):
                                    key_definitions=predicate[1],
                                    query=not predicate[2])
         elif mainterm in ['splitload']:
-            self.text_by_paragraph(get_file_name(file_path=os.altsep + 'textfiles',
+            self.text_by_paragraph(file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                                  file_suffix='.txt',
                                                  file_prefix=EMPTYCHAR,
                                                  get_filename=otherterms[0])[0],
@@ -10993,7 +10112,9 @@ class Console (Note_Shelf):
                 else:
                     self.defaults.set('defaultkeys',
                                       self.defaults.get('defaultkeys')
-                                      +check_hyperlinks([key_to_add]))
+                                      +check_hyperlinks([key_to_add],
+                                                        display=display,
+                                                        notebook=notebook))
                     self.dd_changed=True
             display.noteprint((labels.DEFAULT_KEYS,
                    formkeys(self.defaults.get('defaultkeys'))))
@@ -11100,7 +10221,11 @@ class Console (Note_Shelf):
 
             sourcerange = get_range(s_input(queries.SOURCE_TO_FROM,
                                             otherterms[0]),
-                                    True, False, sort=True,many=True)
+                                    orequal=True,
+                                    complete=False,
+                                    sort=True,
+                                    many=True,
+                                    notebook=notebook)
 
             self.copy_many_to_temp(sourcerange)
         elif mainterm in ['copyfrom']:
@@ -11513,7 +10638,9 @@ class Console (Note_Shelf):
                      .replace(COMMA,EMPTYCHAR)\
                      .replace(PERIOD,EMPTYCHAR).isnumeric():
                     
-                    self.default_dict['flipbook'] = get_range(temp_entry,many=True)
+                    self.default_dict['flipbook'] = get_range(temp_entry,
+                                                              many=True,
+                                                              notebook=notebook)
                     self.dd_changed=True
                     self.parent = EMPTYCHAR
                     self.show_full_top, self.children_too = self.display_attributes[0],self.display_attributes[1]
@@ -11589,7 +10716,7 @@ class Console (Note_Shelf):
             datesuffix=str(datetime.datetime.now()).split(' ')[0]
             knowledge_text = self.default_dict['generalknowledge'].dump()
             if knowledge_text:
-                save_file(knowledge_text,
+                file_access.save_file(knowledge_text,
                           filename='GK'+notebookname+datesuffix,
                           folder='/textfiles')
 
@@ -11601,12 +10728,12 @@ class Console (Note_Shelf):
             
         if mainterm in ['loadknowledge','loadgeneralknowledge']:
 
-            filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+            filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                           file_suffix='.txt',
                                           file_prefix=EMPTYCHAR,
                                           get_filename=otherterms[0])[0].rstrip()
             display.noteprint((alerts.LOADING_FILE,filename_temp))
-            knowledge_text = get_text_file(filename_temp)
+            knowledge_text = file_access.get_text_file(filename_temp)
 
             for l_temp in knowledge_text.split('\n'):
 
@@ -11624,12 +10751,12 @@ class Console (Note_Shelf):
                     project_text = db_cursor.fetchone()[0]
                                     
                 if predicate[1] or otherterms[0] or (not predicate[0] and input('FROM TEXTFILE?') in YESTERMS):
-                    filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                    filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                                   file_suffix='.txt',
                                                   file_prefix=EMPTYCHAR,
                                                   get_filename=otherterms[0])[0].rstrip()
                     display.noteprint((alerts.LOADING_FILE,filename_temp))
-                    project_text = get_text_file(filename_temp)
+                    project_text = file_access.get_text_file(filename_temp)
                 if project_text:
                     if '<<<<PROJECTBEGIN>>>>' in project_text and '<<<<PROJECTEND>>>>' in project_text:
                         project_text = project_text.split('<<<<PROJECTBEGIN>>>>')[1].split('<<<<PROJECTEND>>>>')[0]
@@ -12060,7 +11187,7 @@ class Console (Note_Shelf):
                                replace(EOL,' EOL ').
                                replace('/BREAK/',' BREAK ').replace('/NEW/',' NEW ')))
         elif mainterm in ['dictionaryload']:
-            filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+            filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
                                     get_filename=otherterms[0])[0].rstrip()
             display.noteprint((alerts.LOADING_FILE,filename_temp))
@@ -12085,7 +11212,7 @@ class Console (Note_Shelf):
                 pathname = '/' + s_input(self.FOLDER,otherterms[2])
             else:
                 pathname = '/textfiles'
-            save_file(text_temp,filename,pathname)
+            file_access.save_file(text_temp,filename,pathname)
 
         elif mainterm in ['echo']:
             text_temp=s_input(queries.TEXT_TO_PRINT,otherterms[0])
@@ -12093,7 +11220,7 @@ class Console (Note_Shelf):
 
         elif mainterm in ['run']:
             program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
-            program = get_text_file(program_name,'\programs',suffix='.py')
+            program = file_access.get_text_file(program_name,'\programs',suffix='.py')
             print(program)
             text_temp=s_input(queries.TEXT_TO_CONVERT,otherterms[1])
             exec(program)
@@ -12111,12 +11238,12 @@ class Console (Note_Shelf):
 
         elif mainterm in ['load']:
 
-            filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+            filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                           file_suffix='.txt', file_prefix=EMPTYCHAR,
                                           get_filename=otherterms[0])[0].rstrip()
 
 
-            self.text_result = get_text_file(filename_temp)
+            self.text_result = file_access.get_text_file(filename_temp)
 
         elif mainterm in ['interpret']:
             text_temp=s_input(queries.TEXT_TO_INTERPRET,otherterms[0])
@@ -12124,15 +11251,15 @@ class Console (Note_Shelf):
 
         elif mainterm in ['runinterpret']:
             program_name = s_input(queries.FUNCTION_NAME,otherterms[0])
-            program = get_text_file(program_name,'\programs',suffix='.py')
+            program = file_access.get_text_file(program_name,'\programs',suffix='.py')
             print(program)
             if not otherterms[1]:
-                filename_temp = get_file_name(file_path=os.altsep + 'textfiles',
+                filename_temp = file_access.get_file_name(file_path=os.altsep + 'textfiles',
                                     file_suffix='.txt', file_prefix=EMPTYCHAR,
                                     get_filename=otherterms[1])[0].rstrip()
             else:
                 filename_temp = otherterms[1]
-            textfile = get_text_file(filename_temp)
+            textfile = file_access.get_text_file(filename_temp)
 
             exec(program)
             exec('self.loadtext(text=generic(textfile))')
@@ -12141,7 +11268,9 @@ class Console (Note_Shelf):
             
 
         elif mainterm in ['invert']:
-            temp_range = get_range(s_input(prompt=queries.RANGE_TO_FROM, inputtext=otherterms[0]),many=True)
+            temp_range = get_range(s_input(prompt=queries.RANGE_TO_FROM, inputtext=otherterms[0]),
+                                   many=True,
+                                   notebook=notebook)
 
             self.last_results = ', '.join([a_temp for a_temp in self.indexes()
                                                       if Index(a_temp)>Index(0)
@@ -12234,7 +11363,8 @@ class Console (Note_Shelf):
         elif mainterm in ['editnote', 'en']:
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
-                                        many=True)]:
+                                        many=True,
+                                        notebook=notebook)]:
                 display.noteprint(self.show(i_temp),
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.get_metadata_from_note(i_temp)['size']))
@@ -12248,7 +11378,8 @@ class Console (Note_Shelf):
                           'enk']:
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
-                                        many=True)]:
+                                        many=True,
+                                        notebook=notebook)]:
                 display.noteprint(self.show(i_temp),
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.get_metadata_from_note(i_temp)['size']))
@@ -12263,7 +11394,8 @@ class Console (Note_Shelf):
         elif mainterm in ['editnotetext', 'ent']:
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
-                                        many=True)]:
+                                        many=True,
+                                        notebook=notebook)]:
                 display.noteprint(self.show(i_temp),
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.get_metadata_from_note(i_temp)['size']))
@@ -12271,7 +11403,8 @@ class Console (Note_Shelf):
 
         elif mainterm in ['link']:
             temp_range = [str(x_temp) for x_temp
-                          in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]))]
+                          in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
+                                       notebook=notebook)]
             
     
             if len(temp_range) > 10:
@@ -12297,7 +11430,8 @@ class Console (Note_Shelf):
             range_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
             
             temp_range = [str(x_temp) for x_temp
-                          in get_range(range_entry)]
+                          in get_range(range_entry,
+                                       notebook=notebook)]
             if len(temp_range) > 1:
                 link_from = temp_range[0]
  
@@ -12342,7 +11476,8 @@ class Console (Note_Shelf):
 
             range_entry = s_input(queries.RANGE_TO_FROM,otherterms[0])
             temp_range = [str(x_temp) for x_temp
-                          in get_range(range_entry)]
+                          in get_range(range_entry,
+                                       notebook=notebook)]
 
             for x_temp in temp_range:
                 temp_keys = {k_temp for k_temp
@@ -12359,7 +11494,9 @@ class Console (Note_Shelf):
         elif mainterm in ['compress']:
             if longphrase:
                 temp_range = [str(a_temp) for a_temp
-                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True)]
+                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
+                                         many=True,
+                                         notebook=notebook)]
             else:
                 temp_range = self.indexes()
                 
@@ -12369,7 +11506,8 @@ class Console (Note_Shelf):
             self.rehome_orphans([str(a_temp) for a_temp
                                  in get_range(s_input(queries.RANGE_TO_FROM,
                                                       otherterms[0]),
-                                              many=True)])
+                                              many=True,
+                                              notebook=notebook)])
         elif mainterm in ['showdel']:
             
 ##            self.last_results = rangelist.range_find([Index(temp_l)
@@ -12420,7 +11558,8 @@ class Console (Note_Shelf):
                 self.add_field(s_input(queries.FIELDNAME,otherterms[0]),
                                    [a_temp for a_temp in 
                                     get_range(s_input(queries.RANGE_TO_FROM,otherterms[1]),
-                                                 many=True)])
+                                              many=True,
+                                              notebook=notebook)])
             if predicate[0]:
                 fn_temp = s_input(queries.FIELDNAME,otherterms[0])
                 temp_range = s_input(queries.STRICT_RANGE_TO_FROM,
@@ -12441,7 +11580,8 @@ class Console (Note_Shelf):
         elif mainterm in ['deletefield']:
             if not longphrase:
                 self.delete_field(s_input(queries.FIELDNAME),
-                                  get_range(s_input(queries.RANGE_TO_FROM)))
+                                  get_range(s_input(queries.RANGE_TO_FROM),
+                                            notebook=notebook))
             elif totalterms == 1:
                 self.delete_field(s_input(queries.FIELDNAME,
                                           otherterms[0]))
@@ -12449,7 +11589,8 @@ class Console (Note_Shelf):
                 self.delete_field(s_input(queries.FIELDNAME,
                                           otherterms[0]),
                                   get_range(s_input(queries.RANGE_TO_FROM,
-                                                              otherterms[1])))
+                                                              otherterms[1]),
+                                            notebook=notebook))
             
             self.display_fields()
 ##            display.noteprint((labels.FIELD,
@@ -12485,7 +11626,8 @@ class Console (Note_Shelf):
                            for x_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,
                                                 otherterms[0]),
-                                        many=True)],
+                                        many=True,
+                                        notebook=notebook)],
                           destinationindex=otherterms[1],
                           inbetween = inbetween)
 
@@ -12493,7 +11635,9 @@ class Console (Note_Shelf):
             indexlist_temp = [str(x_temp)
                               for x_temp
                               in get_range(s_input(queries.RANGE_TO_FROM,
-                                                                          otherterms[0]),many=True)]
+                                                   otherterms[0]),
+                                           many=True,
+                                           notebook=notebook)]
             if not indexlist_temp:
                 indexlist_temp = None
             if totalterms > 1:
@@ -12531,7 +11675,9 @@ class Console (Note_Shelf):
                         display.noteprint((alerts.ATTENTION,
                                            alerts.NOT_YET_CLUSTERED))
                 else:
-                    temp_range = get_range(temp_entry,many=True)
+                    temp_range = get_range(temp_entry,
+                                           many=True,
+                                           notebook=notebook)
                     temp_range = [str(x_temp)
                                   for x_temp
                                   in temp_range]
@@ -12639,7 +11785,8 @@ class Console (Note_Shelf):
                                      returnvalue='user'))
         elif mainterm in ['updatesize']:
             sourcerange = get_range(s_input(queries.RANGE_TO_FROM,
-                                            otherterms[0]))
+                                            otherterms[0]),
+                                    notebook=notebook)
             self.update_size(sourcerange, int(s_input(queries.NEW_NOTE_SIZE,
                                                       otherterms[1],
                                                       typeflag='int',
@@ -12664,7 +11811,7 @@ class Console (Note_Shelf):
  
         elif mainterm in ['formout']:
             if not otherterms[1]:
-                get_file_name(file_path=os.altsep + 'textfiles',
+                file_access.get_file_name(file_path=os.altsep + 'textfiles',
                               file_suffix='txt',
                               justshow=True)
             self.format_output(selection=[str(x_temp) for x_temp
@@ -12672,7 +11819,8 @@ class Console (Note_Shelf):
                                                            otherterms[0]),True,
                                                        False,
                                                        sort=True,
-                                                       many=True)],
+                                                       many=True,
+                                                       notebook=notebook)],
                                saveyes=not predicate[2],
                                filename=(s_input(queries.SAVE_TO,
                                                  otherterms[1])),
@@ -12751,10 +11899,11 @@ class Console (Note_Shelf):
         elif mainterm in ['delete', 'del', 'd']:
             todeleterange = get_range(s_input(queries.DELETE_FROM_TO,
                                           otherterms[0]),
-                                      True,
-                                      False,
+                                      orequal=True,
+                                      complete=False,
                                       sort=True,
-                                      many=True)
+                                      many=True,
+                                      notebook=notebook)
             temp_counter = 0
             for td_temp in todeleterange:
                 temp_counter+=1
@@ -12803,10 +11952,11 @@ class Console (Note_Shelf):
                     l_temp = 0
             self.showall(get_range(s_input(queries.RANGE_TO_FROM,
                                   otherterms[0]),
-                         orequal=True,
-                         complete=False, 
-                         sort=self.sorting,
-                         many=True),
+                                 orequal=True,
+                                 complete=False, 
+                                 sort=self.sorting,
+                                 many=True,
+                                 notebook=notebook),
                 show_date=(self.defaults.get('showdate') or predicate[4]),
                 childrentoo=not predicate[1],
                 levels=l_temp,
@@ -12869,7 +12019,9 @@ class Console (Note_Shelf):
                                                 histo_tag_dict = self.histo_tag_dict)
                 
             self.histio.contract([str(x_temp) for x_temp in get_range(s_input('Range from / to',
-                                                                              otherterms[0]),many=True)])
+                                                                              otherterms[0]),
+                                                                      many=True,
+                                                                      notebook=notebook)])
             self.histio.show()
 
         elif mainterm in ['keysfortags']:
@@ -12881,7 +12033,8 @@ class Console (Note_Shelf):
                                                                               orequal=True,
                                                                               complete=False,
                                                                               sort=True,
-                                                                              many=True)}                    
+                                                                              many=True,
+                                                                              notebook=notebook)}                    
                     temp_keys = {x_temp for x_temp in self.keys() if self.get_indexes_for_key(x_temp).intersection(temp_range)}
                     temp_tags = {x_temp for x_temp in self.tags() if self.get_keys_for_tag(x_temp).intersection(temp_keys)}
             self.histio = histogram(displayobject=display,
@@ -12915,14 +12068,17 @@ class Console (Note_Shelf):
                                        nformat.format_keys(sorted([x_temp for x_temp in self.indexes()
                                                                    if x_temp
                                                                    in get_range(s_input(queries.RANGE_TO_FROM,
-                                                                                        otherterms[0]),many=True)]))))
+                                                                                        otherterms[0]),
+                                                                                many=True,
+                                                                                notebook=notebook)]))))
                 else:
                     display.noteprint((labels.INDEXES,
                                        rangelist.range_find([int(Index(x_temp))
                                                              for x_temp in self.indexes()
                                                              if x_temp in get_range(s_input('Range from / to',
                                                                                             otherterms[0]),
-                                                                                    many=True)],reduce=True)))
+                                                                                    many=True,
+                                                                                    notebook=notebook)],reduce=True)))
             else:
                 if predicate[0]:
                     display.noteprint((labels.INDEXES,
@@ -12938,7 +12094,7 @@ class Console (Note_Shelf):
             if longphrase:
 
                 indexrange = get_range(s_input(queries.RANGE_TO_FROM,
-                                               otherterms[0]))
+                                               otherterms[0]),notebook=notebook)
                 self.reform(indexrange)
             else:
                 self.reform()
@@ -13006,10 +12162,11 @@ class Console (Note_Shelf):
 
             self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
                                                      otherterms[0]),
-                                             True,
-                                             False,
+                                             orequal=True,
+                                             complete=False,
                                              sort=self.sorting,
-                                             many=True),
+                                             many=True,
+                                             notebook=notebook),
                          multi=True,
                          output=multi_dict[notebookname][display_stream],
                          vary=predicate[2],
@@ -13063,10 +12220,11 @@ class Console (Note_Shelf):
             else:
                 self.showall(entrylist=get_range(s_input(queries.RANGE_TO_FROM,
                                                  otherterms[0]),
-                                         True,
-                                         False,
+                                         orequal=True,
+                                         complete=False,
                                          sort=True,
-                                         many=self.sorting),
+                                         many=self.sorting,
+                                         notebook=notebook),
                      multi=True,
                      output=multi_dict[notebookname][display_stream],
                      vary=predicate[2],
@@ -13168,7 +12326,9 @@ class Console (Note_Shelf):
                     if not predicate[0] or self.currentpad not in self.pad_dict:
                         self.currentpad = self.create_work_pad(self.currentpad)
 
-                for i_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True):
+                for i_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
+                                        many=True,
+                                        notebook=notebook):
                     
                     note_temp = display.noteprint(self.show(i_temp),
                                                   np_temp=True)
@@ -13279,7 +12439,8 @@ class Console (Note_Shelf):
             self.find_dates_for_keys_in_indexes(entrylist=[str(x_temp) for x_temp
                                                            in get_range(s_input('Range from / to',
                                                                                 otherterms[0]),
-                                                                        many=True)],
+                                                                        many=True,
+                                                                        notebook=notebook)],
                                                 determinant=determinant,flag=flag)
             self.show_date_dictionary(determinant=determinant,
                                       func=self.default_dict['purge'].apply,
@@ -13376,7 +12537,8 @@ class Console (Note_Shelf):
                                   orequal=True,
                                   complete=False,
                                   sort=True,
-                                  many=True)
+                                  many=True,
+                                  notebook=notebook)
             grabbed = self.grab_keys(grabrange,
                                      all_caps=not predicate[0],
                                      first_caps=not predicate[1])
@@ -13643,7 +12805,11 @@ class Console (Note_Shelf):
         if mainterm in ['mergemany', 'mm']:
             sourcerange = get_range(s_input(queries.SOURCE_TO_FROM,
                                             otherterms[0]),
-                                    True, False, sort=True,many=True)
+                                    orequal=True,
+                                    complete=False,
+                                    sort=True,
+                                    many=True,
+                                    notebook=notebook)
             if otherterms[1]:
                 destination = Index(s_input(queries.DESTINATION, otherterms[1]))
             else:
@@ -13661,7 +12827,10 @@ class Console (Note_Shelf):
             if not convert_temp:
                 convert_temp = SEMICOLON
 
-            for i_temp in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True):
+            for i_temp in get_range(s_input(queries.RANGE_TO_FROM,
+                                            otherterms[0]),
+                                    many=True,
+                                    notebook=notebook):
 
                 self.columnize(str(i_temp),
                                convert_temp,
@@ -13700,7 +12869,9 @@ class Console (Note_Shelf):
             totallength = 0
             keysets = set()
 
-            entries = get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),many=True)
+            entries = get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
+                                many=True,
+                                notebook=notebook)
             totalwidth = int(s_input(queries.WIDTH,
                                      otherterms[1],
                                      typeflag='int',
@@ -13753,7 +12924,8 @@ class Console (Note_Shelf):
                 oldindex_temp = Index(s_input(queries.INDEX_TO_MERGE,otherterms[1]))
             for i_temp in [a_temp for a_temp
                            in get_range(s_input(queries.RANGE_TO_FROM,otherterms[0]),
-                                        many=True)]:
+                                        many=True,
+                                        notebook=notebook)]:
                 display.noteprint(self.show(i_temp),
                                   param_width=display.width_needed(self.show(i_temp),
                                                                    self.get_metadata_from_note(i_temp)['size']))
@@ -13783,7 +12955,8 @@ class Console (Note_Shelf):
                                                          otherterms[0]),
                                                  True, False,
                                                  sort=True,
-                                                 many=True),keysonly=not predicate[0])
+                                                 many=True,
+                                                 notebook=notebook),keysonly=not predicate[0])
                 
     def copy_move_search_com (self,longphrase=False,mainterm=EMPTYCHAR,otherterms=EMPTYCHAR,predicate=EMPTYCHAR):
 
@@ -13826,12 +12999,14 @@ class Console (Note_Shelf):
                                             orequal=True,
                                             complete=False,
                                             sort=True,
-                                            many=True)
+                                            many=True,
+                                            notebook=notebook)
                     destinationrange = get_range(s_input(queries.DESTINATION+BLANK,
                                                          otherterms[1]),
                                                  orequal=True,
                                                  complete=True,
-                                                 sort=True)
+                                                 sort=True,
+                                                 notebook=notebook)
 
                     subordinate = False
                     all_children = False
@@ -13872,13 +13047,14 @@ class Console (Note_Shelf):
             
             
             default_notebook = notebookname
-            display.noteprint(('NOTEBOOKS',', '.join(get_all_notebooks())))
+            display.noteprint(('NOTEBOOKS',', '.join(file_access.get_all_notebooks())))
 
             if mainterm in ['search','?']:
                 # for a simple search
 
                 
-                notebooks_to_search = [x for x in otherterms[0][1:].split('}')[0].split(',') if x in get_all_notebooks()]
+                notebooks_to_search = [x for x in otherterms[0][1:].split('}')[0].split(',')
+                                       if x in file_access.get_all_notebooks()]
                 otherterms[0] = '}'.join(otherterms[0][1:].split('}')[1:])
                 
                 
@@ -13886,9 +13062,9 @@ class Console (Note_Shelf):
             else:
                 # for a global search 
                 if not otherterms[1]:
-                    notebooks_to_search = get_all_notebooks()
+                    notebooks_to_search = file_access.get_all_notebooks()
                 else:
-                    notebooks_to_search = [x for x in otherterms[1].split(',') if x in get_all_notebooks()]
+                    notebooks_to_search = [x for x in otherterms[1].split(',') if x in file_access.get_all_notebooks()]
 
             display.noteprint(('SEARCH RANGE='+', '.join(notebooks_to_search),'SEARCH PHRASE='+otherterms[0]))
 
@@ -13941,7 +13117,8 @@ class Console (Note_Shelf):
                                    complete=False,
                                    sort=True,
                                    many=True,
-                                   indexes=True)
+                                   indexes=True,
+                                   notebook=notebook)
                     temp_range = [str(x) for x in temp_range]
                     sr_temp =(sr_temp[0],[x for x in sr_temp[1] if x in temp_range],sr_temp[2])
                 display.noteprint(('TOTAL RESULTS!',str(len(sr_temp[1]))))
@@ -13993,7 +13170,8 @@ class Console (Note_Shelf):
                                    orequal=True,
                                    complete=False,
                                    sort=True,
-                                   many=True)
+                                   many=True,
+                                   notebook=notebook)
             temp_words = set()
             first=True
             for t_temp in temp_range:
@@ -14037,10 +13215,11 @@ class Console (Note_Shelf):
 
                             temp_range = {str(x_temp) for x_temp in get_range(s_input(queries.RANGE_FROM,
                                                                                               otherterms[0]),
-                                                                                      orequal=True,
-                                                                                      complete=False,
-                                                                                      sort=True,
-                                                                                      many=True)}
+                                                                              orequal=True,
+                                                                              complete=False,
+                                                                              sort=True,
+                                                                              many=True,
+                                                                              notebook=notebook)}
                         else:
 
                             enter_keys = {x_temp.strip() for x_temp in otherterms[0].split(',')}
@@ -14114,7 +13293,8 @@ class Console (Note_Shelf):
                                                                               orequal=True,
                                                                               complete=False,
                                                                               sort=True,
-                                                                              many=True)])
+                                                                              many=True,
+                                                                              notebook=notebook)])
 
                 self.histio.show()
 
@@ -14140,7 +13320,8 @@ class Console (Note_Shelf):
                                                                               orequal=True,
                                                                               complete=False,
                                                                               sort=True,
-                                                                              many=True)])
+                                                                              many=True,
+                                                                              notebook=notebook)])
                 self.histio.show()
         
 
@@ -14545,7 +13726,7 @@ class Console (Note_Shelf):
                     elif n_temp and n_temp[0] == ATSIGN:
                         n_temp = n_temp[1:]
                         try:
-                            textfile = get_text_file(n_temp)
+                            textfile = file_access.get_text_file(n_temp)
                             biginputterm = biginputterm.replace('{{'+ATSIGN+n_temp+'}}',textfile)
                         except:
                             display.noteprint((alerts.ATTENTION,label.FILE_ERROR))
@@ -14588,7 +13769,8 @@ class Console (Note_Shelf):
                                                                       for a_temp
                                                                       in transpose_keys(self.default_dict['projects'].
                                                                                         get_all_indexes(project=projectname),
-                                                                                        surround=False).replace(LONGDASH,SLASH)]))
+                                                                                        surround=False,
+                                                                                        notebook=notebook).replace(LONGDASH,SLASH)]))
             
 
         return biginputterm,continuelooping,close_notebook,rawbig
@@ -15024,7 +14206,8 @@ class Console (Note_Shelf):
                                 {str(x_temp) for x_temp
                                  in get_range(s_input(queries.RANGE_TO_FROM,
                                                       otherterms[0]),
-                                              many=True)}):
+                                              many=True,
+                                              notebook=notebook)}):
                                 found_temp = True
                         if found_temp:
                             is_temp.add(tag)
@@ -15432,7 +14615,8 @@ class Console (Note_Shelf):
         elif mainterm in ['flipproject']:
             if self.project:
                 self.default_dict['flipbook'] = sorted(transpose_keys(self.default_dict['projects'].get_all_indexes(project=self.project[-1]),
-                                                                      surround=False),key=lambda x:Index(x))
+                                                                      surround=False,
+                                                                      notebook=notebook),key=lambda x:Index(x))
                 self.set_iterator(self.default_dict['flipbook'],
                                   flag=self.defaults.get('setitflag'))
                 self.dd_changed=True
@@ -15464,7 +14648,8 @@ class Console (Note_Shelf):
                 if len(self.default_dict['projects'].get_status_modified(project=name_temp))>0:
                     text_temp += 'LAST MODIDFIED: ' + self.default_dict['projects'].get_status_modified(project=name_temp)[-1] + EOL + EOL
                 text_temp += 'INDEXES: ' + ', '.join(transpose_keys(self.default_dict['projects'].get_all_indexes(project=name_temp),
-                                                                    surround=False))
+                                                                    surround=False,
+                                                                    notebook=notebook))
                                                   
                 display.noteprint(('/C/ PROJECT',text_temp))
                 if predicate[0]:
@@ -15501,7 +14686,10 @@ class Console (Note_Shelf):
 
             else:
     
-                entrylist_temp = get_range(s_input('Range?',otherterms[0]),many=True)
+                entrylist_temp = get_range(s_input('Range?',
+                                                   otherterms[0]),
+                                           many=True,
+                                           notebook=notebook)
                 if otherterms[1]:
                     determinant = otherterms[1]
      
@@ -15605,7 +14793,7 @@ INTROSCRIPT = INTROSCRIPT.replace(PERCENTAGE, BLANK*int((OPENING_WIDTH-150)/2))
 
 display = Display()
 for dir_name in  ['notebooks','textfiles','registry','diagnostics','pictures','programs','indexer','pdfs']:
-    result = make_new_directory(dir_name)
+    result = file_access.make_new_directory(dir_name)
     if result:
         display.noteprint((result,''))
 register = Registry(displayobject=display)
@@ -15684,125 +14872,10 @@ allnotebooks = {}
 allnotebooks_tracking = {}
 add_new_notebook = True
 
-# OPEN DATEBASE CONNECTION
-
-
-##default_connection = sqlite3.connect('notebooks'+SLASH+'defaults.db')
-##default_cursor = default_connection.cursor()
-##
-##
-
-db_connection = sqlite3.connect('notebooks'+SLASH+'notebook.db')
-db_cursor = db_connection.cursor()
 
 # DATA BASE DEFINITION
 
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS notebooks (
-        notebook TEXT NOT NULL UNIQUE );
-        """)
-db_cursor.executescript("""
-
-    CREATE TABLE IF NOT EXISTS notes (
-        
-        notebook TEXT NOT NULL,
-        note_index TEXT NOT NULL,
-        note_body TEXT DEFAULT '',
-        size INTEGER DEFAULT 60,
-        user TEXT DEFAULT 'user',
-        UNIQUE (notebook, note_index)
-        FOREIGN KEY (notebook) REFERENCES notebooks (notebook) ON DELETE CASCADE
-        );""")
-            
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS timestamps (
-        notebook TEXT NOT NULL,
-        note_index TEXT NOT NULL,
-        timestamp DATE NOT NULL,
-        UNIQUE (notebook, note_index, timestamp)
-        FOREIGN KEY (notebook, note_index) REFERENCES notes (notebook, note_index) ON DELETE CASCADE 
-        );""")
-                        
-db_cursor.executescript("""        
-    CREATE TABLE IF NOT EXISTS all_note_keys (
-        notebook TEXT NOT NULL,
-        note_index TEXT NOT NULL,
-        keyword TEXT NOT NULL,
-        UNIQUE (notebook, note_index, keyword)
-        FOREIGN KEY (notebook, note_index) REFERENCES notes (notebook, note_index) ON DELETE CASCADE
-        );""")
-db_cursor.executescript("""                        
-    CREATE TABLE IF NOT EXISTS all_words (
-        notebook TEXT NOT NULL,
-        word TEXT NOT NULL,
-        UNIQUE (notebook, word)
-        );""")
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS all_keys (
-        keyword TEXT NOT NULL,
-        notebook TEXT NOT NULL,
-        UNIQUE (keyword, notebook)
-        );""")
-
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS keys_to_indexes (
-        notebook TEXT NOT NULL,
-        keyword TEXT NOT NULL,
-        note_index TEXT NOT NULL,
-        UNIQUE (keyword, notebook, note_index)
-        FOREIGN KEY (notebook, keyword) REFERENCES all_keys (notebook, keyword) ON DELETE CASCADE
-        );""")
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS tags_to_keys (
-        notebook TEXT NOT NULL,
-        tag TEXT NOT NULL,
-        keyword TEXT NOT NULL,
-        UNIQUE (notebook, tag, keyword)
-        FOREIGN KEY (notebook, keyword) REFERENCES all_keys (notebook, keyword) ON DELETE CASCADE
-        );
-    """)
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS word_to_indexes (
-        notebook TEXT NOT NULL,
-        word TEXT NOT NULL,
-        note_index TEXT NOT NULL,
-        UNIQUE (notebook, word, note_index)
-        FOREIGN KEY (notebook, word) REFERENCES all_words (notebook, word) ON DELETE CASCADE
-        );
-    """)
-
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS projects (
-        notebook TEXT NOT NULL UNIQUE,
-        projectfile TEXT,
-        FOREIGN KEY (notebook) REFERENCES notebooks (notebook)
-        );
-        
-        """)
-db_cursor.executescript("""
-    CREATE TABLE IF NOT EXISTS defaults (
-        notebook TEXT NOT NULL,
-        attribute TEXT NOT NULL,
-        content TEXT NOT NULL,
-        UNIQUE (notebook, attribute)
-        FOREIGN KEY (notebook) REFERENCES notebooks (notebook)
-        );
-        """)
-
-db_cursor.executescript("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_all_words ON all_words (notebook, word);""")
-
-db_cursor.executescript("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_all_keys ON all_keys (notebook, keyword);""")
-
-db_cursor.executescript("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_notes ON notes (notebook, note_index);""")
-
-        
-
-
-
-
+create_database (db_cursor)
 db_connection.commit()
 
 
@@ -15844,7 +14917,7 @@ while bigloop:
                     else:
                         flagvalue = 'c'
                 else:           
-                    nb_temp = get_file_name(file_path=os.altsep + 'notebooks',
+                    nb_temp = file_access.get_file_name(file_path=os.altsep + 'notebooks',
                                             file_suffix='ND.dat',
                                             file_prefix=prefix,
                                             show_notebooks_too=True)
