@@ -7422,259 +7422,6 @@ class Note_Shelf:
         
         
 
-class Configuration:
-
-
-    """This class is used to load, save, and manage user configurations """
-
-    def __init__(self,
-                 username):
-
-        self.configuration_names = ['pause',
-                                    '_longshow count',
-                                    '_shortshow count',
-                                    'always next',
-                                    'always child',
-                                    'quickenter',
-                                    '_longmax',
-                                    'autobackup',
-                                    'flipout',
-                                    'shortshow',
-                                    'all cap purge',
-                                    'first cap purge',
-                                    'lower case purge',
-                                    'children too',
-                                    'box configs',
-                                    'auto multi',
-                                    'show full top']
-
-        try:
-
-            tempfile = open(globaldirectoryname
-                            +SLASH+username
-                            +'_config.pkl', 'rb')
-            self = pickle.load(tempfile)
-            tempfile.close()
-
-        except:
-            nprint(alerts.FAILED_CONF_LOAD)
-
-
-            self.pause = True
-            self.longshow_count = 60
-            self.shortshow_count = 5
-            self.always_next = False
-            self.always_child = False
-            self.quickenter = False
-                # True is quickenter is permitted
-            self.longmax = 100
-                #the maximum number of notes that
-                #will be shown long-form
-            self.autobackup = True
-                #True is the program will automatically
-                #save entered notes to backup textfile
-            self.flipout = False
-                #True i\nf flipbook will be used
-            self.shortshow = False
-                #True if notes will always
-                #be shown in short format
-            self.all_cap_purge = True
-                #True if ALL_CAP keys will be
-                #excluded when clustering
-            self.first_cap_purge = False
-                #True if capitalized keys will
-                #be excluded when clustering
-            self.lower_case_purge = False
-            self.children_too = True
-            self.box_configs = False
-
-            self.auto_multi = True
-            self.show_full_top = True
-
-            display.noteprint((alerts.CREATING_NEW_CONF,
-                               username+'_config.pkl'))
-            tempfile = open(globaldirectoryname
-                            +SLASH+username
-                            +'_config.pkl',
-                            'wb')
-            pickle.dump(self,
-                        tempfile)
-            tempfile.close()
-
-    def define_other(self):
-
-        """transfer configurations kept as attributes
-        of the notebook to the configuration class
-        """
-
-        try:
-
-            notebook.pause = self.pause
-            notebook.longshow_count = self.longshow_count
-            notebook.shortshow_count = self.shortshow_count
-            notebook.always_next = self.always_next
-            notebook.always_child = self.always_child
-            notebook.quickenter = self.quickenter
-            notebook.longmax = self.longmax
-            notebook.autobackup = self.autobackup
-            notebook.flipout = self.flipout
-            notebook.shortshow = self.shortshow
-            notebook.all_cap_purge = self.all_cap_purge
-            notebook.first_cap_purge = self.first_cap_purge
-            notebook.lower_case_purge = self.lower_case_purge
-            notebook.children_too = self.children_too
-            notebook.box_configs = self.box_configs
-            notebook.auto_multi = self.auto_multi
-            notebook.show_full_top = self.show_full_top
-        except:
-            notebook.pause = self.pause
-            notebook.longshow_count = self.longshow_count
-            notebook.shortshow_count = self.shortshow_count
-            notebook.always_next = self.always_next
-            notebook.always_child = self.always_child
-            notebook.quickenter = self.quickenter
-            notebook.longmax = self.longmax
-            notebook.autobackup = self.autobackup
-            notebook.flipout = self.flipout
-            notebook.shortshow = self.shortshow
-            notebook.all_cap_purge = self.all_cap_purge
-            notebook.first_cap_purge = self.first_cap_purge
-            notebook.lower_case_purge = False
-            notebook.children_too = self.children_too
-            notebook.box_configs = self.box_configs
-            notebook.auto_multi = self.auto_multi
-            notebook.show_full_top = self.show_full_top
-            
-
-    def define_self(self):
-
-        """transfer attributes of the
-        configuration class to the notebook
-        """
-
-        try:
-            self.pause = notebook.pause
-            self.longshow_count = notebook.longshow_count
-            self.shortshow_count = notebook.shortshow_count
-            self.always_next = notebook.always_next
-            self.always_child = notebook.always_child
-            self.quickenter = notebook.quickenter
-            self.longmax = notebook.longmax
-            self.autobackup = notebook.autobackup
-            self.flipout = notebook.flipout
-            self.shortshow = notebook.shortshow
-            self.all_cap_purge = notebook.all_cap_purge
-            self.first_cap_purge = notebook.first_cap_purge
-            self.lower_case_purge = notebook.lower_case_purge
-            self.children_too = notebook.children_too
-            self.box_configs = notebook.box_configs
-            self.auto_multi = notebook.auto_multi
-            self.show_full_top = notebook.show_full_top
-        except:
-            self.pause = notebook.pause
-            self.longshow_count = notebook.longshow_count
-            self.shortshow_count = notebook.shortshow_count
-            self.always_next = notebook.always_next
-            self.always_child = notebook.always_child
-            self.quickenter = notebook.quickenter
-            self.longmax = notebook.longmax
-            self.autobackup = notebook.autobackup
-            self.flipout = notebook.flipout
-            self.shortshow = notebook.shortshow
-            self.all_cap_purge = notebook.all_cap_purge
-            self.first_cap_purge = notebook.first_cap_purge
-            self.lower_case_purge = notebook.lower_case_purge
-            self.children_too = notebook.children_too
-            self.box_configs = notebook.box_configs
-            self.auto_multi = notebook.auto_multi
-            self.show_full_top = notebook.show_full_top
-            self.lower_case_purge = False
-
-    def load(self):
-        """load configurations from configuration file"""
-        try:
-            tempfile = open(globaldirectoryname+SLASH
-                            +notebook.defaults.get('user')
-                            +'_config.pkl', 'rb')
-        except:
-            tempfile = open(globaldirectoryname+SLASH
-                            +'USER'
-                            +'_config.pkl', 'rb')
-        self = pickle.load(tempfile)  #pylint flagged this as inproper assignment to self
-        tempfile.close()
-
-        self.define_other()
-        self.show()
-
-        
-
-    def save(self):
-        """save configurations to configuration file"""
-
-        self.define_self()
-        tempfile = open(globaldirectoryname+SLASH
-                        +notebook.defaults.get('user')
-                        +'_config.pkl', 'wb')
-        pickle.dump(self, tempfile)   #pylint flagged this as inproper assignment to self
-        tempfile.close()
-        display.noteprint((EMPTYCHAR,labels.CONFIG_SAVED))
-
-    def show(self,
-             big=False):
-
-        """show configurations
-        somewhat gratuitous use of eval
-        function for the sake of versatility.
-        """ 
-
-        width = max([terminalsize.get_terminal_size()[0]-30, 145])
-
-        if big:
-            con_display = Note_Display(width)
-        if not big:
-            con_display = DisplayList(displayobject=display)
-
-        boolconver = {True: 'ON',
-                      False: 'Off'}
-        smallwidth = 20
-
-
-        for label in self.configuration_names:
-
-            if label[0] != UNDERLINE:
-                value = eval('str(boolconver[notebook.'
-                             +label.replace(BLANK, UNDERLINE)+'])')
-            else:
-                label = label[1:]
-                value = eval('str(notebook.'
-                             +label.replace(BLANK, UNDERLINE)+RIGHTPAREN)
-
-            if big:
-                con_display.load(display.noteprint
-                                 ((nformat.center(label,
-                                                  width=smallwidth-2,
-                                                  char=UNDERLINE),
-                                   value),
-                                  np_temp=True,
-                                  param_width=smallwidth,
-                                  param_spacing=0))
-
-            else:
-                con_display.append(label+' : '+value+'   ')
-
-        if big:
-            display.noteprint((nformat.center('CONFIGURATIONS',
-                                              width,
-                                              char=STAR),
-                               con_display.print_all(pause=False,
-                                                     show=False,
-                                                     back=True)),
-                              param_is_emb=True,
-                              param_spacing=0)
-        if not big:
-            con_display.show(header=labels.CONFIGURATIONS,
-                             centered=True)
-
 
 
 
@@ -7783,89 +7530,45 @@ class Console (Note_Shelf):
         self.convert_text_terms = True 
             
 
-##        if self.using_shelf:
-##            for suffix in ('d','k','t','w'):
-##                if not failed:
-##                    try:
-##
-##                        tempfile = open(self.directoryname
-##                                    +SLASH+self.filename+suffix.upper()+'.pkl', 'wb')
-##                        try:
-##                            self.pickle_dictionary[suffix] = pickle.load(tempfile)
-##                        except:
-##                            self.pickle_dictionary[suffix] = {}
-##                        tempfile.close()
-##                        display_temp+={'d':'DEFAULT DICTIONARY',
-##                                       'k':'KEY DICTIONARY',
-##                                       't':'TAG DICTIONARY',
-##                                       'w':'WORD DICTIONARY'}[suffix]+' LOADED'+'\n'
-##                        loaded += suffix
-##                        
-##                        
-##                    except:
-##                        display_temp+={'d':'DEFAULT DICTIONARY',
-##                                       'k':'KEY DICTIONARY','t':'TAG DICTIONARY',
-##                                       'w':'WORD DICTIONARY'}[suffix]+' FAILED'+'\n'+'\n'+\
-##                                       ' WILL LOAD AS SINGLE PICKLE FILE!'
-##                        self.pickle_dictionary[suffix] = {}
-##                        failed = True
-##                    
-##            display.noteprint((alerts.ATTENTION,display_temp))    
-##
-##            if failed:
-##                try:
-##                    self.divided = False
-##                    tempfile = open(self.directoryname
-##                                    +SLASH+self.filename+'.pkl', 'rb')
-##              
-##                    self.pickle_dictionary = pickle.load(tempfile)
-##                    display.noteprint((alerts.ATTENTION,
-##                                       'PICKLE DICTIONARY OPENED'))
-##
-##                    tempfile.close()
-##
-##                    
-##                except OSError:
-##
-##                    db_cursor.execute("SELECT notebook FROM notebooks")
-##                    filelist = list([i[0] for i in db_cursor.fetchall()])
-##                    if self.filename in filelist:
-##                        nprint(self.filename+' ALREADY OPENED AS DATABASE')
-##                        auto_database = True
-##                        self.using_shelf = False 
-##
-##                    else:
-##               
-##                        display.noteprint((alerts.ATTENTION,
-##                                           'CREATING NEW PICKLE DICTIONARY'))
-##                        display.noteprint((alerts.ATTENTION,alerts.NEW_PICKLE))
-##                        self.pickle_dictionary = {'k':{},
-##                                                  't':{},
-##                                                  'w':{},
-##                                                  'd':{}}
-##                        tempfile = open(self.directoryname+SLASH+self.filename+'.pkl', 'wb')
-##                        pickle.dump(self.pickle_dictionary, tempfile)
-##                        tempfile.close()
-##
-##                       
-##
-##            if self.using_shelf:
-##                display.noteprint(('DIVIDED',str(self.divided)))
-##                
-##
-##                self.key_dict = self.pickle_dictionary['k']
-##                    # keeps track of keys
-##                self.tag_dict = self.pickle_dictionary['t']
-##                    # keeps track of tags
-##                self.word_dict = self.pickle_dictionary['w']
-##                    # keeps track of words to facilitate quick searches
-##                self.default_dict = self.pickle_dictionary['d']
-##                    # persistent default date
-##
+
 
             
         self.by_line = Convert()
-        self.purge_objects = False 
+        self.purge_objects = False
+
+        ## CONFIGURATIONS
+##        self.pause = True
+##        self.longshow_count = 60
+##        self.shortshow_count = 5
+        self.always_next = False
+        self.always_child = False
+        self.quickenter = False
+            # True is quickenter is permitted
+        self.longmax = 100
+            #the maximum number of notes that
+            #will be shown long-form
+        self.autobackup = True
+            #True is the program will automatically
+            #save entered notes to backup textfile
+        self.flipout = False
+            #True i\nf flipbook will be used
+        self.shortshow = False
+            #True if notes will always
+            #be shown in short format
+        self.all_cap_purge = True
+            #True if ALL_CAP keys will be
+            #excluded when clustering
+        self.first_cap_purge = False
+            #True if capitalized keys will
+            #be excluded when clustering
+        self.lower_case_purge = False
+        self.children_too = True
+        self.box_configs = False
+
+        self.auto_multi = True
+        self.show_full_top = True
+        ##END OF CONFIGURATIONS
+
         
 
         self.defaults = DefaultManager(default_dictionary=self.default_dict,
@@ -7878,35 +7581,6 @@ class Console (Note_Shelf):
         self.defaults.set('usedatabase',True)                               
         display.noteprint(('ATTENTION!',
                            'OPENING AS DATABASE'))
-##        if self.using_shelf and not self.defaults.contains('usedatabase'):
-##            self.defaults.set('usedatabase',auto_database or
-##                              input('Use database?') in YESTERMS)
-##            self.purge_objects = True 
-##        if not self.defaults.get('usedatabase'):
-##            try:
-##                self.note_dict = shelve.open(self.directoryname
-##                                         +SLASH+self.filename
-##                                         +'ND', flag=flagvalue)
-##
-##                self.using_shelf = True
-##                self.using_database = False
-##            except:
-##                display.noteprint(('ATTENTION!',
-##                                   'OPENING AS DATABASE'))
-##                self.using_shelf = False
-##                self.using_database = True
-##                
-##                del self.tag_dict
-##                del self.word_dict
-##                self.defaults.set('usedatabase',
-##                                  True)
-##            
-##            
-##        else:
-##            del self.tag_dict
-##            del self.word_dict
-##            self.using_shelf = False
-##            self.using_database = True
 
         def initiate_defaults(label,predicate):
 
@@ -8160,11 +7834,11 @@ class Console (Note_Shelf):
                                              'en':set(),
                                              'fr':set(),
                                              'de':set()}
-        try:
-            self.configuration = Configuration(self.defaults.get('user'))
-        except:
-            self.configuration = Configuration('USER')
-
+##        try:
+##            self.configuration = Configuration(self.defaults.get('user'))
+##        except:
+##            self.configuration = Configuration('USER')
+##
         if  not self.defaults.get('updated data'):
             self.default_dict['display'] = DisplayList(displayobject=display)
             self.default_dict['definitions'] = KeyDefinitions(displayobject=display,
@@ -10360,7 +10034,7 @@ class Console (Note_Shelf):
                                              otherterms[0],
                                              returnvalue=self.defaults.get('user')))
             self.dd_changed=True
-            self.configurations = Configuration(self.defaults.get('user'))
+
             display.noteprint(('USER',
                                self.defaults.get('user')))
  
@@ -13570,7 +13244,7 @@ while bigloop:
                             
 
                     
-                    notebook.configuration.load()
+##                    notebook.configuration.load()
 
                     notebook.constitute_key_freq_dict()
 
