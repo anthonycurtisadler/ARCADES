@@ -179,10 +179,6 @@ histo_tag_dict = None
 # OPEN DATEBASE CONNECTION
 
 
-##default_connection = sqlite3.connect('notebooks'+SLASH+'defaults.db')
-##default_cursor = default_connection.cursor()
-##
-##
 
 db_connection = sqlite3.connect('notebooks'+SLASH+'notebook.db')
 db_cursor = db_connection.cursor()
@@ -336,17 +332,6 @@ class Note_Shelf:
 
         pass
         
-##        with open(self.directoryname
-##                        +SLASH+self.filename+extra
-##                        +'.pkl',
-##                        'wb') as tempfile:
-##            if not suffix:
-##                pickle.dump(self.pickle_dictionary,
-##                            tempfile)
-##            else:
-##                pickle.dump(self.pickle_dictionary[suffix],tempfile)
-##                
-##            #globaldirectoryname+SLASH+self.filename+'PIC'
 
     
 
@@ -489,7 +474,7 @@ class Note_Shelf:
                         
                     
         newkeyset = set()
-##        is_sequence = False
+
         if self.name_interpret:
             keyset = expand(keyset)
 
@@ -720,7 +705,6 @@ class Note_Shelf:
 
 
         for k_temp in deletedkeys:
-##            k_temp = k_temp.split(SLASH)[0]
             k_temp = k_temp.strip()
             if k_temp in set(self.get_keys()):
                 self.discard_index_from_key(k_temp, index) 
@@ -1213,9 +1197,6 @@ class Note_Shelf:
                                   value_tuple)
                 
                    
-                
-
-
 
 
     def delete_note (self,
@@ -5289,8 +5270,6 @@ class Note_Shelf:
 
 
             lastcounter = 0
-    ##        if shortform:
-    ##            display.noteprint(('ATTENTION!', 'Please wait a moment!'))
 
             if quick:
                 self.default_dict[save_list] = []
@@ -6780,18 +6759,6 @@ class Note_Shelf:
                 return returntext[:trim_length]
         return returntext[:-2]
 
-
-##    def freq_test(self):
-##
-##        """testing function"""
-##
-##        self.constitute_key_freq_dict()
-##        self.print_key_freq(self.order_keys(self.keys()))
-##        for a_temp in self.note_dict:
-##            print(a_temp,
-##                  self.abridged_str_from_list(
-##                      self.return_least_keys(
-##                          self.note_dict[a_temp].keyset)))
 
     def make_consistent(self):
 
@@ -9739,9 +9706,7 @@ class Console (Note_Shelf):
                                               notebook=notebook)])
         elif mainterm in ['showdel']:
             
-##            self.last_results = rangelist.range_find([Index(temp_l)
-##                                                      for temp_l in self.indexes()
-##                                                      if Index(temp_l) < Index(0)])
+
             self.last_results = ', '.join(temp_l for temp_l in self.indexes() if Index(temp_l) < Index(0))
             display.noteprint((labels.DELETED,self.last_results))
             self.last_results = self.last_results.replace(LONGDASH,SLASH)
@@ -9822,9 +9787,7 @@ class Console (Note_Shelf):
                                             notebook=notebook))
             
             self.display_fields()
-##            display.noteprint((labels.FIELD,
-##                               str(self.show_fields())),
-##                              param_is_emb=True)
+
 
         elif mainterm in ['undo']:
             if not predicate[0]:
@@ -12691,11 +12654,7 @@ class Console (Note_Shelf):
 
                     if project_name:
 
-                        # To load different project
-        ##                if input('CARRY OVER DEFAULT KEYS?') not in YESTERMS:
-        ##                    self.default_dict['defaultkeys'] = self.default_dict['projects'][project_name]['defaultkeys']
-        ##                else:
-        ##                    self.default_dict['defaultkeys'] += self.default_dict['projects'][project_name]['defaultkeys']
+            
                         if not predicate[1]:
                             lastup,uptohere = Index(str(self.default_dict['projects'].get_position(project=project_name)[0])),\
                                               Index(str(self.default_dict['projects'].get_position(project=project_name)[1]))
@@ -12952,8 +12911,7 @@ class Console (Note_Shelf):
             if self.project:
                 project_name = self.project[-1]
                 if project_name in self.default_dict['projects'].get_all_projects():
-##                    if input('UPDATE KEYS for '+project_name+' ?') in YESTERMS and len(self.project<2):
-##                        self.default_dict['projects'][project_name]['defaultkeys'] = self.default_dict['defaultkeys']
+
 
                     self.default_dict['projects'].set_position(project=project_name,
                                                                lastup=lastup,
@@ -13229,15 +13187,6 @@ while bigloop:
                                 dict_temp = register.fetch(notebookname)
                                 
                             
-##                    except:
-##                        if input(queries.OPEN_AS_NEW):
-##                            flagvalue = 'c'
-##                            nprint(notebookname, alerts.OPENING, {'c':'new file',
-##                                                'r':'read only',
-##                                                'w':'read and write'}[flagvalue])
-##                    print('FLAG=',flagvalue)
-####                            notebook = Console(notebookname, flagvalue)
-####                            if not notebook.read_only:
 
                     register.start(notebookname)
                                 
@@ -13287,15 +13236,7 @@ while bigloop:
                     diagnostics = DiagnosticTracking(filename=notebookname)
                     diagnostics.start()
 
-                
-                                                    
-                
-
-##        except OSError:
-##            print('Fail')
-##            successful = False
-##        except:
-##            print('Other Error')
+ 
 
     if bigloop: 
 
@@ -13308,8 +13249,7 @@ while bigloop:
                 display.noteprint((alerts.CONSTITUTING_WORD_DICT,
                                    alerts.WAIT))
                 allnotebooks[notebookname].constitute_word_dict()
-##            if not allnotebooks[notebookname].is_consistent():
-##                allnotebooks[notebookname].make_consistent()
+
 
             allnotebooks[notebookname].set_iterator(children_too=True,
                                                     flag=allnotebooks[notebookname].defaults.get('setitflag'),
@@ -13532,13 +13472,7 @@ while bigloop:
                 allnotebooks[notebookname].using_database = False
                 allnotebooks[notebookname].using_shelf = True
 
-##        if input("Load projects from database?") in YESTERMS:
-##                    db_cursor.execute("SELECT projectfile FROM projects WHERE notebook=?;",(notebookname,))
-##                    
-##                    text = db_cursor.fetchone()[0]
-##                    if text:
-##                        allnotebooks[notebookname].default_dict['projects'].import_string(text)
-##                        display.noteprint((alerts.ATTENTION,'SUCCESSFULLY LOADED'))
+
                    
      
 
