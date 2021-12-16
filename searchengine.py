@@ -1,7 +1,8 @@
 from globalconstants import LEFTPAREN, RIGHTPAREN, ANDSIGN, VERTLINE, PERIOD, DASH,\
                        BLANK, LEFTPAREN, RIGHTPAREN,LEFTCURLY, RIGHTCURLY, COMMA, \
                        TILDA, EMPTYCHAR, DOLLAR, STAR, CARET, QUESTIONMARK, LEFTNOTE, \
-                       RIGHTNOTE, POUND, SLASH, PLUS, PERCENTAGE, ATSIGN
+                       RIGHTNOTE, POUND, SLASH, PLUS, PERCENTAGE, ATSIGN, LEFTBRACKET, RIGHTBRACKET, \
+                       UNDERLINE
 
 from truth_table import TruthTable
 import simple_parser as parser
