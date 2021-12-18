@@ -24,7 +24,8 @@ import _pickle as pickle
 from abbreviate import Abbreviate                                       #pylint 9.63/10
 from calculator import Calculator 
 from globalconstants import BOX_CHAR,\
-     INTROSCRIPT, ENTERSCRIPT, TRUTHSCRIPT, FORMATTINGSCRIPT, SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
+     INTROSCRIPT, ENTERSCRIPT, TRUTHSCRIPT, FORMATTINGSCRIPT,\
+     SEARCHSCRIPT, OPENING_WIDTH, DASH, SLASH,\
      SMALLWORDS, LEFTNOTE, RIGHTNOTE, EOL, TAB,\
      BLANK, VERTLINE, DOLLAR, PERCENTAGE, EMPTYCHAR, EXCLAMATION,\
      COMMA, EQUAL, QUESTIONMARK, PERIOD, COLON, SEMICOLON, VOIDTERM, PLUS, \
@@ -63,7 +64,8 @@ from formatutilities import nprint, si_input
 from generalutilities import get_range, side_note, split_into_columns, repeat_function_on_set,\
      is_date, isindex, dummy, split_up_string, frequency_count, clip_date, concatenate,\
      abridge, format_text_output, unformat_text_output, show_list, combine_sequence_values, \
-     remove_tags, sort_keyset, reform_text, add_form, remove_tag, modify_keys, reduce_tupples, stack_input, get_words 
+     remove_tags, sort_keyset, reform_text, add_form, remove_tag, modify_keys, reduce_tupples,\
+     stack_input, get_words 
 
 
      
@@ -444,7 +446,9 @@ class Note_Shelf:
                 else:
                     key_parts = key.split(PERIOD)
                     if len(key_parts)==2:
-                        all_keys = [key_parts[1],key_parts[0]+BLANK+key_parts[1],key_parts[0][0]+BLANK+key_parts[1]]
+                        all_keys = [key_parts[1],
+                                    key_parts[0]+BLANK+key_parts[1],
+                                    key_parts[0][0]+BLANK+key_parts[1]]
                     else:
                         abbreviated = EMPTYCHAR
                         for x in key_parts[0:-1]:
@@ -502,12 +506,15 @@ class Note_Shelf:
                 elif node and relation and other_node:
                     if self.default_dict['generalknowledge'].relation_exists(relation):
                         if not self.default_dict['generalknowledge'].node_exists(node):
-                            display.noteprint(self.default_dict['generalknowledge'].text_interpret(node))
+                            display.noteprint(self.default_dict['generalknowledge']
+                                              .text_interpret(node))
                         if not self.default_dict['generalknowledge'].node_exists(other_node):
-                            display.noteprint(self.default_dict['generalknowledge'].text_interpret(other_node))
-                        display.noteprint(self.default_dict['generalknowledge'].text_interpret(node+':'
-                                                                                               +relation
-                                                                                               +';'+other_node))
+                            display.noteprint(self.default_dict['generalknowledge']
+                                              .text_interpret(other_node))
+                        display.noteprint(self.default_dict['generalknowledge']
+                                          .text_interpret(node+':'
+                                                          +relation+';'
+                                                          +other_node))
                     else:
                         display.noteprint(('ATTENTION!',
                                            'RELATION not defined'))
@@ -654,7 +661,8 @@ class Note_Shelf:
                                                                  term2=seq_value,
                                                                  action='set')
                         else:
-                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/' + str(identifier) + '/' + str(seq_value) + str(x)
+                            temp_label = 'POSSIBLE TYPE ERROR!' + str(seq_type) + '/'\
+                                         + str(identifier) + '/' + str(seq_value) + str(x)
                             nprint(temp_label)
                             
         return newkeyset
@@ -2011,7 +2019,8 @@ class Note_Shelf:
 
     def tag_dict_values (self):
 
-        """Returns all the indexes for tags, corresponding to the values in the keydictionary"""
+        """Returns all the indexes for tags, corresponding
+        to the values in the keydictionary"""
 
         if self.using_database:
             value_tuple = (notebookname,)
@@ -2147,7 +2156,9 @@ class Note_Shelf:
                     
 
             
-            if self.default_dict['indexlist_indexes'] and len(self.default_dict['indexlist_indexes'].list)>0 and not right_at:
+            if (self.default_dict['indexlist_indexes']
+                and len(self.default_dict['indexlist_indexes'].list)>0
+                and not right_at):
                     index = self.default_dict['indexlist_indexes'].list[-1]
             elif right_at:
                 index = ind
@@ -2621,7 +2632,8 @@ class Note_Shelf:
 
         keyset_temp = self.get_keys_from_note(index) #fetches keyset
 
-        keyset_temp = self.keypurger.purge(keyset_temp,projects=set(self.default_dict['projects'].get_all_projects()))
+        keyset_temp = self.keypurger.purge(keyset_temp,projects=set(self.default_dict['projects']
+                                                                    .get_all_projects()))
         seq_keys = set()
         if self.defaults.get('sequences_in_text') and not shortform:
             oldkeys = set(keyset_temp)
@@ -3370,7 +3382,8 @@ class Note_Shelf:
                                        size=display.width_needed(
                                            self.show(str(index)),
                                            self.get_metadata_from_note(index)['size']),
-                                       annotate=annotate)
+                                       annotate=annotate,
+                                       notebookobject=self)
             else:
                 newtext = oldtext
         
@@ -3618,27 +3631,6 @@ class Note_Shelf:
                                   param_width=self.defaults.get('size'))
                 self.revise(i_temp)
 
-##    def change_index(self,
-##                     index):
-##
-##        """Changes the current index position to a new position"""
-##
-##        if isinstance(index, (str, int)):
-##            index = Index(index)
-##
-####        if str(index) in self.indexes():
-####            self.default_dict['currentindex'] = self.find_space(index)
-##
-##        else:
-##            while True:
-##
-##                if str(index) in self.indexes() or index < Index(2):
-##                    self.default_dict['currentindex'] = self.find_space(index)
-##                    break
-##                index -= Index(1)
-##        display.noteprint(('/C/INDEX CHANGED TO',
-##                           str(self.default_dict['currentindex'])))
-
 
     def undo_many(self):
 
@@ -3828,12 +3820,15 @@ class Note_Shelf:
             entrylist = self.default_dict['iterators'][count]
 
         if entrylist is None:
-            entrylist = [i_temp for i_temp in self.default_dict['indexlist_indexes'].list
-                                if i_temp > Index(0)
-                                and (children_too
-                                     or i_temp.is_top())]
+            entrylist = [i_temp for i_temp
+                         in self.default_dict['indexlist_indexes'].list
+                         if i_temp > Index(0)
+                         and (children_too
+                         or i_temp.is_top())]
         else:
-            entrylist = [Index(str(i_temp)) for i_temp in entrylist if Index(str(i_temp)) > Index(0)]
+            entrylist = [Index(str(i_temp))
+                         for i_temp in entrylist
+                         if Index(str(i_temp)) > Index(0)]
 
         if not entrylist:
             entrylist = [i_temp for i_temp in self.default_dict['indexlist_indexes'].list
@@ -4011,7 +4006,8 @@ class Note_Shelf:
             returnkeys = set()
             for project in (self.project*self.suspend_default_keys) + self.temp_projects:
                 if project in self.default_dict['projects'].get_all_projects():
-                    returnkeys = returnkeys.union(set(self.default_dict['projects'].get_default_keys(project=project)))
+                    returnkeys = returnkeys.union(set(self.default_dict['projects']
+                                                      .get_default_keys(project=project)))
             return returnkeys
 
         def query_keys(keysetobject=None):
@@ -4056,7 +4052,8 @@ class Note_Shelf:
                                  key=lambda x:order_sequence_keys(x)):
                 if (not et
                     and ATSIGN in k_temp
-                    and QUESTIONMARK in k_temp) and not k_temp in self.suspended_sequences:  #for sequence keywords with a question mark 
+                    and QUESTIONMARK in k_temp) and not k_temp in self.suspended_sequences:
+                    #for sequence keywords with a question mark 
                     satisfied=False
                     while satisfied==False:
 
@@ -4073,17 +4070,21 @@ class Note_Shelf:
                         self.lastsequencevalue.change(k_temp,remove_final_slash(xt_temp))
                         if xt_temp != '/' and xt_temp.endswith('/'):
                             self.suspended_sequences.add(k_temp)
-                            self.defaults.set('defaultkeys',self.defaults.get('defaultkeys')+[k_temp.split('@')[0]+'@'+xt_temp[0:-1]])
+                            self.defaults.set('defaultkeys',
+                                              self.defaults.get('defaultkeys')
+                                              +[k_temp.split('@')[0]+'@'+xt_temp[0:-1]])
                             satisfied = True
                             xt_temp = remove_final_slash(xt_temp)
                         if xt_temp == '/':
                             self.suspended_sequences.add(k_temp)
                             satisfied = True
                         elif xt_temp == ' ':
-                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp))
+                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]
+                                             +self.lastsequencevalue.show(k_temp))
                             satisfied = True
                         elif xt_temp and not xt_temp.replace('+',''):
-                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp))
+                            keysetobject.add(k_temp.split(QUESTIONMARK)[0]
+                                             +self.lastsequencevalue.show(k_temp))
                             satisfied = True
                             
 
@@ -4161,10 +4162,19 @@ class Note_Shelf:
                                                 keysetobject.add(k_temp.replace(QUESTIONMARK,x_temp))
                                                 satisfied = True
                                             elif x_temp.count(DASH) == 1 and x_temp[-1] != DASH and x_temp[0] != DASH:
-                                                keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
-                                                                                'from'+ATSIGN+UNDERLINE+x_temp.split(DASH)[0]))
-                                                keysetobject.add(k_temp.replace(ATSIGN+UNDERLINE+QUESTIONMARK,
-                                                                                'to'+ATSIGN+UNDERLINE+x_temp.split(DASH)[1]))
+                                                keysetobject.add(k_temp.replace(ATSIGN
+                                                                                +UNDERLINE
+                                                                                +QUESTIONMARK,
+                                                                                'from'
+                                                                                +ATSIGN
+                                                                                +UNDERLINE
+                                                                                +x_temp.split(DASH)[0]))
+                                                keysetobject.add(k_temp.replace(ATSIGN
+                                                                                +UNDERLINE
+                                                                                +QUESTIONMARK,
+                                                                                'to'+ATSIGN
+                                                                                +UNDERLINE
+                                                                                +x_temp.split(DASH)[1]))
                                                 satisfied = True 
                                                 
 
@@ -4477,7 +4487,7 @@ class Note_Shelf:
 
             
         if editover:
-            text = textedit_new(text)
+            text = textedit_new(text,notebookobject=self)
         text = reform_text(text)
         text = self.default_dict['abbreviations'].do(text)
         text = self.default_dict['macros'].do(text)
@@ -4571,7 +4581,8 @@ class Note_Shelf:
             text = text.replace('//'+mode+'//',EMPTYCHAR)
       
         if self.defaults.get('fromtext') and not self.defaults.get('convertbyline'):
-            conv_keys, text = self.default_dict['convert'][self.defaults.get('convertmode')].interpret(text)
+            conv_keys, text = self.default_dict['convert'][self.defaults
+                                                           .get('convertmode')].interpret(text)
             text = reform_text(text)
             text = self.default_dict['abbreviations'].do(text)
             text = self.default_dict['macros'].do(text)
@@ -4580,10 +4591,13 @@ class Note_Shelf:
 
 
    
-        auto_sequence_keys(keysetobject=keyset) # calls function to add autonomatically numbered sequence keys 
-        sequence_keys(keysetobject=keyset)# calls function to evaluate sequence keys if they exist
+        auto_sequence_keys(keysetobject=keyset)
+        # calls function to add autonomatically numbered sequence keys 
+        sequence_keys(keysetobject=keyset)
+        # calls function to evaluate sequence keys if they exist
         
-        if (not from_keys    # use old keys if new keys are not to be queried or taken from the text
+        if (not from_keys
+            # use old keys if new keys are not to be queried or taken from the text
             and not self.defaults.get('keysbefore')
             and not self.defaults.get('keysafter')):
             keyset.update(oldkeys)
@@ -4625,7 +4639,9 @@ class Note_Shelf:
                         self.default_dict['abbreviations'].undo(text),
                         metatext)
 
-        if not self.defaults.get('overrideextract') and not_parsing and extract.embedded_extract(text)[2] > 0:
+        if (not self.defaults.get('overrideextract')
+            and not_parsing
+            and extract.embedded_extract(text)[2] > 0):
             
             #call parsing if there are embedded notes,
             #and it is not already in the middle of parsing
@@ -4717,7 +4733,8 @@ class Note_Shelf:
                 else:
                     if entryset.intersection({str(x_temp)
                                               for x_temp
-                                              in self.default_dict['projects'].get_all_indexes(project=project_temp)}):
+                                              in self.default_dict['projects']
+                                              .get_all_indexes(project=project_temp)}):
                         dictionaryobject[date].add(project_temp)
 
     def find_dates_for_keys_in_indexes (self,
@@ -5057,7 +5074,8 @@ class Note_Shelf:
                                       if ATSIGN not in y_temp}\
                                      .union({y_temp.split(ATSIGN)[0]+ATSIGN+QUESTIONMARK
                                              for y_temp in self.get_keys_from_note(x_temp)
-                                             if ATSIGN in y_temp and y_temp.split(ATSIGN)[0] != identifier})
+                                             if ATSIGN in y_temp
+                                             and y_temp.split(ATSIGN)[0] != identifier})
                         first = False
                     else:
                         found_keys_new = {y_temp for y_temp
@@ -5065,7 +5083,8 @@ class Note_Shelf:
                                           if ATSIGN not in y_temp}\
                                          .union({y_temp.split(ATSIGN)[0]+ATSIGN+QUESTIONMARK
                                                  for y_temp in self.get_keys_from_note(x_temp)
-                                                 if ATSIGN in y_temp and y_temp.split(ATSIGN)[0] != identifier})
+                                                 if ATSIGN in y_temp
+                                                 and y_temp.split(ATSIGN)[0] != identifier})
                         found_keys = found_keys.intersection(found_keys_new)
                 return_dict['defaultkeys'] = list(found_keys)
                 

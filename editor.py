@@ -7,6 +7,7 @@ from displaylist import DisplayList
 from indexclass import Index
 import nformat
 from notebookutilities import transpose_keys
+from generalutilities import get_range
 
 display = Display()
 queries = Queries()
@@ -23,7 +24,8 @@ def formkeys(entry_temp,notebook=None):
 def textedit_new(text,
                  size=60,
                  splitchar=BLANK,
-                 annotate=False):
+                 annotate=False,
+                 notebookobject=None):
 
     """ updated text editing function.
     Allows the user to edit inputed text"""
@@ -231,7 +233,7 @@ def edit_keys (keyobject,
                                                               complete=False,
                                                               many=True,
                                                               indexes=False,
-                                                              notebook=notebook)]
+                                                              notebook=notebookobject)]
                      else:
 
                          keyobject = [listcopy[int(a_temp)] for a_temp in get_range(i_temp,
@@ -239,7 +241,7 @@ def edit_keys (keyobject,
                                                                                      complete=False,
                                                                                      many=True,
                                                                                      indexes=False,
-                                                                                    notebook=notebook)
+                                                                                    notebook=notebookobject)
                                                              if int(a_temp) < len(listcopy)
                                                              and int(a_temp) >= 0]
         else:
