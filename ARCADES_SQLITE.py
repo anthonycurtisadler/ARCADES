@@ -4065,10 +4065,11 @@ class Note_Shelf:
                                 return x
                             
 
-                        xt_temp = input(k_temp.split(QUESTIONMARK)[0]+self.lastsequencevalue.show(k_temp)+QUESTIONMARK)
+                        xt_temp = input(k_temp.split(QUESTIONMARK)[0]+self.default_dict['abbreviations'].undo(self.lastsequencevalue.show(k_temp))+QUESTIONMARK)
+                        
 
                         self.lastsequencevalue.change(k_temp,remove_final_slash(xt_temp))
-                        if xt_temp != '/' and xt_temp.endswith('/'):
+                        if xt_temp != '/' and xt_temp.endswith('/') and xt_temp.count('/')%2 != 0:
                             self.suspended_sequences.add(k_temp)
                             self.defaults.set('defaultkeys',
                                               self.defaults.get('defaultkeys')
@@ -4078,23 +4079,24 @@ class Note_Shelf:
                         if xt_temp == '/':
                             self.suspended_sequences.add(k_temp)
                             satisfied = True
-                        elif xt_temp == ' ':
+                        elif xt_temp == ' ' and self.lastsequencevalue.show(k_temp).strip():
                             keysetobject.add(k_temp.split(QUESTIONMARK)[0]
-                                             +self.lastsequencevalue.show(k_temp))
+                                             +self.default_dict['abbreviations'].undo(self.lastsequencevalue.show(k_temp)))
+
                             satisfied = True
                         elif xt_temp and not xt_temp.replace('+',''):
                             keysetobject.add(k_temp.split(QUESTIONMARK)[0]
-                                             +self.lastsequencevalue.show(k_temp))
+                                             +self.default_dict['abbreviations'].undo(self.lastsequencevalue.show(k_temp)))
                             satisfied = True
                             
 
                                                        
                         else:
-                            for x_temp in xt_temp.split(COMMA):
+                            for x_temp in [y.strip() for y in xt_temp.split(COMMA)]:
                                 x_temp = self.default_dict['abbreviations'].undo(x_temp)
                                 
                             
-                                if not x_temp:
+                                if not x_temp.strip():
                                     satisfied = True
                                 elif ATSIGN + POUND + QUESTIONMARK in k_temp: # for date sequences
                                         if  (SLASH not in x_temp
