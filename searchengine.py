@@ -12,7 +12,8 @@ from substitutions import Substitutions
 from display import Display
 from indexclass import Index
 import extract
-from generalutilities import concatenate 
+from generalutilities import concatenate
+from lexical import English_frequent_words
 
 
 display = Display()
