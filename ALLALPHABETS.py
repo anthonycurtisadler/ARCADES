@@ -570,6 +570,125 @@ extended_latin= """
 
 """
 
+cyrillic="""
+
+А|A#
+
+Ӓ|A#:
+
+Б|B#
+
+В|V#
+
+Г|G#
+
+Ґ|G#'
+
+Д|D#
+
+Ђ|B#+
+
+Ѓ|G#'
+
+Е|E#
+
+Ѐ|E#'
+
+Ё|E#:
+
+Є|E#+
+
+Ж|J#
+
+З|E#*
+
+Ѕ|S#
+
+И|H#
+
+І|I#
+
+Ї|I#:
+
+Ꙇ|I#[
+
+Ѝ|H#'
+
+Ӣ|H#_
+
+Й|H#(
+
+Ј|J#*
+
+К|K#
+
+Л|P#*
+
+Љ|P#+
+
+М|M#
+
+Н|N#
+
+Њ|B#]
+
+О|O#
+
+Ō|O#_
+
+Ӧ|O#:
+
+П|P#
+
+Р|R#
+
+С|C#
+
+Т|T#
+
+Ћ|T#*
+
+Ќ|K#'
+
+У|U#
+
+Ӯ|U#_
+
+Ў|U#(
+
+Ӱ|U#:
+
+Ф|F#
+
+Х|X#
+
+Ц|Z#
+
+Ч|Q#
+
+Џ|Z#*
+
+Ш|W#
+
+Щ|W#*
+
+Ꙏ|b#
+
+Ъ|b#*
+
+Ы|U#*
+
+Ь|b#
+
+Ѣ|b#
+
+Э|E#
+
+Ю|O#
+
+Я|Y#
+
+"""
 
 
 germanletters="""
@@ -1260,6 +1379,14 @@ def greek_mod_word (x):
 
 
 all_alphabets = {}
+
+
+all_alphabets['cy'] = {'alphabet':cyrillic,
+                        'function':dummy,
+                       'orientation':True,
+                       'helpscript':"",
+                       'latin':False}
+
 
 all_alphabets['gr'] = {'alphabet':greekletters,
                        'function':greek_mod_word,

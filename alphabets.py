@@ -194,7 +194,7 @@ class Alphabet:
 
 if __name__ == "__main__":
 
-    greek_keyboard = Alphabet('heb')
+    greek_keyboard = Alphabet('cy')
     while True:
         print(greek_keyboard.transcribe(input('?')))
         print(greek_keyboard.help())  
